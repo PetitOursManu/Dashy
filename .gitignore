@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build output
+dist/
+build/
+client/dist/
+server/dist/
+server/public/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data (hosted apps, previews, uploads)
+data/
+server/data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# Test / coverage
+coverage/
+
+# TypeScript incremental build info
+*.tsbuildinfo

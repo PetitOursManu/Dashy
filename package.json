@@ -1,0 +1,19 @@
+{
+  "name": "dashy",
+  "version": "1.0.0",
+  "description": "Dashy — a self-hosted dashboard for hosting standalone static web apps.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "start": "node server/dist/index.js",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck",
+    "test": "npm --prefix server test && npm --prefix server run test:e2e"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

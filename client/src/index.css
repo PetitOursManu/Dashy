@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply text-sand-900 dark:text-sand-100;
+    margin: 0;
+    min-height: 100vh;
+    /* Warm "sunrise" gradient backdrop (light). */
+    background-color: #f7efe7;
+    background-image:
+      radial-gradient(1100px 620px at 0% -5%, #f8ddc8 0%, rgba(248, 221, 200, 0) 55%),
+      radial-gradient(1000px 560px at 100% 0%, #f2e7d8 0%, rgba(242, 231, 216, 0) 50%),
+      linear-gradient(180deg, #f8f1e9 0%, #f3ebe1 100%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-color: #161310;
+    background-image:
+      radial-gradient(1100px 620px at 0% -5%, rgba(239, 106, 46, 0.16) 0%, rgba(239, 106, 46, 0) 55%),
+      radial-gradient(1000px 560px at 100% 0%, rgba(120, 80, 50, 0.18) 0%, rgba(120, 80, 50, 0) 50%),
+      linear-gradient(180deg, #1b1713 0%, #141110 100%);
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-ember-400/60 focus:ring-offset-2 focus:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-br from-ember-400 to-ember-600 text-white shadow-glow hover:from-ember-500 hover:to-ember-700 hover:shadow-lg active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply btn border border-sand-200 bg-white/70 text-sand-800 hover:bg-white dark:border-sand-700 dark:bg-sand-800/70 dark:text-sand-100 dark:hover:bg-sand-800;
+  }
+  .btn-danger {
+    @apply btn bg-red-500 text-white hover:bg-red-600;
+  }
+  .btn-ghost {
+    @apply btn text-sand-600 hover:bg-sand-200/60 dark:text-sand-300 dark:hover:bg-sand-800/60;
+  }
+  .input {
+    @apply w-full rounded-xl border border-sand-200 bg-white/80 px-3.5 py-2.5 text-sm text-sand-900 placeholder-sand-400 transition-colors focus:border-ember-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-ember-400/30 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-100 dark:focus:bg-sand-900;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-sand-700 dark:text-sand-300;
+  }
+  /* Soft, floating surface — the signature card of the redesign. */
+  .card {
+    @apply rounded-3xl border border-white/60 bg-white/80 shadow-soft backdrop-blur-sm dark:border-white/5 dark:bg-sand-900/70;
+  }
+  /* Tiny uppercase section label used in the sidebar. */
+  .nav-section {
+    @apply px-3 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-wider text-sand-400;
+  }
+  /* Sidebar navigation link. */
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sand-600 transition-all hover:bg-white/70 hover:text-sand-900 dark:text-sand-300 dark:hover:bg-sand-800/60 dark:hover:text-white;
+  }
+  .nav-link-active {
+    @apply bg-white text-sand-900 shadow-card dark:bg-sand-800 dark:text-white;
+  }
+}

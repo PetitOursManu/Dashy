@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+**/data
+**/coverage
+**/*.log
+.git
+.gitignore
+README.md
