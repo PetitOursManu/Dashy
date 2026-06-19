@@ -83,13 +83,14 @@ function OpensChart({ data, total }: { data: OverviewStats['opensByMonth']; tota
         <span className="text-3xl font-bold tracking-tight">{total}</span>
         <span className="text-sm text-sand-400">opens over 6 months</span>
       </div>
-      <div className="mt-5 flex h-40 items-end gap-3">
+      <div className="mt-5 flex h-40 items-stretch gap-3">
         {data.map((d, i) => (
           <div key={i} className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex w-full flex-1 items-end overflow-hidden rounded-lg bg-sand-100 dark:bg-sand-800/60">
+            <div className="relative flex w-full flex-1 items-end overflow-hidden rounded-lg bg-sand-100 dark:bg-sand-800/60">
               <div
                 className="w-full rounded-lg bg-gradient-to-t from-ember-600 to-ember-300 transition-all"
-                style={{ height: `${Math.max(2, (d.count / max) * 100)}%` }}
+                style={{ height: `${d.count > 0 ? Math.max(6, (d.count / max) * 100) : 0}%` }}
+                title={`${d.count} open${d.count === 1 ? '' : 's'}`}
               />
             </div>
             <span className="text-xs text-sand-400">{d.label}</span>
