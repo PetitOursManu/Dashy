@@ -3,6 +3,7 @@ import { Modal } from './Modal';
 import { Spinner } from './Spinner';
 import { usersApi } from '../api/users';
 import { ApiError } from '../api/client';
+import { useI18n } from '../context/LanguageContext';
 import type { HostedApp, User } from '../types';
 
 interface UserFormModalProps {
@@ -15,6 +16,7 @@ interface UserFormModalProps {
 }
 
 export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: UserFormModalProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
@@ -68,13 +70,13 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
   return (
     <Modal
       open={open}
-      title={mode === 'create' ? 'Add a user' : `Edit ${user?.email ?? 'user'}`}
+      title={mode === 'create' ? t('form.addTitle') : t('form.editTitle', { email: user?.email ?? '' })}
       onClose={submitting ? () => {} : onClose}
     >
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="label" htmlFor="user-email">
-            Email
+            {t('form.email')}
           </label>
           <input
             id="user-email"
@@ -90,9 +92,9 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
 
         <div>
           <label className="label" htmlFor="user-password">
-            {mode === 'create' ? 'Password' : 'New password'}
+            {mode === 'create' ? t('form.password') : t('form.newPassword')}
             {mode === 'edit' && (
-              <span className="font-normal text-sand-400"> (leave blank to keep current)</span>
+              <span className="font-normal text-sand-400"> {t('form.keepBlank')}</span>
             )}
           </label>
           <input
@@ -109,7 +111,7 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
 
         <div>
           <label className="label" htmlFor="user-role">
-            Role
+            {t('form.role')}
           </label>
           <select
             id="user-role"
@@ -117,19 +119,19 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
             value={role}
             onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
           >
-            <option value="user">User — sees only assigned apps</option>
-            <option value="admin">Admin — full access &amp; management</option>
+            <option value="user">{t('form.roleUserOpt')}</option>
+            <option value="admin">{t('form.roleAdminOpt')}</option>
           </select>
         </div>
 
         <div>
-          <span className="label">App access</span>
+          <span className="label">{t('form.appAccess')}</span>
           {role === 'admin' ? (
             <p className="rounded-lg bg-sand-100 px-3 py-2 text-sm text-sand-500 dark:bg-sand-800 dark:text-sand-400">
-              Admins have access to every app.
+              {t('form.adminAll')}
             </p>
           ) : apps.length === 0 ? (
-            <p className="text-sm text-sand-400">No apps to assign yet.</p>
+            <p className="text-sm text-sand-400">{t('form.noApps')}</p>
           ) : (
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-sand-200 p-2 dark:border-sand-700">
               {apps.map((app) => (
@@ -158,11 +160,11 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" className="btn-primary" disabled={submitting}>
             {submitting && <Spinner className="h-4 w-4" />}
-            {mode === 'create' ? 'Create user' : 'Save changes'}
+            {mode === 'create' ? t('form.create') : t('form.save')}
           </button>
         </div>
       </form>

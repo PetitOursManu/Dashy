@@ -22,7 +22,10 @@ No SaaS, no paid services — everything runs on a single machine.
 - 👥 **Multi-user & access control** — admins create users and choose, per user, which apps each one can open; regular users see only their assigned apps. Everyone can self-enable 2FA.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
-- 🌗 **Dark mode by default** with a light toggle, "arctic" palette, mobile-first responsive layout.
+- ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
+- 🌍 **7 languages** — the whole interface is translated: English (default), Français, Español, Deutsch, Italiano, 简体中文, Русский.
+- 🎨 **3 themes** — Light, Dark, and Violet (purple accent), warm "ember/sand" palette, mobile-first responsive layout.
+- 🔒 **Session control** — "sign out of all devices" invalidates every active session (JWT versioning).
 - 🛡️ **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, encrypted TOTP secrets at rest (AES-256-GCM).
 - 🐳 **One-command deploy** — multi-stage Docker build + `docker-compose`, single container serving both API and SPA.
 

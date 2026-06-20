@@ -3,6 +3,7 @@ import { appsApi } from '../api/apps';
 import { usersApi } from '../api/users';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/LanguageContext';
 import type { HostedApp, User } from '../types';
 import { AppCard } from '../components/AppCard';
 import { ImportModal } from '../components/ImportModal';
@@ -45,6 +46,7 @@ function FilterPill({
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const isAdmin = user?.role === 'admin';
 
   const [apps, setApps] = useState<HostedApp[]>([]);
@@ -121,27 +123,29 @@ export function DashboardPage() {
 
   const stats = isAdmin
     ? [
-        { icon: <LayersIcon className="h-5 w-5" />, label: 'Hosted apps', value: apps.length },
-        { icon: <UsersIcon className="h-5 w-5" />, label: 'Team members', value: users.length },
+        { icon: <LayersIcon className="h-5 w-5" />, label: t('dash.hostedApps'), value: apps.length },
+        { icon: <UsersIcon className="h-5 w-5" />, label: t('dash.teamMembers'), value: users.length },
         {
           icon: <ShieldIcon className="h-5 w-5" />,
-          label: '2FA enabled',
+          label: t('dash.twoFaEnabled'),
           value: users.filter((u) => u.twoFactorEnabled).length,
         },
       ]
     : [
-        { icon: <LayersIcon className="h-5 w-5" />, label: 'Apps available', value: apps.length },
+        { icon: <LayersIcon className="h-5 w-5" />, label: t('dash.appsAvailable'), value: apps.length },
         {
           icon: <StarIcon className="h-5 w-5" />,
-          label: 'Favorites',
+          label: t('dash.favorites'),
           value: apps.filter((a) => a.isFavorite).length,
         },
         {
           icon: <ShieldIcon className="h-5 w-5" />,
-          label: 'Two-factor',
-          value: user?.twoFactorEnabled ? 'On' : 'Off',
+          label: t('dash.twoFactor'),
+          value: user?.twoFactorEnabled ? t('dash.on') : t('dash.off'),
         },
       ];
+
+  const greetingName = user?.nickname || user?.fullName || user?.email.split('@')[0] || '';
 
   if (loading) {
     return (
@@ -155,7 +159,7 @@ export function DashboardPage() {
     <div className="space-y-8">
       <section>
         <p className="text-sm text-sand-500 dark:text-sand-400">
-          Welcome back{user ? `, ${user.email.split('@')[0]}` : ''} 👋
+          {t('dash.welcome', { name: greetingName })}
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((s) => (
@@ -169,14 +173,14 @@ export function DashboardPage() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">
-            {isAdmin ? 'All apps' : 'Your apps'}
+            {isAdmin ? t('dash.allApps') : t('dash.yourApps')}
             <span className="ml-2 text-sm font-normal text-sand-400">{apps.length}</span>
           </h2>
           {isAdmin && (
             <button type="button" className="btn-primary" onClick={() => setImportOpen(true)}>
               <PlusIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Import an app</span>
-              <span className="sm:hidden">Import</span>
+              <span className="hidden sm:inline">{t('dash.importApp')}</span>
+              <span className="sm:hidden">{t('dash.import')}</span>
             </button>
           )}
         </div>
@@ -189,7 +193,7 @@ export function DashboardPage() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search apps…"
+                placeholder={t('dash.searchPlaceholder')}
                 className="input pl-9"
               />
             </div>
@@ -201,14 +205,14 @@ export function DashboardPage() {
                   setFavoritesOnly(false);
                 }}
               >
-                All
+                {t('dash.filterAll')}
               </FilterPill>
               <FilterPill active={favoritesOnly} onClick={() => setFavoritesOnly((v) => !v)}>
                 <StarIcon
                   className="h-3.5 w-3.5"
                   fill={favoritesOnly ? 'currentColor' : 'none'}
                 />
-                Favorites
+                {t('dash.favorites')}
               </FilterPill>
               {categories.map((c) => (
                 <FilterPill
@@ -230,11 +234,9 @@ export function DashboardPage() {
         ) : apps.length === 0 ? (
           <div className="card flex flex-col items-center justify-center px-6 py-20 text-center">
             <LayersIcon className="h-12 w-12 text-sand-300 dark:text-sand-600" />
-            <h3 className="mt-4 text-lg font-medium">No apps yet</h3>
+            <h3 className="mt-4 text-lg font-medium">{t('dash.noAppsTitle')}</h3>
             <p className="mt-1 max-w-sm text-sm text-sand-500 dark:text-sand-400">
-              {isAdmin
-                ? 'Import a standalone HTML file or a zipped static site to get started.'
-                : 'No apps have been shared with you yet. Ask an administrator for access.'}
+              {isAdmin ? t('dash.noAppsAdmin') : t('dash.noAppsUser')}
             </p>
             {isAdmin && (
               <button
@@ -243,13 +245,13 @@ export function DashboardPage() {
                 onClick={() => setImportOpen(true)}
               >
                 <PlusIcon className="h-5 w-5" />
-                Import an app
+                {t('dash.importApp')}
               </button>
             )}
           </div>
         ) : visible.length === 0 ? (
           <p className="card px-4 py-12 text-center text-sm text-sand-500 dark:text-sand-400">
-            No apps match your filters.
+            {t('dash.noMatch')}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -268,9 +270,9 @@ export function DashboardPage() {
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={onImported} />
       <ConfirmDialog
         open={toDelete !== null}
-        title="Delete app"
-        message={`Delete "${toDelete?.name}"? This removes its files from disk and cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('dash.deleteTitle')}
+        message={t('dash.deleteMsg', { name: toDelete?.name ?? '' })}
+        confirmLabel={t('edit.delete')}
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}
       />

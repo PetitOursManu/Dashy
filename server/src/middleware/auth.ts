@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { COOKIE_NAME, verifyToken, type JwtPayload } from '../utils/jwt.js';
+import { User } from '../models/User.js';
 import { ApiError } from './error.js';
 
 declare global {
@@ -11,22 +12,36 @@ declare global {
   }
 }
 
-/** Require a valid (fully authenticated, non-pending) access token cookie. */
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
-  const token = req.cookies?.[COOKIE_NAME];
-  if (!token) {
-    throw new ApiError(401, 'Authentication required');
-  }
+/**
+ * Require a valid (fully authenticated, non-pending) access token cookie, and
+ * verify the token's version still matches the user's — so "sign out of all
+ * devices" (which bumps tokenVersion) invalidates previously issued tokens.
+ */
+export async function requireAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
+    const token = req.cookies?.[COOKIE_NAME];
+    if (!token) throw new ApiError(401, 'Authentication required');
+
     const payload = verifyToken<JwtPayload & { pending2fa?: boolean }>(token);
     if (payload.pending2fa) {
       throw new ApiError(401, 'Two-factor authentication not completed');
     }
-    req.user = { sub: payload.sub, role: payload.role };
+
+    const user = await User.findById(payload.sub).select('tokenVersion');
+    // Treat a missing version as 0 so tokens issued before this field existed
+    // (and freshly seeded users) remain valid.
+    if (!user || (payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
+      throw new ApiError(401, 'Session expired, please sign in again');
+    }
+
+    req.user = { sub: payload.sub, role: payload.role, tv: payload.tv };
     next();
   } catch (err) {
-    if (err instanceof ApiError) throw err;
-    throw new ApiError(401, 'Invalid or expired session');
+    next(err instanceof ApiError ? err : new ApiError(401, 'Invalid or expired session'));
   }
 }
 

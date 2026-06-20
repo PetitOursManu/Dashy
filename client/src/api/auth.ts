@@ -31,4 +31,29 @@ export const authApi = {
 
   changePassword: (currentPassword: string, newPassword: string) =>
     http.post<{ ok: true }>('/api/auth/password', { currentPassword, newPassword }),
+
+  updateProfile: (payload: {
+    nickname?: string;
+    fullName?: string;
+    jobTitle?: string;
+    language?: string;
+    theme?: string;
+    timezone?: string;
+    dateFormat?: string;
+  }) => http.patch<{ user: User }>('/api/auth/profile', payload),
+
+  logoutAll: () => http.post<{ ok: true }>('/api/auth/logout-all'),
+
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.set('avatar', file);
+    return http.postForm<{ user: User }>('/api/auth/avatar', form);
+  },
+
+  removeAvatar: () => http.del<{ user: User }>('/api/auth/avatar'),
 };
+
+/** URL for a user's avatar image (only meaningful when hasAvatar is true). */
+export function avatarUrl(userId: string): string {
+  return `/api/auth/avatar/${userId}`;
+}

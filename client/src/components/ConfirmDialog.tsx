@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Spinner } from './Spinner';
+import { useI18n } from '../context/LanguageContext';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
@@ -35,7 +37,7 @@ export function ConfirmDialog({
       <p className="text-sm text-sand-600 dark:text-sand-300">{message}</p>
       <div className="mt-6 flex justify-end gap-2">
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={busy}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="button" className="btn-danger" onClick={confirm} disabled={busy}>
           {busy && <Spinner className="h-4 w-4" />}

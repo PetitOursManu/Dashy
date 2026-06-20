@@ -2,6 +2,14 @@ export interface User {
   id: string;
   email: string;
   role: 'admin' | 'user';
+  nickname: string;
+  fullName: string;
+  jobTitle: string;
+  hasAvatar: boolean;
+  language: string;
+  theme: string;
+  timezone: string;
+  dateFormat: string;
   twoFactorEnabled: boolean;
   /** App ids a regular user may open (present in admin user listings). */
   allowedApps?: string[];

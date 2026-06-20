@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useI18n } from '../context/LanguageContext';
 
 export function BackupCodes({ codes }: { codes: string[] }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const text = codes.join('\n');
@@ -36,15 +38,13 @@ export function BackupCodes({ codes }: { codes: string[] }) {
       </ul>
       <div className="mt-3 flex gap-2">
         <button type="button" className="btn-secondary !py-1 !text-xs" onClick={copy}>
-          {copied ? 'Copied!' : 'Copy'}
+          {copied ? t('backup.copied') : t('backup.copy')}
         </button>
         <button type="button" className="btn-secondary !py-1 !text-xs" onClick={download}>
-          Download
+          {t('backup.download')}
         </button>
       </div>
-      <p className="mt-2 text-xs text-sand-400">
-        Each code can be used once. Store them somewhere safe — they are shown only now.
-      </p>
+      <p className="mt-2 text-xs text-sand-400">{t('backup.hint')}</p>
     </div>
   );
 }

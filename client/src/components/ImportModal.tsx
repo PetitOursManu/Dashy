@@ -4,6 +4,7 @@ import { Spinner } from './Spinner';
 import { UploadIcon } from './Icons';
 import { appsApi } from '../api/apps';
 import { ApiError } from '../api/client';
+import { useI18n } from '../context/LanguageContext';
 import type { HostedApp } from '../types';
 
 interface ImportModalProps {
@@ -16,6 +17,7 @@ const CONTENT_ACCEPT = '.html,.htm,.zip';
 const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
 
 export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -53,7 +55,7 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
     e.preventDefault();
     setError(null);
     if (!content) {
-      setError('Please choose a .html file or a .zip archive.');
+      setError(t('import.errChoose'));
       return;
     }
     setSubmitting(true);
@@ -68,25 +70,25 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
       reset();
       onImported(app);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Import failed. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('import.errFail'));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal open={open} title="Import an app" onClose={close}>
+    <Modal open={open} title={t('import.title')} onClose={close}>
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="label" htmlFor="app-name">
-            Name
+            {t('import.name')}
           </label>
           <input
             id="app-name"
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My standalone artifact"
+            placeholder={t('import.namePlaceholder')}
             maxLength={120}
             required
           />
@@ -94,34 +96,36 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
 
         <div>
           <label className="label" htmlFor="app-desc">
-            Description <span className="font-normal text-sand-400">(optional)</span>
+            {t('import.description')}{' '}
+            <span className="font-normal text-sand-400">({t('common.optional')})</span>
           </label>
           <textarea
             id="app-desc"
             className="input min-h-[72px] resize-y"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="A short description shown on the card"
+            placeholder={t('import.descPlaceholder')}
             maxLength={2000}
           />
         </div>
 
         <div>
           <label className="label" htmlFor="app-category">
-            Category <span className="font-normal text-sand-400">(optional)</span>
+            {t('import.category')}{' '}
+            <span className="font-normal text-sand-400">({t('common.optional')})</span>
           </label>
           <input
             id="app-category"
             className="input"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Tools, Games, Docs"
+            placeholder={t('import.categoryPlaceholder')}
             maxLength={40}
           />
         </div>
 
         <div>
-          <label className="label">Content</label>
+          <label className="label">{t('import.content')}</label>
           <button
             type="button"
             onClick={() => contentInput.current?.click()}
@@ -133,10 +137,8 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
                 <span className="font-medium">{content.name}</span>
               ) : (
                 <>
-                  <span className="font-medium">Choose a file</span>
-                  <span className="block text-sand-400">
-                    Standalone .html or a .zip static site
-                  </span>
+                  <span className="font-medium">{t('import.chooseFile')}</span>
+                  <span className="block text-sand-400">{t('import.chooseHint')}</span>
                 </>
               )}
             </span>
@@ -152,14 +154,15 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
 
         <div>
           <label className="label">
-            Preview image <span className="font-normal text-sand-400">(optional)</span>
+            {t('import.preview')}{' '}
+            <span className="font-normal text-sand-400">({t('common.optional')})</span>
           </label>
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand-200 bg-sand-100 dark:border-sand-700 dark:bg-sand-800">
               {previewUrl ? (
                 <img src={previewUrl} alt="" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-xs text-sand-400">Auto</span>
+                <span className="text-xs text-sand-400">{t('import.previewAuto')}</span>
               )}
             </div>
             <div className="flex flex-col gap-1.5">
@@ -169,9 +172,7 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
                 onChange={(e) => onPreviewSelected(e.target.files?.[0] ?? null)}
                 className="text-sm text-sand-500 file:mr-3 file:rounded-md file:border-0 file:bg-sand-200 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-sand-300 dark:file:bg-sand-700 dark:hover:file:bg-sand-600"
               />
-              <span className="text-xs text-sand-400">
-                Leave empty to auto-generate a placeholder.
-              </span>
+              <span className="text-xs text-sand-400">{t('import.previewHint')}</span>
             </div>
           </div>
         </div>
@@ -184,11 +185,11 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn-secondary" onClick={close} disabled={submitting}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" className="btn-primary" disabled={submitting}>
             {submitting && <Spinner className="h-4 w-4" />}
-            Import
+            {t('import.submit')}
           </button>
         </div>
       </form>

@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/LanguageContext';
 import { ApiError } from '../api/client';
 import { Spinner } from '../components/Spinner';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { Logo, ShieldIcon } from '../components/Icons';
 
 export function LoginPage() {
   const { login, verifyTwoFactor } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'credentials' | '2fa'>('credentials');
@@ -51,17 +52,11 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo className="h-14 w-14 drop-shadow-[0_8px_16px_rgba(219,84,33,0.35)]" />
           <h1 className="mt-3 text-2xl font-bold tracking-tight">Dashy</h1>
-          <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">
-            Self-hosted app dashboard
-          </p>
+          <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('login.subtitle')}</p>
         </div>
 
         <div className="card p-6 sm:p-7">
@@ -69,7 +64,7 @@ export function LoginPage() {
             <form onSubmit={submitCredentials} className="space-y-4">
               <div>
                 <label className="label" htmlFor="email">
-                  Email
+                  {t('login.email')}
                 </label>
                 <input
                   id="email"
@@ -84,7 +79,7 @@ export function LoginPage() {
               </div>
               <div>
                 <label className="label" htmlFor="password">
-                  Password
+                  {t('login.password')}
                 </label>
                 <input
                   id="password"
@@ -105,16 +100,16 @@ export function LoginPage() {
 
               <button type="submit" className="btn-primary w-full" disabled={submitting}>
                 {submitting && <Spinner className="h-4 w-4" />}
-                Sign in
+                {t('login.signIn')}
               </button>
             </form>
           ) : (
             <form onSubmit={submitToken} className="space-y-4">
               <div className="flex flex-col items-center text-center">
                 <ShieldIcon className="h-8 w-8 text-ember-400" />
-                <h2 className="mt-2 font-medium">Two-factor authentication</h2>
+                <h2 className="mt-2 font-medium">{t('login.twoFaTitle')}</h2>
                 <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">
-                  Enter the 6-digit code from your authenticator app, or a backup code.
+                  {t('login.twoFaPrompt')}
                 </p>
               </div>
               <input
@@ -137,7 +132,7 @@ export function LoginPage() {
 
               <button type="submit" className="btn-primary w-full" disabled={submitting}>
                 {submitting && <Spinner className="h-4 w-4" />}
-                Verify
+                {t('login.verify')}
               </button>
               <button
                 type="button"
@@ -148,7 +143,7 @@ export function LoginPage() {
                   setError(null);
                 }}
               >
-                Back
+                {t('login.back')}
               </button>
             </form>
           )}

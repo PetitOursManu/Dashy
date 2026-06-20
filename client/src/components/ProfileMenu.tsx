@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/LanguageContext';
+import { avatarUrl } from '../api/auth';
 import { Avatar } from './Avatar';
-import { ChevronDownIcon, LogoutIcon, ShieldIcon } from './Icons';
+import { ChevronDownIcon, LogoutIcon, SettingsIcon, ShieldIcon } from './Icons';
 
 export function ProfileMenu() {
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -40,7 +43,11 @@ export function ProfileMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Avatar email={user.email} className="h-8 w-8 text-xs" />
+        <Avatar
+          email={user.email}
+          src={user.hasAvatar ? avatarUrl(user.id) : undefined}
+          className="h-8 w-8 text-xs"
+        />
         <span className="hidden max-w-[10rem] truncate text-sm font-medium sm:inline">
           {user.email}
         </span>
@@ -53,12 +60,26 @@ export function ProfileMenu() {
           className="absolute right-0 z-50 mt-2 w-60 origin-top-right animate-fade-in overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-soft backdrop-blur dark:border-white/10 dark:bg-sand-900/95"
         >
           <div className="border-b border-sand-100 px-4 py-3 dark:border-sand-800">
-            <p className="truncate text-sm font-semibold">{user.email}</p>
-            <p className="mt-0.5 text-xs capitalize text-sand-500 dark:text-sand-400">
-              {user.role}
+            <p className="truncate text-sm font-semibold">
+              {user.nickname || user.fullName || user.email}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-sand-500 dark:text-sand-400">
+              {user.jobTitle || user.email}
             </p>
           </div>
           <div className="p-1.5">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                navigate('/settings');
+              }}
+              className="nav-link w-full"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              {t('nav.settings')}
+            </button>
             <button
               type="button"
               role="menuitem"
@@ -69,7 +90,7 @@ export function ProfileMenu() {
               className="nav-link w-full"
             >
               <ShieldIcon className="h-4 w-4" />
-              Security
+              {t('nav.security')}
             </button>
             <button
               type="button"
@@ -78,7 +99,7 @@ export function ProfileMenu() {
               className="nav-link w-full text-red-600 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/10"
             >
               <LogoutIcon className="h-4 w-4" />
-              Log out
+              {t('nav.logout')}
             </button>
           </div>
         </div>

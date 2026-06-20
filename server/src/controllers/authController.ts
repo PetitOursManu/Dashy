@@ -1,10 +1,14 @@
 import type { Request, Response } from 'express';
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
 import argon2 from 'argon2';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import { z } from 'zod';
 import { User, type UserDoc } from '../models/User.js';
 import { env } from '../config/env.js';
+import { AVATARS_DIR } from '../config/paths.js';
 import { ApiError } from '../middleware/error.js';
 import { encrypt, decrypt, generateBackupCodes } from '../utils/crypto.js';
 import { logActivity } from '../services/activity.js';
@@ -40,10 +44,27 @@ export const disable2faSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+export const profileSchema = z
+  .object({
+    nickname: z.string().max(60).trim().optional(),
+    fullName: z.string().max(120).trim().optional(),
+    jobTitle: z.string().max(120).trim().optional(),
+    language: z.enum(['en', 'fr', 'es', 'de', 'it', 'zh', 'ru']).optional(),
+    theme: z.enum(['light', 'dark', 'violet']).optional(),
+    timezone: z.string().max(64).optional(),
+    dateFormat: z.enum(['', 'dmy', 'mdy', 'iso']).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
 // --------------------------------- helpers -----------------------------------
 
-function setAuthCookie(res: Response, userId: string, role: 'admin' | 'user'): void {
-  const token = signAccessToken({ sub: userId, role });
+function setAuthCookie(
+  res: Response,
+  userId: string,
+  role: 'admin' | 'user',
+  tokenVersion: number,
+): void {
+  const token = signAccessToken({ sub: userId, role, tv: tokenVersion });
   res.cookie(COOKIE_NAME, token, cookieOptions(ACCESS_COOKIE_MAX_AGE));
 }
 
@@ -75,7 +96,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     role: isFirst ? 'admin' : 'user',
   });
 
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user');
+  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
   res.status(201).json({ user: user.toJSON() });
 }
 
@@ -97,7 +118,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user');
+  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
   res.json({ user: user.toJSON() });
 }
 
@@ -124,7 +145,7 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
   if (!ok) throw new ApiError(401, 'Invalid two-factor code');
 
   await user.save(); // persist a consumed backup code if one was used
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user');
+  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
   res.json({ user: user.toJSON() });
 }
 
@@ -161,6 +182,70 @@ export async function me(req: Request, res: Response): Promise<void> {
 export function logout(_req: Request, res: Response): void {
   res.clearCookie(COOKIE_NAME, cookieOptions());
   res.json({ ok: true });
+}
+
+/** Update the current user's own profile + preferences. */
+export async function updateProfile(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const updates = req.body as z.infer<typeof profileSchema>;
+  if (updates.nickname !== undefined) user.nickname = updates.nickname;
+  if (updates.fullName !== undefined) user.fullName = updates.fullName;
+  if (updates.jobTitle !== undefined) user.jobTitle = updates.jobTitle;
+  if (updates.language !== undefined) user.language = updates.language;
+  if (updates.theme !== undefined) user.theme = updates.theme;
+  if (updates.timezone !== undefined) user.timezone = updates.timezone;
+  if (updates.dateFormat !== undefined) user.dateFormat = updates.dateFormat;
+
+  await user.save();
+  res.json({ user: user.toJSON() });
+}
+
+/** Sign out of every device by invalidating all issued tokens. */
+export async function logoutAll(req: Request, res: Response): Promise<void> {
+  await User.updateOne({ _id: req.user!.sub }, { $inc: { tokenVersion: 1 } });
+  res.clearCookie(COOKIE_NAME, cookieOptions());
+  res.json({ ok: true });
+}
+
+// ------------------------------- avatar --------------------------------------
+
+export async function uploadAvatar(req: Request, res: Response): Promise<void> {
+  if (!req.file) throw new ApiError(400, 'No image uploaded');
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const old = user.avatar;
+  user.avatar = path.basename(req.file.filename);
+  await user.save();
+  if (old) {
+    await fsp.rm(path.join(AVATARS_DIR, path.basename(old)), { force: true }).catch(() => {});
+  }
+  res.json({ user: user.toJSON() });
+}
+
+export async function deleteAvatar(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.avatar) {
+    await fsp
+      .rm(path.join(AVATARS_DIR, path.basename(user.avatar)), { force: true })
+      .catch(() => {});
+    user.avatar = null;
+    await user.save();
+  }
+  res.json({ user: user.toJSON() });
+}
+
+/** Serve any team member's avatar image (auth required). */
+export async function getAvatar(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.params.id).select('avatar');
+  if (!user || !user.avatar) throw new ApiError(404, 'No avatar');
+  const file = path.join(AVATARS_DIR, path.basename(user.avatar));
+  if (!fs.existsSync(file)) throw new ApiError(404, 'No avatar');
+  res.set('Cache-Control', 'private, max-age=60');
+  res.sendFile(file);
 }
 
 // ------------------------------- 2FA management ------------------------------

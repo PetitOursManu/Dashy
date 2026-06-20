@@ -9,6 +9,18 @@ export interface IUser {
   email: string;
   passwordHash: string;
   role: 'admin' | 'user';
+  // --- Profile (self-editable, visible to admins) ---
+  nickname: string;
+  fullName: string;
+  jobTitle: string;
+  avatar: string | null;
+  // --- Preferences ---
+  language: string;
+  theme: string;
+  timezone: string;
+  dateFormat: string;
+  // Bumped to invalidate all existing sessions ("sign out everywhere").
+  tokenVersion: number;
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   backupCodes: BackupCode[];
@@ -48,6 +60,22 @@ const userSchema = new Schema<IUser>(
 
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
 
+    // --- Profile ---
+    nickname: { type: String, default: '', trim: true, maxlength: 60 },
+    fullName: { type: String, default: '', trim: true, maxlength: 120 },
+    jobTitle: { type: String, default: '', trim: true, maxlength: 120 },
+    // Filename of the uploaded avatar under AVATARS_DIR, or null.
+    avatar: { type: String, default: null },
+
+    // --- Preferences ---
+    language: { type: String, default: 'en', maxlength: 8 },
+    theme: { type: String, default: 'light', maxlength: 16 },
+    timezone: { type: String, default: '', maxlength: 64 },
+    dateFormat: { type: String, default: '', maxlength: 8 },
+
+    // Session epoch — incrementing it invalidates all issued JWTs.
+    tokenVersion: { type: Number, default: 0 },
+
     // --- TOTP 2FA ---
     twoFactorEnabled: { type: Boolean, default: false },
     // AES-256-GCM encrypted TOTP secret (null until setup begins).
@@ -81,6 +109,10 @@ userSchema.set('toJSON', {
     delete r.passwordHash;
     delete r.twoFactorSecret;
     delete r.backupCodes;
+    // Expose only whether an avatar exists, not the internal filename / counters.
+    r.hasAvatar = Boolean(r.avatar);
+    delete r.avatar;
+    delete r.tokenVersion;
     return r;
   },
 });

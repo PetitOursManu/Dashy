@@ -5,19 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Warm accent — peach → coral → terracotta ("ember").
+        // Accent ("ember") — backed by CSS variables so a theme can swap the
+        // whole accent (e.g. orange → violet) by overriding the channels.
         ember: {
-          50: '#fff5ef',
-          100: '#ffe7d6',
-          200: '#feccac',
-          300: '#fbaa78',
-          400: '#f6824a',
-          500: '#ef6a2e',
-          600: '#db5421',
-          700: '#b6411d',
-          800: '#91361e',
-          900: '#76301c',
-          950: '#40140a',
+          50: 'rgb(var(--ember-50) / <alpha-value>)',
+          100: 'rgb(var(--ember-100) / <alpha-value>)',
+          200: 'rgb(var(--ember-200) / <alpha-value>)',
+          300: 'rgb(var(--ember-300) / <alpha-value>)',
+          400: 'rgb(var(--ember-400) / <alpha-value>)',
+          500: 'rgb(var(--ember-500) / <alpha-value>)',
+          600: 'rgb(var(--ember-600) / <alpha-value>)',
+          700: 'rgb(var(--ember-700) / <alpha-value>)',
+          800: 'rgb(var(--ember-800) / <alpha-value>)',
+          900: 'rgb(var(--ember-900) / <alpha-value>)',
+          950: 'rgb(var(--ember-950) / <alpha-value>)',
         },
         // Warm neutrals — cream / greige / taupe ("sand").
         sand: {
@@ -40,7 +41,7 @@ export default {
       boxShadow: {
         soft: '0 10px 30px -12px rgba(95, 60, 35, 0.22)',
         card: '0 2px 14px -6px rgba(95, 60, 35, 0.14)',
-        glow: '0 8px 24px -8px rgba(239, 106, 46, 0.45)',
+        glow: '0 8px 24px -8px rgb(var(--ember-500) / 0.45)',
       },
       borderRadius: {
         '2xl': '1rem',

@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { env } from '../config/env.js';
-import { TMP_DIR, PREVIEWS_DIR, ensureDataDirs } from '../config/paths.js';
+import { TMP_DIR, PREVIEWS_DIR, AVATARS_DIR, ensureDataDirs } from '../config/paths.js';
 
 ensureDataDirs();
 
@@ -31,6 +31,39 @@ const storage = multer.diskStorage({
     cb(null, randomName(file.originalname));
   },
 });
+
+function imageFilter(
+  _req: unknown,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+): void {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!IMAGE_EXTS.has(ext) || !IMAGE_MIMES.has(file.mimetype)) {
+    cb(new Error('Avatar must be a PNG, JPEG, WEBP, GIF or SVG image'));
+    return;
+  }
+  cb(null, true);
+}
+
+/** Upload handler for a user avatar (single image, ~5 MB). */
+export const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination(_req, _file, cb) {
+      cb(null, AVATARS_DIR);
+    },
+    filename(_req, file, cb) {
+      cb(null, randomName(file.originalname));
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter(req, file, cb) {
+    if (file.fieldname !== 'avatar') {
+      cb(new Error(`Unexpected field: ${file.fieldname}`));
+      return;
+    }
+    imageFilter(req, file, cb);
+  },
+}).single('avatar');
 
 /**
  * Upload handler for importing an app: one `content` file (.html/.zip) and an

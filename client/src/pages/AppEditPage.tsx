@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { appsApi } from '../api/apps';
 import { ApiError } from '../api/client';
+import { useI18n } from '../context/LanguageContext';
 import type { HostedApp } from '../types';
 import { Spinner, FullPageSpinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -9,6 +10,7 @@ import { ExternalIcon, TrashIcon } from '../components/Icons';
 
 export function AppEditPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [app, setApp] = useState<HostedApp | null>(null);
@@ -84,9 +86,9 @@ export function AppEditPage() {
   if (!app) {
     return (
       <div className="card p-6">
-        <p className="text-sm text-red-600 dark:text-red-400">{error ?? 'App not found.'}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{error ?? t('edit.notFound')}</p>
         <Link to="/" className="btn-secondary mt-4">
-          Back to dashboard
+          {t('edit.back')}
         </Link>
       </div>
     );
@@ -97,7 +99,7 @@ export function AppEditPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="min-w-0">
           <Link to="/" className="text-sm font-medium text-ember-500 hover:underline">
-            ← Back to dashboard
+            ← {t('edit.back')}
           </Link>
           <p className="mt-1 truncate text-sm text-sand-500 dark:text-sand-400">{app.name}</p>
         </div>
@@ -108,14 +110,14 @@ export function AppEditPage() {
           className="btn-secondary shrink-0"
         >
           <ExternalIcon className="h-4 w-4" />
-          Open
+          {t('edit.open')}
         </a>
       </div>
 
       <form onSubmit={save} className="card space-y-4 p-6">
         <div>
           <label className="label" htmlFor="name">
-            Name
+            {t('edit.name')}
           </label>
           <input
             id="name"
@@ -129,7 +131,7 @@ export function AppEditPage() {
 
         <div>
           <label className="label" htmlFor="description">
-            Description
+            {t('edit.description')}
           </label>
           <textarea
             id="description"
@@ -142,21 +144,21 @@ export function AppEditPage() {
 
         <div>
           <label className="label" htmlFor="category">
-            Category
+            {t('edit.category')}
           </label>
           <input
             id="category"
             className="input"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Tools, Games, Docs"
+            placeholder={t('import.categoryPlaceholder')}
             maxLength={40}
           />
         </div>
 
         <div>
           <label className="label" htmlFor="entry">
-            Entry file
+            {t('edit.entryFile')}
           </label>
           <input
             id="entry"
@@ -164,13 +166,11 @@ export function AppEditPage() {
             value={entryFile}
             onChange={(e) => setEntryFile(e.target.value)}
           />
-          <p className="mt-1 text-xs text-sand-400">
-            The HTML file served at the root of <code>{app.url}</code> (must exist in the app).
-          </p>
+          <p className="mt-1 text-xs text-sand-400">{t('edit.entryHint', { url: app.url })}</p>
         </div>
 
         <div>
-          <label className="label">Preview image</label>
+          <label className="label">{t('edit.preview')}</label>
           <div className="flex items-center gap-3">
             <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-sand-200 bg-sand-100 dark:border-sand-700 dark:bg-sand-800">
               <img
@@ -195,7 +195,7 @@ export function AppEditPage() {
         )}
         {saved && (
           <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
-            Changes saved.
+            {t('edit.saved')}
           </p>
         )}
 
@@ -206,20 +206,20 @@ export function AppEditPage() {
             onClick={() => setConfirmDelete(true)}
           >
             <TrashIcon className="h-4 w-4" />
-            Delete
+            {t('edit.delete')}
           </button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving && <Spinner className="h-4 w-4" />}
-            Save changes
+            {t('edit.save')}
           </button>
         </div>
       </form>
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete app"
-        message={`Delete "${app.name}"? This removes its files from disk and cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('dash.deleteTitle')}
+        message={t('dash.deleteMsg', { name: app.name })}
+        confirmLabel={t('edit.delete')}
         onConfirm={remove}
         onCancel={() => setConfirmDelete(false)}
       />

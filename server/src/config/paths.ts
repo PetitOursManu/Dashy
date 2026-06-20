@@ -18,6 +18,9 @@ export const APPS_DIR = path.join(DATA_DIR, 'apps');
 /** Where preview images are stored: `<DATA_DIR>/previews/`. */
 export const PREVIEWS_DIR = path.join(DATA_DIR, 'previews');
 
+/** Where user avatars are stored: `<DATA_DIR>/avatars/`. */
+export const AVATARS_DIR = path.join(DATA_DIR, 'avatars');
+
 /** Temp dir for in-flight uploads before they are validated/moved. */
 export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 
@@ -25,7 +28,7 @@ export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 export const CLIENT_DIST_DIR = path.resolve(__dirname, '../../public');
 
 export function ensureDataDirs(): void {
-  for (const dir of [DATA_DIR, APPS_DIR, PREVIEWS_DIR, TMP_DIR]) {
+  for (const dir of [DATA_DIR, APPS_DIR, PREVIEWS_DIR, AVATARS_DIR, TMP_DIR]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }

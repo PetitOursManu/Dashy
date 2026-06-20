@@ -11,9 +11,9 @@
       // Apply the saved theme before paint to avoid a flash. Defaults to light.
       (function () {
         try {
-          if (localStorage.getItem('dashy-theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-          }
+          var t = localStorage.getItem('dashy-theme');
+          if (t === 'dark') document.documentElement.classList.add('dark');
+          else if (t === 'violet') document.documentElement.classList.add('violet');
         } catch (e) {}
       })();
     </script>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ThemeToggle } from './ThemeToggle';
+import { useI18n } from '../context/LanguageContext';
 import { ProfileMenu } from './ProfileMenu';
 import {
   ChevronDownIcon,
@@ -9,34 +9,40 @@ import {
   GridIcon,
   Logo,
   MenuIcon,
+  SettingsIcon,
   ShieldIcon,
   UsersIcon,
 } from './Icons';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   icon: typeof GridIcon;
   end?: boolean;
   adminOnly?: boolean;
 }
 
-const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
   {
-    title: 'Main Menu',
-    items: [{ to: '/', label: 'Dashboard', icon: GridIcon, end: true }],
+    titleKey: 'nav.mainMenu',
+    items: [{ to: '/', labelKey: 'nav.dashboard', icon: GridIcon, end: true }],
   },
   {
-    title: 'Management',
+    titleKey: 'nav.management',
+    items: [{ to: '/users', labelKey: 'nav.users', icon: UsersIcon, adminOnly: true }],
+  },
+  {
+    titleKey: 'nav.account',
     items: [
-      { to: '/users', label: 'Users', icon: UsersIcon, adminOnly: true },
-      { to: '/security', label: 'Security', icon: ShieldIcon },
+      { to: '/settings', labelKey: 'nav.settings', icon: SettingsIcon },
+      { to: '/security', labelKey: 'nav.security', icon: ShieldIcon },
     ],
   },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useAuth();
+  const { t } = useI18n();
   return (
     <div className="flex h-full flex-col">
       <NavLink to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-3 py-2">
@@ -49,8 +55,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           const items = group.items.filter((i) => !i.adminOnly || user?.role === 'admin');
           if (items.length === 0) return null;
           return (
-            <div key={group.title}>
-              <p className="nav-section">{group.title}</p>
+            <div key={group.titleKey}>
+              <p className="nav-section">{t(group.titleKey)}</p>
               {items.map((item) => (
                 <NavLink
                   key={item.to}
@@ -60,7 +66,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
                 >
                   <item.icon className="h-[18px] w-[18px]" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </NavLink>
               ))}
             </div>
@@ -69,36 +75,34 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="mt-4 rounded-2xl bg-gradient-to-br from-ember-500 to-ember-700 p-4 text-white shadow-glow">
-        <p className="text-sm font-semibold">Host an app</p>
-        <p className="mt-1 text-xs text-white/80">
-          Drop a standalone HTML file or a zipped static site from the dashboard.
-        </p>
+        <p className="text-sm font-semibold">{t('nav.hostTitle')}</p>
+        <p className="mt-1 text-xs text-white/80">{t('nav.hostDesc')}</p>
       </div>
     </div>
   );
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/users': 'Users',
-  '/security': 'Security',
+const TITLE_KEYS: Record<string, string> = {
+  '/': 'nav.dashboard',
+  '/users': 'nav.users',
+  '/security': 'nav.security',
+  '/settings': 'nav.settings',
 };
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useI18n();
   const location = useLocation();
   const title = location.pathname.startsWith('/apps/')
-    ? 'Edit app'
-    : (PAGE_TITLES[location.pathname] ?? 'Dashy');
+    ? t('edit.back')
+    : t(TITLE_KEYS[location.pathname] ?? 'nav.dashboard');
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col p-4 lg:flex">
         <SidebarContent />
       </aside>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
@@ -119,7 +123,6 @@ export function Layout() {
         </div>
       )}
 
-      {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
@@ -135,7 +138,6 @@ export function Layout() {
             <ChevronDownIcon className="hidden h-5 w-5 text-sand-400 sm:block" />
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <ProfileMenu />
           </div>
         </header>

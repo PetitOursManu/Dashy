@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { avatarUpload } from '../middleware/upload.js';
 import * as auth from '../controllers/authController.js';
 
 const router = Router();
@@ -25,6 +26,18 @@ router.post('/logout', auth.logout);
 
 // --- Authenticated session ---
 router.get('/me', requireAuth, asyncHandler(auth.me));
+router.patch(
+  '/profile',
+  requireAuth,
+  validateBody(auth.profileSchema),
+  asyncHandler(auth.updateProfile),
+);
+router.post('/logout-all', requireAuth, asyncHandler(auth.logoutAll));
+
+// --- Avatar ---
+router.post('/avatar', requireAuth, avatarUpload, asyncHandler(auth.uploadAvatar));
+router.delete('/avatar', requireAuth, asyncHandler(auth.deleteAvatar));
+router.get('/avatar/:id', requireAuth, asyncHandler(auth.getAvatar));
 
 // --- 2FA management ---
 router.post('/2fa/setup', requireAuth, asyncHandler(auth.setupTwoFactor));

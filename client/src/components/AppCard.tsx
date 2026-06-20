@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import type { HostedApp } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/LanguageContext';
+import { useFormat } from '../hooks/useFormat';
 import { EditIcon, ExternalIcon, StarIcon, TrashIcon } from './Icons';
 
 interface AppCardProps {
@@ -9,16 +11,10 @@ interface AppCardProps {
   onToggleFavorite: (app: HostedApp) => void;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 export function AppCard({ app, onDelete, onToggleFavorite }: AppCardProps) {
   const { user } = useAuth();
+  const { t } = useI18n();
+  const { formatDate } = useFormat();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
@@ -40,7 +36,7 @@ export function AppCard({ app, onDelete, onToggleFavorite }: AppCardProps) {
         />
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
           <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-sm font-medium text-sand-900">
-            <ExternalIcon className="h-4 w-4" /> Open
+            <ExternalIcon className="h-4 w-4" /> {t('card.open')}
           </span>
         </span>
 
@@ -63,8 +59,8 @@ export function AppCard({ app, onDelete, onToggleFavorite }: AppCardProps) {
               ? 'bg-white/90 text-amber-500'
               : 'bg-black/35 text-white hover:bg-black/55'
           }`}
-          title={app.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-          aria-label={app.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          title={app.isFavorite ? t('card.removeFav') : t('card.addFav')}
+          aria-label={app.isFavorite ? t('card.removeFav') : t('card.addFav')}
           aria-pressed={app.isFavorite}
         >
           <StarIcon className="h-4 w-4" fill={app.isFavorite ? 'currentColor' : 'none'} />
@@ -77,16 +73,13 @@ export function AppCard({ app, onDelete, onToggleFavorite }: AppCardProps) {
             {app.name}
           </h3>
           {app.openCount > 0 && (
-            <span
-              className="shrink-0 rounded-full bg-ember-100 px-2 py-0.5 text-[11px] font-medium text-ember-700 dark:bg-ember-500/15 dark:text-ember-300"
-              title={`Opened ${app.openCount} ${app.openCount === 1 ? 'time' : 'times'}`}
-            >
-              {app.openCount} {app.openCount === 1 ? 'open' : 'opens'}
+            <span className="shrink-0 rounded-full bg-ember-100 px-2 py-0.5 text-[11px] font-medium text-ember-700 dark:bg-ember-500/15 dark:text-ember-300">
+              {app.openCount} {app.openCount === 1 ? t('card.openOne') : t('card.opens')}
             </span>
           )}
         </div>
         <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-sand-500 dark:text-sand-400">
-          {app.description || 'No description'}
+          {app.description || t('card.noDescription')}
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs text-sand-400">{formatDate(app.createdAt)}</span>

@@ -1,30 +1,37 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-type Theme = 'dark' | 'light';
+export type Theme = 'light' | 'dark' | 'violet';
+export const THEMES: Theme[] = ['light', 'dark', 'violet'];
 
 interface ThemeContextValue {
   theme: Theme;
+  setTheme: (theme: Theme) => void;
   toggle: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+function applyTheme(theme: Theme): void {
+  const el = document.documentElement;
+  el.classList.toggle('dark', theme === 'dark');
+  el.classList.toggle('violet', theme === 'violet');
+}
+
 function readInitialTheme(): Theme {
   try {
     const stored = localStorage.getItem('dashy-theme');
-    if (stored === 'light' || stored === 'dark') return stored;
+    if (stored && THEMES.includes(stored as Theme)) return stored as Theme;
   } catch {
     /* ignore */
   }
-  return 'light'; // light by default (warm theme)
+  return 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const [theme, setThemeState] = useState<Theme>(readInitialTheme);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', theme === 'dark');
+    applyTheme(theme);
     try {
       localStorage.setItem('dashy-theme', theme);
     } catch {
@@ -32,9 +39,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  const setTheme = (t: Theme) => setThemeState(t);
+  const toggle = () =>
+    setThemeState((t) => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]);
 
-  return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, toggle }}>{children}</ThemeContext.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

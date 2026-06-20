@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { statsApi } from '../api/stats';
+import { useI18n } from '../context/LanguageContext';
+import { useFormat } from '../hooks/useFormat';
 import type { ActivityItem, OverviewStats, StorageStats } from '../types';
-import { formatBytes, relativeTime } from '../utils/format';
+import { formatBytes } from '../utils/format';
 import { Spinner } from './Spinner';
 import {
   ActivityIcon,
@@ -75,13 +77,14 @@ function PanelHeader({ icon, title, right }: { icon: ReactNode; title: string; r
 }
 
 function OpensChart({ data, total }: { data: OverviewStats['opensByMonth']; total: number }) {
+  const { t } = useI18n();
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
     <div className="card p-5 lg:col-span-2">
-      <PanelHeader icon={<ChartIcon className="h-5 w-5" />} title="App opens" />
+      <PanelHeader icon={<ChartIcon className="h-5 w-5" />} title={t('analytics.appOpens')} />
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold tracking-tight">{total}</span>
-        <span className="text-sm text-sand-400">opens over 6 months</span>
+        <span className="text-sm text-sand-400">{t('analytics.opensOver')}</span>
       </div>
       <div className="mt-5 flex h-40 items-stretch gap-3">
         {data.map((d, i) => (
@@ -102,12 +105,13 @@ function OpensChart({ data, total }: { data: OverviewStats['opensByMonth']; tota
 }
 
 function TopApps({ apps }: { apps: OverviewStats['topApps'] }) {
+  const { t } = useI18n();
   const max = Math.max(1, ...apps.map((a) => a.openCount));
   return (
     <div className="card p-5">
-      <PanelHeader icon={<TrophyIcon className="h-5 w-5" />} title="Most opened" />
+      <PanelHeader icon={<TrophyIcon className="h-5 w-5" />} title={t('analytics.mostOpened')} />
       {apps.length === 0 || apps.every((a) => a.openCount === 0) ? (
-        <p className="py-6 text-center text-sm text-sand-400">No opens recorded yet.</p>
+        <p className="py-6 text-center text-sm text-sand-400">{t('analytics.noOpens')}</p>
       ) : (
         <ul className="space-y-3">
           {apps.map((a, i) => (
@@ -144,14 +148,16 @@ const ACTIVITY_ICON: Record<string, ReactNode> = {
 };
 
 function ActivityFeed({ items }: { items: ActivityItem[] }) {
+  const { t } = useI18n();
+  const { relativeTime } = useFormat();
   return (
     <div className="rounded-3xl bg-sand-900 p-5 text-sand-100 shadow-soft dark:bg-black/40">
       <div className="mb-4 flex items-center gap-2">
         <ActivityIcon className="h-5 w-5 text-ember-400" />
-        <h3 className="font-semibold">Recent activity</h3>
+        <h3 className="font-semibold">{t('analytics.recentActivity')}</h3>
       </div>
       {items.length === 0 ? (
-        <p className="py-6 text-center text-sm text-sand-400">Nothing yet.</p>
+        <p className="py-6 text-center text-sm text-sand-400">{t('analytics.nothingYet')}</p>
       ) : (
         <ul className="space-y-1">
           {items.map((it) => (
@@ -174,17 +180,18 @@ function ActivityFeed({ items }: { items: ActivityItem[] }) {
 }
 
 function StoragePanel({ data }: { data: StorageStats }) {
+  const { t } = useI18n();
   const top = data.apps.slice(0, 6);
   const max = Math.max(1, ...top.map((a) => a.size));
   return (
     <div className="card p-5">
       <PanelHeader
         icon={<HardDriveIcon className="h-5 w-5" />}
-        title="Storage usage"
+        title={t('analytics.storageUsage')}
         right={<span className="text-sm font-semibold">{formatBytes(data.total)}</span>}
       />
       {top.length === 0 ? (
-        <p className="py-6 text-center text-sm text-sand-400">No apps yet.</p>
+        <p className="py-6 text-center text-sm text-sand-400">{t('analytics.noApps')}</p>
       ) : (
         <ul className="space-y-2.5">
           {top.map((a) => (

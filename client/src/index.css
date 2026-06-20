@@ -5,6 +5,36 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Default accent — ember (orange), as "R G B" channels for Tailwind. */
+    --ember-50: 255 245 239;
+    --ember-100: 255 231 214;
+    --ember-200: 254 204 172;
+    --ember-300: 251 170 120;
+    --ember-400: 246 130 74;
+    --ember-500: 239 106 46;
+    --ember-600: 219 84 33;
+    --ember-700: 182 65 29;
+    --ember-800: 145 54 30;
+    --ember-900: 118 48 28;
+    --ember-950: 64 20 10;
+  }
+
+  /* Violet theme — purple accent (light base). */
+  html.violet {
+    --ember-50: 245 243 255;
+    --ember-100: 237 233 254;
+    --ember-200: 221 214 254;
+    --ember-300: 196 181 253;
+    --ember-400: 167 139 250;
+    --ember-500: 139 92 246;
+    --ember-600: 124 58 237;
+    --ember-700: 109 40 217;
+    --ember-800: 91 33 182;
+    --ember-900: 76 29 149;
+    --ember-950: 46 16 101;
+  }
+
   html {
     @apply antialiased;
   }
@@ -23,9 +53,18 @@
   .dark body {
     background-color: #161310;
     background-image:
-      radial-gradient(1100px 620px at 0% -5%, rgba(239, 106, 46, 0.16) 0%, rgba(239, 106, 46, 0) 55%),
+      radial-gradient(1100px 620px at 0% -5%, rgb(var(--ember-500) / 0.16) 0%, transparent 55%),
       radial-gradient(1000px 560px at 100% 0%, rgba(120, 80, 50, 0.18) 0%, rgba(120, 80, 50, 0) 50%),
       linear-gradient(180deg, #1b1713 0%, #141110 100%);
+  }
+
+  /* Violet theme uses a cooler lavender backdrop instead of warm peach. */
+  html.violet body {
+    background-color: #f3f1f9;
+    background-image:
+      radial-gradient(1100px 620px at 0% -5%, #e6def7 0%, transparent 55%),
+      radial-gradient(1000px 560px at 100% 0%, #efe9f6 0%, transparent 50%),
+      linear-gradient(180deg, #f5f2fb 0%, #efebf6 100%);
   }
 }
 

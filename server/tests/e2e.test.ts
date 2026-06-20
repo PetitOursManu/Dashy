@@ -272,6 +272,72 @@ test('admin analytics endpoints respond', async () => {
   assert.ok(Array.isArray(st.apps));
 });
 
+// ------------------------- profile, avatar, sessions -------------------------
+
+test('user can update profile + preferences (internal fields hidden)', async () => {
+  const res = await api('PATCH', '/api/auth/profile', {
+    nickname: 'Ada',
+    fullName: 'Ada Lovelace',
+    jobTitle: 'Engineer',
+    language: 'fr',
+    theme: 'violet',
+    timezone: 'Europe/Paris',
+    dateFormat: 'dmy',
+  });
+  assert.equal(res.status, 200);
+
+  const { user } = await (await api('GET', '/api/auth/me')).json();
+  assert.equal(user.nickname, 'Ada');
+  assert.equal(user.fullName, 'Ada Lovelace');
+  assert.equal(user.language, 'fr');
+  assert.equal(user.theme, 'violet');
+  assert.equal(user.timezone, 'Europe/Paris');
+  assert.equal(user.dateFormat, 'dmy');
+  assert.equal(user.hasAvatar, false);
+  // Internal fields never leak.
+  assert.equal(user.tokenVersion, undefined);
+  assert.equal(user.avatar, undefined);
+});
+
+test('avatar upload, fetch, and delete', async () => {
+  const { user } = await (await api('GET', '/api/auth/me')).json();
+
+  const form = new FormData();
+  const png = Buffer.from('89504e470d0a1a0a0000', 'hex');
+  form.set('avatar', new Blob([png], { type: 'image/png' }), 'a.png');
+  const up = await fetch(baseUrl + '/api/auth/avatar', {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  assert.equal(up.status, 200);
+  assert.equal((await up.json()).user.hasAvatar, true);
+
+  const img = await fetch(`${baseUrl}/api/auth/avatar/${user.id}`, {
+    headers: { Cookie: cookieHeader() },
+  });
+  assert.equal(img.status, 200);
+
+  const del = await api('DELETE', '/api/auth/avatar');
+  assert.equal((await del.json()).user.hasAvatar, false);
+});
+
+test('logout-all invalidates previously issued tokens', async () => {
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const oldToken = cookies.get('dashy_token');
+  assert.equal((await api('GET', '/api/apps')).status, 200);
+
+  await api('POST', '/api/auth/logout-all');
+
+  // Replaying the captured (now-stale) token must be rejected.
+  const replay = await fetch(baseUrl + '/api/apps', {
+    headers: { Cookie: `dashy_token=${oldToken}` },
+    redirect: 'manual',
+  });
+  assert.equal(replay.status, 401);
+});
+
 // ------------------------- multi-user / access control -----------------------
 
 const BOB_EMAIL = 'bob@example.com';

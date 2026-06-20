@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { useI18n } from '../context/LanguageContext';
 import { CloseIcon } from './Icons';
 
 interface ModalProps {
@@ -10,6 +11,7 @@ interface ModalProps {
 }
 
 export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }: ModalProps) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -38,7 +40,12 @@ export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }:
       <div className={`card w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between border-b border-sand-200 px-5 py-4 dark:border-sand-800">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} className="btn-ghost !px-2" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-ghost !px-2"
+            aria-label={t('common.close')}
+          >
             <CloseIcon />
           </button>
         </div>

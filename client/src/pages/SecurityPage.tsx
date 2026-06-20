@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/LanguageContext';
 import type { TwoFactorSetup } from '../types';
 import { Spinner } from '../components/Spinner';
 import { ShieldIcon } from '../components/Icons';
@@ -9,16 +11,47 @@ import { BackupCodes } from '../components/BackupCodes';
 
 export function SecurityPage() {
   const { user, refresh } = useAuth();
+  const { t } = useI18n();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <p className="text-sm text-sand-500 dark:text-sand-400">
-        Manage two-factor authentication and your password.
-      </p>
-
+      <p className="text-sm text-sand-500 dark:text-sand-400">{t('sec.subtitle')}</p>
       <TwoFactorSection enabled={user?.twoFactorEnabled ?? false} onChange={refresh} />
       <PasswordSection />
+      <SignOutAllSection />
     </div>
+  );
+}
+
+// --------------------------- sign out everywhere ----------------------------
+
+function SignOutAllSection() {
+  const { t } = useI18n();
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+
+  const signOutAll = async () => {
+    setBusy(true);
+    try {
+      await authApi.logoutAll();
+    } catch {
+      /* even on error, drop the local session below */
+    } finally {
+      setUser(null);
+      navigate('/login', { replace: true });
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <h2 className="font-semibold">{t('sec.signOutAllTitle')}</h2>
+      <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('sec.signOutAllDesc')}</p>
+      <button type="button" className="btn-secondary mt-4" onClick={signOutAll} disabled={busy}>
+        {busy && <Spinner className="h-4 w-4" />}
+        {t('sec.signOutAll')}
+      </button>
+    </section>
   );
 }
 
@@ -31,6 +64,7 @@ function TwoFactorSection({
   enabled: boolean;
   onChange: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
@@ -100,11 +134,9 @@ function TwoFactorSection({
         <div className="flex items-start gap-3">
           <ShieldIcon className="mt-0.5 h-6 w-6 text-ember-400" />
           <div>
-            <h2 className="font-semibold">Two-factor authentication</h2>
+            <h2 className="font-semibold">{t('sec.twoFaTitle')}</h2>
             <p className="text-sm text-sand-500 dark:text-sand-400">
-              {enabled
-                ? 'Enabled — a code is required at each login.'
-                : 'Add a time-based one-time code (TOTP) for extra security.'}
+              {enabled ? t('sec.twoFaOn') : t('sec.twoFaOff')}
             </p>
           </div>
         </div>
@@ -115,7 +147,7 @@ function TwoFactorSection({
               : 'bg-sand-200 text-sand-600 dark:bg-sand-800 dark:text-sand-300'
           }`}
         >
-          {enabled ? 'On' : 'Off'}
+          {enabled ? t('sec.statusOn') : t('sec.statusOff')}
         </span>
       </div>
 
@@ -125,15 +157,13 @@ function TwoFactorSection({
         </p>
       )}
 
-      {/* --- Not enabled, not yet in setup --- */}
       {!enabled && !setup && (
         <button type="button" className="btn-primary mt-5" onClick={startSetup} disabled={busy}>
           {busy && <Spinner className="h-4 w-4" />}
-          Enable 2FA
+          {t('sec.enable')}
         </button>
       )}
 
-      {/* --- Setup flow --- */}
       {!enabled && setup && (
         <div className="mt-5 space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row">
@@ -143,13 +173,8 @@ function TwoFactorSection({
               className="h-44 w-44 shrink-0 rounded-lg bg-white p-2"
             />
             <div className="space-y-2 text-sm">
-              <p className="text-sand-600 dark:text-sand-300">
-                1. Scan the QR code with your authenticator app (Google Authenticator, Aegis,
-                1Password…).
-              </p>
-              <p className="text-sand-600 dark:text-sand-300">
-                2. Or enter this secret manually:
-              </p>
+              <p className="text-sand-600 dark:text-sand-300">{t('sec.step1')}</p>
+              <p className="text-sand-600 dark:text-sand-300">{t('sec.step2')}</p>
               <code className="block break-all rounded-md bg-sand-100 px-2 py-1.5 font-mono text-xs dark:bg-sand-800">
                 {setup.secret}
               </code>
@@ -158,16 +183,16 @@ function TwoFactorSection({
 
           <div>
             <p className="mb-2 text-sm font-medium text-sand-700 dark:text-sand-300">
-              Save these backup codes somewhere safe:
+              {t('sec.saveBackup')}
             </p>
             <BackupCodes codes={setup.backupCodes} />
           </div>
 
           <form onSubmit={confirmEnable} className="space-y-3">
             <label className="label" htmlFor="enable-token">
-              3. Enter a code from your app to confirm
+              {t('sec.step3')}
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <input
                 id="enable-token"
                 className="input max-w-[12rem] text-center tracking-widest"
@@ -179,7 +204,7 @@ function TwoFactorSection({
               />
               <button type="submit" className="btn-primary" disabled={busy}>
                 {busy && <Spinner className="h-4 w-4" />}
-                Confirm & enable
+                {t('sec.confirmEnable')}
               </button>
               <button
                 type="button"
@@ -190,20 +215,19 @@ function TwoFactorSection({
                   setError(null);
                 }}
               >
-                Cancel
+                {t('sec.cancel')}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* --- Enabled: regenerate codes / disable --- */}
       {enabled && (
         <div className="mt-5 space-y-5">
           {newCodes && (
             <div>
               <p className="mb-2 text-sm font-medium text-sand-700 dark:text-sand-300">
-                New backup codes (the old ones no longer work):
+                {t('sec.newBackup')}
               </p>
               <BackupCodes codes={newCodes} />
             </div>
@@ -212,7 +236,7 @@ function TwoFactorSection({
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary" onClick={regenerate} disabled={busy}>
               {busy && <Spinner className="h-4 w-4" />}
-              Regenerate backup codes
+              {t('sec.regenerate')}
             </button>
           </div>
 
@@ -221,7 +245,7 @@ function TwoFactorSection({
             className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4"
           >
             <p className="text-sm font-medium text-sand-700 dark:text-sand-300">
-              Disable two-factor authentication
+              {t('sec.disableTitle')}
             </p>
             <div className="flex flex-wrap gap-2">
               <input
@@ -229,13 +253,13 @@ function TwoFactorSection({
                 className="input max-w-xs"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Confirm your password"
+                placeholder={t('sec.confirmPw')}
                 autoComplete="current-password"
                 required
               />
               <button type="submit" className="btn-danger" disabled={busy}>
                 {busy && <Spinner className="h-4 w-4" />}
-                Disable 2FA
+                {t('sec.disable')}
               </button>
             </div>
           </form>
@@ -248,6 +272,7 @@ function TwoFactorSection({
 // ----------------------------- password section -----------------------------
 
 function PasswordSection() {
+  const { t } = useI18n();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -260,11 +285,11 @@ function PasswordSection() {
     setError(null);
     setDone(false);
     if (newPassword !== confirm) {
-      setError('New passwords do not match.');
+      setError(t('sec.pwMismatch'));
       return;
     }
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
+      setError(t('sec.pwShort'));
       return;
     }
     setBusy(true);
@@ -283,11 +308,11 @@ function PasswordSection() {
 
   return (
     <section className="card p-6">
-      <h2 className="font-semibold">Change password</h2>
+      <h2 className="font-semibold">{t('sec.changePw')}</h2>
       <form onSubmit={submit} className="mt-4 space-y-4">
         <div>
           <label className="label" htmlFor="current">
-            Current password
+            {t('sec.currentPw')}
           </label>
           <input
             id="current"
@@ -301,7 +326,7 @@ function PasswordSection() {
         </div>
         <div>
           <label className="label" htmlFor="new">
-            New password
+            {t('sec.newPw')}
           </label>
           <input
             id="new"
@@ -316,7 +341,7 @@ function PasswordSection() {
         </div>
         <div>
           <label className="label" htmlFor="confirm">
-            Confirm new password
+            {t('sec.confirmNewPw')}
           </label>
           <input
             id="confirm"
@@ -336,13 +361,13 @@ function PasswordSection() {
         )}
         {done && (
           <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
-            Password updated.
+            {t('sec.pwUpdated')}
           </p>
         )}
 
         <button type="submit" className="btn-primary" disabled={busy}>
           {busy && <Spinner className="h-4 w-4" />}
-          Update password
+          {t('sec.updatePw')}
         </button>
       </form>
     </section>
