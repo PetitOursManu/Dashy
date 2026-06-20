@@ -118,6 +118,7 @@ test('rejects bad password', async () => {
 let slug = '';
 let appId = '';
 let zipSlug = '';
+let shareToken = '';
 
 test('admin can import a standalone HTML app', async () => {
   // Re-authenticate (previous test cleared cookies).
@@ -322,6 +323,80 @@ test('avatar upload, fetch, and delete', async () => {
   assert.equal((await del.json()).user.hasAvatar, false);
 });
 
+test('admin can create a public share link (served without auth)', async () => {
+  const res = await api('POST', `/api/apps/${appId}/share`, { password: '', expiresInDays: null });
+  assert.equal(res.status, 200);
+  const { app } = await res.json();
+  assert.ok(app.share?.token);
+  assert.equal(app.share.hasPassword, false);
+  shareToken = app.share.token;
+
+  // Public access — no cookie at all.
+  const pub = await fetch(`${baseUrl}/share/${shareToken}/`, { redirect: 'manual' });
+  assert.equal(pub.status, 200);
+  assert.match(await pub.text(), /Hello Dashy/);
+});
+
+test('password-protected share gates then unlocks', async () => {
+  const set = await api('POST', `/api/apps/${appId}/share`, {
+    password: 'sesame',
+    expiresInDays: null,
+  });
+  assert.equal((await set.json()).app.share.hasPassword, true);
+
+  // Gate shows a password form, not the app.
+  const gated = await fetch(`${baseUrl}/share/${shareToken}/`, { redirect: 'manual' });
+  const gatedHtml = await gated.text();
+  assert.match(gatedHtml, /password/i);
+  assert.doesNotMatch(gatedHtml, /Hello Dashy/);
+
+  // Wrong password.
+  const wrong = await fetch(`${baseUrl}/share/${shareToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'password=nope',
+    redirect: 'manual',
+  });
+  assert.equal(wrong.status, 401);
+
+  // Correct password → cookie + redirect → content reachable.
+  const ok = await fetch(`${baseUrl}/share/${shareToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'password=sesame',
+    redirect: 'manual',
+  });
+  assert.equal(ok.status, 302);
+  const cookie = (ok.headers.getSetCookie?.() ?? [])
+    .map((c) => c.split(';')[0])
+    .join('; ');
+  assert.match(cookie, /dashy_share_/);
+
+  const unlocked = await fetch(`${baseUrl}/share/${shareToken}/`, {
+    headers: { Cookie: cookie },
+    redirect: 'manual',
+  });
+  assert.equal(unlocked.status, 200);
+  assert.match(await unlocked.text(), /Hello Dashy/);
+});
+
+test('expired share returns 410 and revoke removes it', async () => {
+  const { HostedApp } = await import('../src/models/HostedApp.js');
+  await HostedApp.updateOne(
+    { 'share.token': shareToken },
+    { $set: { 'share.expiresAt': new Date(Date.now() - 1000) } },
+  );
+  const expired = await fetch(`${baseUrl}/share/${shareToken}/`, { redirect: 'manual' });
+  assert.equal(expired.status, 410);
+
+  const revoke = await api('DELETE', `/api/apps/${appId}/share`);
+  assert.equal(revoke.status, 200);
+  assert.equal((await revoke.json()).app.share, null);
+
+  const gone = await fetch(`${baseUrl}/share/${shareToken}/`, { redirect: 'manual' });
+  assert.equal(gone.status, 404);
+});
+
 test('logout-all invalidates previously issued tokens', async () => {
   cookies.clear();
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
@@ -404,6 +479,11 @@ test('regular user is blocked from admin-only endpoints', async () => {
   assert.equal((await api('GET', '/api/users')).status, 403);
   assert.equal((await api('POST', '/api/users', {})).status, 403);
   assert.equal((await api('GET', '/api/stats/overview')).status, 403);
+  // Regular users cannot create public share links.
+  assert.equal(
+    (await api('POST', `/api/apps/${appId}/share`, { password: '', expiresInDays: null })).status,
+    403,
+  );
 
   const form = new FormData();
   form.set('name', 'Should Fail');

@@ -45,5 +45,10 @@ export const appsApi = {
   toggleFavorite: (id: string) =>
     http.post<{ id: string; isFavorite: boolean }>(`/api/apps/${id}/favorite`),
 
+  createShare: (id: string, payload: { password: string; expiresInDays: number | null }) =>
+    http.post<{ app: HostedApp }>(`/api/apps/${id}/share`, payload),
+
+  revokeShare: (id: string) => http.del<{ app: HostedApp }>(`/api/apps/${id}/share`),
+
   remove: (id: string) => http.del<{ ok: true }>(`/api/apps/${id}`),
 };

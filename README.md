@@ -20,6 +20,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - 🖼️ **Preview cards** — responsive grid (1 → 4 columns), upload a preview image or get an auto-generated placeholder.
 - ✏️ **Manage** — rename, edit description, change the entry file, replace the preview, delete (removes files from disk).
 - 👥 **Multi-user & access control** — admins create users and choose, per user, which apps each one can open; regular users see only their assigned apps. Everyone can self-enable 2FA.
+- 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.

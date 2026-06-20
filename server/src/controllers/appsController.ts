@@ -54,13 +54,22 @@ async function removeAppFiles(app: { id: string; previewImage?: string | null })
   }
 }
 
-function serializeApp(app: InstanceType<typeof HostedApp>, favorites?: Set<string>) {
+export function serializeApp(app: InstanceType<typeof HostedApp>, favorites?: Set<string>) {
   const json = app.toJSON();
+  const share = app.share?.token
+    ? {
+        token: app.share.token,
+        url: `/share/${app.share.token}/`,
+        expiresAt: app.share.expiresAt,
+        hasPassword: Boolean(app.share.passwordHash),
+      }
+    : null;
   return {
     ...json,
     url: `/hosted/${app.slug}/`,
     previewUrl: `/api/apps/${app.id}/preview`,
     isFavorite: favorites?.has(app.id) ?? false,
+    share,
   };
 }
 

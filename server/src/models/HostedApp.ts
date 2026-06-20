@@ -1,5 +1,12 @@
 import mongoose, { Schema, type HydratedDocument, type Types } from 'mongoose';
 
+export interface IShare {
+  token: string | null;
+  passwordHash: string | null;
+  expiresAt: Date | null;
+  createdAt: Date | null;
+}
+
 export interface IHostedApp {
   name: string;
   description: string;
@@ -10,9 +17,21 @@ export interface IHostedApp {
   owner: Types.ObjectId;
   openCount: number;
   lastOpenedAt: Date | null;
+  // Public-share settings (created by an admin). token=null means not shared.
+  share: IShare;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const shareSchema = new Schema<IShare>(
+  {
+    token: { type: String, default: null, index: true },
+    passwordHash: { type: String, default: null },
+    expiresAt: { type: Date, default: null },
+    createdAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
 
 const hostedAppSchema = new Schema<IHostedApp>(
   {
@@ -37,6 +56,12 @@ const hostedAppSchema = new Schema<IHostedApp>(
     // Usage tracking (incremented when the app's root is opened).
     openCount: { type: Number, default: 0 },
     lastOpenedAt: { type: Date, default: null },
+
+    // Public sharing (admin-only).
+    share: {
+      type: shareSchema,
+      default: () => ({ token: null, passwordHash: null, expiresAt: null, createdAt: null }),
+    },
   },
   { timestamps: true },
 );
@@ -48,6 +73,9 @@ hostedAppSchema.set('toJSON', {
   transform(_doc, ret) {
     const r = ret as unknown as Record<string, unknown>;
     delete r._id;
+    if (r.share && typeof r.share === 'object') {
+      delete (r.share as Record<string, unknown>).passwordHash;
+    }
     return r;
   },
 });

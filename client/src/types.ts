@@ -28,6 +28,12 @@ export interface HostedApp {
   openCount: number;
   lastOpenedAt: string | null;
   isFavorite: boolean;
+  share: {
+    token: string;
+    url: string; // /share/<token>/
+    expiresAt: string | null;
+    hasPassword: boolean;
+  } | null;
   url: string; // /hosted/<slug>/
   previewUrl: string; // /api/apps/<id>/preview
   createdAt: string;

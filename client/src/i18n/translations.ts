@@ -203,6 +203,19 @@ const en: Record<string, string> = {
   'sec.signOutAllTitle': 'Sign out of all devices',
   'sec.signOutAllDesc': 'End every active session, including this one. You will need to sign in again.',
   'sec.signOutAll': 'Sign out everywhere',
+
+  'share.title': 'Public sharing',
+  'share.desc': 'Anyone with the link can open this app — no account needed.',
+  'share.create': 'Create a public link',
+  'share.link': 'Public link',
+  'share.password': 'Password',
+  'share.passwordHint': 'Leave blank for no password.',
+  'share.expiry': 'Expiration',
+  'share.never': 'Never',
+  'share.days': '{n} days',
+  'share.update': 'Update link',
+  'share.revoke': 'Revoke link',
+  'share.protected': 'Password-protected',
 };
 
 const fr: Record<string, string> = {
@@ -398,6 +411,19 @@ const fr: Record<string, string> = {
   'sec.signOutAllTitle': 'Se déconnecter de tous les appareils',
   'sec.signOutAllDesc': 'Met fin à toutes les sessions actives, y compris celle-ci. Tu devras te reconnecter.',
   'sec.signOutAll': 'Tout déconnecter',
+
+  'share.title': 'Partage public',
+  'share.desc': 'Toute personne ayant le lien peut ouvrir cette app — sans compte.',
+  'share.create': 'Créer un lien public',
+  'share.link': 'Lien public',
+  'share.password': 'Mot de passe',
+  'share.passwordHint': 'Laisse vide pour aucun mot de passe.',
+  'share.expiry': 'Expiration',
+  'share.never': 'Jamais',
+  'share.days': '{n} jours',
+  'share.update': 'Mettre à jour le lien',
+  'share.revoke': 'Révoquer le lien',
+  'share.protected': 'Protégé par mot de passe',
 };
 
 const es: Record<string, string> = {
@@ -593,6 +619,19 @@ const es: Record<string, string> = {
   'sec.signOutAllTitle': 'Cerrar sesión en todos los dispositivos',
   'sec.signOutAllDesc': 'Finaliza todas las sesiones activas, incluida esta. Tendrás que iniciar sesión de nuevo.',
   'sec.signOutAll': 'Cerrar todas las sesiones',
+
+  'share.title': 'Compartir público',
+  'share.desc': 'Cualquiera con el enlace puede abrir esta app, sin cuenta.',
+  'share.create': 'Crear un enlace público',
+  'share.link': 'Enlace público',
+  'share.password': 'Contraseña',
+  'share.passwordHint': 'Déjalo vacío para no usar contraseña.',
+  'share.expiry': 'Caducidad',
+  'share.never': 'Nunca',
+  'share.days': '{n} días',
+  'share.update': 'Actualizar enlace',
+  'share.revoke': 'Revocar enlace',
+  'share.protected': 'Protegido con contraseña',
 };
 
 const de: Record<string, string> = {
@@ -788,6 +827,19 @@ const de: Record<string, string> = {
   'sec.signOutAllTitle': 'Von allen Geräten abmelden',
   'sec.signOutAllDesc': 'Beendet alle aktiven Sitzungen, auch diese. Du musst dich erneut anmelden.',
   'sec.signOutAll': 'Überall abmelden',
+
+  'share.title': 'Öffentlich teilen',
+  'share.desc': 'Jeder mit dem Link kann diese App öffnen — ohne Konto.',
+  'share.create': 'Öffentlichen Link erstellen',
+  'share.link': 'Öffentlicher Link',
+  'share.password': 'Passwort',
+  'share.passwordHint': 'Leer lassen für kein Passwort.',
+  'share.expiry': 'Ablauf',
+  'share.never': 'Nie',
+  'share.days': '{n} Tage',
+  'share.update': 'Link aktualisieren',
+  'share.revoke': 'Link widerrufen',
+  'share.protected': 'Passwortgeschützt',
 };
 
 const it: Record<string, string> = {
@@ -983,6 +1035,19 @@ const it: Record<string, string> = {
   'sec.signOutAllTitle': 'Disconnetti da tutti i dispositivi',
   'sec.signOutAllDesc': 'Termina tutte le sessioni attive, inclusa questa. Dovrai accedere di nuovo.',
   'sec.signOutAll': 'Disconnetti ovunque',
+
+  'share.title': 'Condivisione pubblica',
+  'share.desc': 'Chiunque abbia il link può aprire questa app, senza account.',
+  'share.create': 'Crea un link pubblico',
+  'share.link': 'Link pubblico',
+  'share.password': 'Password',
+  'share.passwordHint': 'Lascia vuoto per nessuna password.',
+  'share.expiry': 'Scadenza',
+  'share.never': 'Mai',
+  'share.days': '{n} giorni',
+  'share.update': 'Aggiorna link',
+  'share.revoke': 'Revoca link',
+  'share.protected': 'Protetto da password',
 };
 
 const zh: Record<string, string> = {
@@ -1178,6 +1243,19 @@ const zh: Record<string, string> = {
   'sec.signOutAllTitle': '退出所有设备',
   'sec.signOutAllDesc': '结束所有活动会话，包括当前会话。你需要重新登录。',
   'sec.signOutAll': '全部退出',
+
+  'share.title': '公开分享',
+  'share.desc': '任何拥有链接的人都能打开此应用，无需账户。',
+  'share.create': '创建公开链接',
+  'share.link': '公开链接',
+  'share.password': '密码',
+  'share.passwordHint': '留空表示不设密码。',
+  'share.expiry': '有效期',
+  'share.never': '永不',
+  'share.days': '{n} 天',
+  'share.update': '更新链接',
+  'share.revoke': '撤销链接',
+  'share.protected': '密码保护',
 };
 
 const ru: Record<string, string> = {
@@ -1373,6 +1451,19 @@ const ru: Record<string, string> = {
   'sec.signOutAllTitle': 'Выйти на всех устройствах',
   'sec.signOutAllDesc': 'Завершает все активные сессии, включая текущую. Потребуется снова войти.',
   'sec.signOutAll': 'Выйти везде',
+
+  'share.title': 'Публичный доступ',
+  'share.desc': 'Любой, у кого есть ссылка, может открыть это приложение — без аккаунта.',
+  'share.create': 'Создать публичную ссылку',
+  'share.link': 'Публичная ссылка',
+  'share.password': 'Пароль',
+  'share.passwordHint': 'Оставьте пустым, чтобы без пароля.',
+  'share.expiry': 'Срок действия',
+  'share.never': 'Никогда',
+  'share.days': '{n} дней',
+  'share.update': 'Обновить ссылку',
+  'share.revoke': 'Отозвать ссылку',
+  'share.protected': 'Защищено паролем',
 };
 
 export const translations: Record<Lang, Record<string, string>> = {

@@ -4,20 +4,10 @@ import path from 'node:path';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { HostedApp } from '../models/HostedApp.js';
-import { OpenEvent } from '../models/OpenEvent.js';
-import { appDir } from '../config/paths.js';
 import { ApiError } from '../middleware/error.js';
 import { assertCanAccessApp } from '../services/access.js';
-import type { Types } from 'mongoose';
-
-/** Record an app "open" (entry navigation). Fire-and-forget. */
-function recordOpen(appId: Types.ObjectId, userId: string): void {
-  HostedApp.updateOne(
-    { _id: appId },
-    { $inc: { openCount: 1 }, $set: { lastOpenedAt: new Date() } },
-  ).catch(() => {});
-  OpenEvent.create({ app: appId, user: userId }).catch(() => {});
-}
+import { recordOpen } from '../services/opens.js';
+import { resolveWithinApp } from '../utils/appServe.js';
 
 const router = Router();
 
@@ -25,16 +15,6 @@ const router = Router();
 // further restricted per-user (admins see all; regular users only their
 // assigned apps — enforced in `serve`).
 router.use(requireAuth);
-
-function resolveWithinApp(appId: string, requested: string): string | null {
-  const decoded = decodeURIComponent(requested).replace(/\\/g, '/');
-  if (decoded.includes('\0')) return null;
-  const base = appDir(appId);
-  const target = path.resolve(base, '.' + path.sep + decoded);
-  const rel = path.relative(base, target);
-  if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
-  return target;
-}
 
 async function serve(req: Request, res: Response): Promise<void> {
   const app = await HostedApp.findOne({ slug: req.params.slug });

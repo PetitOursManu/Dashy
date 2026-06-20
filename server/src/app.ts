@@ -14,6 +14,7 @@ import appsRoutes from './routes/apps.js';
 import usersRoutes from './routes/users.js';
 import statsRoutes from './routes/stats.js';
 import hostedRoutes from './routes/hosted.js';
+import shareRoutes from './routes/share.js';
 
 export function createApp(): Express {
   const app = express();
@@ -45,7 +46,7 @@ export function createApp(): Express {
   // Strict CSP for the dashboard (API + SPA). Skipped for /hosted so imported
   // apps can run their own inline scripts/styles.
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/hosted/')) return next();
+    if (req.path.startsWith('/hosted/') || req.path.startsWith('/share/')) return next();
     res.setHeader(
       'Content-Security-Policy',
       [
@@ -73,8 +74,9 @@ export function createApp(): Express {
   app.use('/api/users', usersRoutes);
   app.use('/api/stats', statsRoutes);
 
-  // Hosted static apps.
+  // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);
+  app.use('/share', shareRoutes);
 
   // Unknown API routes → JSON 404 (never fall through to the SPA).
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));

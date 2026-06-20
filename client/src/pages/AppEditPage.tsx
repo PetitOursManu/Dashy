@@ -3,10 +3,145 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { appsApi } from '../api/apps';
 import { ApiError } from '../api/client';
 import { useI18n } from '../context/LanguageContext';
+import { useFormat } from '../hooks/useFormat';
 import type { HostedApp } from '../types';
 import { Spinner, FullPageSpinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ExternalIcon, TrashIcon } from '../components/Icons';
+import { ExternalIcon, ShareIcon, TrashIcon } from '../components/Icons';
+
+function ShareSection({
+  app,
+  onUpdated,
+}: {
+  app: HostedApp;
+  onUpdated: (app: HostedApp) => void;
+}) {
+  const { t } = useI18n();
+  const { formatDate } = useFormat();
+  const [password, setPassword] = useState('');
+  const [expiresInDays, setExpiresInDays] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const fullUrl = app.share ? `${window.location.origin}${app.share.url}` : '';
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const { app: updated } = await appsApi.createShare(app.id, { password, expiresInDays });
+      onUpdated(updated);
+      setPassword('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revoke = async () => {
+    setBusy(true);
+    try {
+      const { app: updated } = await appsApi.revokeShare(app.id);
+      onUpdated(updated);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  return (
+    <section className="card mt-6 p-6">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <ShareIcon className="h-5 w-5 text-ember-500" />
+        {t('share.title')}
+      </h2>
+      <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('share.desc')}</p>
+
+      {app.share && (
+        <div className="mt-4">
+          <label className="label">{t('share.link')}</label>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={fullUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              className="input font-mono text-xs"
+            />
+            <button type="button" className="btn-secondary shrink-0" onClick={copy}>
+              {copied ? t('backup.copied') : t('backup.copy')}
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            {app.share.hasPassword && (
+              <span className="rounded-full bg-sand-100 px-2 py-0.5 text-sand-600 dark:bg-sand-800 dark:text-sand-300">
+                {t('share.protected')}
+              </span>
+            )}
+            {app.share.expiresAt && (
+              <span className="rounded-full bg-sand-100 px-2 py-0.5 text-sand-600 dark:bg-sand-800 dark:text-sand-300">
+                {t('share.expiry')}: {formatDate(app.share.expiresAt)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label">
+            {t('share.password')}{' '}
+            <span className="font-normal text-sand-400">({t('common.optional')})</span>
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="off"
+          />
+          <p className="mt-1 text-xs text-sand-400">{t('share.passwordHint')}</p>
+        </div>
+        <div>
+          <label className="label">{t('share.expiry')}</label>
+          <select
+            className="input"
+            value={expiresInDays ?? ''}
+            onChange={(e) => setExpiresInDays(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">{t('share.never')}</option>
+            <option value="7">{t('share.days', { n: 7 })}</option>
+            <option value="30">{t('share.days', { n: 30 })}</option>
+            <option value="90">{t('share.days', { n: 90 })}</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" className="btn-primary" onClick={save} disabled={busy}>
+          {busy && <Spinner className="h-4 w-4" />}
+          {app.share ? t('share.update') : t('share.create')}
+        </button>
+        {app.share && (
+          <button
+            type="button"
+            className="btn-ghost text-red-500 hover:bg-red-500/10"
+            onClick={revoke}
+            disabled={busy}
+          >
+            {t('share.revoke')}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export function AppEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -214,6 +349,8 @@ export function AppEditPage() {
           </button>
         </div>
       </form>
+
+      <ShareSection app={app} onUpdated={setApp} />
 
       <ConfirmDialog
         open={confirmDelete}
