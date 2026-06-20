@@ -3,10 +3,88 @@ import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { useTheme, THEMES, type Theme } from '../context/ThemeContext';
 import { authApi, avatarUrl } from '../api/auth';
+import { adminApi, downloadBackup } from '../api/admin';
 import { ApiError } from '../api/client';
 import { LANGUAGES, type Lang } from '../i18n/translations';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
+import { DownloadIcon, UploadIcon } from '../components/Icons';
+
+function BackupSection() {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const onExport = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await downloadBackup();
+    } catch {
+      setError('Backup failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onRestore = async (file: File | null) => {
+    if (!file) return;
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    try {
+      const { restored } = await adminApi.restore(file);
+      setMessage(t('data.restored', { n: restored }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Restore failed.');
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <h2 className="font-semibold">{t('data.title')}</h2>
+      <p className="text-sm text-sand-500 dark:text-sand-400">{t('data.desc')}</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" className="btn-secondary" onClick={onExport} disabled={busy}>
+          {busy ? <Spinner className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+          {t('data.export')}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => fileInput.current?.click()}
+          disabled={busy}
+        >
+          <UploadIcon className="h-4 w-4" />
+          {t('data.import')}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".zip"
+          className="hidden"
+          onChange={(e) => onRestore(e.target.files?.[0] ?? null)}
+        />
+      </div>
+      <p className="mt-1 text-xs text-sand-400">{t('data.importHint')}</p>
+      {message && (
+        <p className="mt-3 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}
 
 const DATE_FORMATS = [
   { value: '', sample: '' },
@@ -301,6 +379,9 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* Backup & restore (admin only) */}
+      {user?.role === 'admin' && <BackupSection />}
     </div>
   );
 }

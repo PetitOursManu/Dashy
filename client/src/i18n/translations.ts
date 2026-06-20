@@ -229,6 +229,13 @@ const en: Record<string, string> = {
   'sessions.current': 'This device',
   'sessions.revoke': 'Revoke',
   'sessions.unknown': 'Unknown device',
+
+  'data.title': 'Backup & restore',
+  'data.desc': 'Export all hosted apps (files + metadata), or restore them from a backup.',
+  'data.export': 'Download backup',
+  'data.import': 'Restore from backup',
+  'data.importHint': 'Upload a Dashy backup .zip. Apps are added (existing ones are kept).',
+  'data.restored': '{n} app(s) restored.',
 };
 
 const fr: Record<string, string> = {
@@ -450,6 +457,13 @@ const fr: Record<string, string> = {
   'sessions.current': 'Cet appareil',
   'sessions.revoke': 'Révoquer',
   'sessions.unknown': 'Appareil inconnu',
+
+  'data.title': 'Sauvegarde et restauration',
+  'data.desc': 'Exporte toutes les apps hébergées (fichiers + métadonnées), ou restaure-les depuis une sauvegarde.',
+  'data.export': 'Télécharger la sauvegarde',
+  'data.import': 'Restaurer une sauvegarde',
+  'data.importHint': 'Importe un .zip de sauvegarde Dashy. Les apps sont ajoutées (les existantes sont conservées).',
+  'data.restored': '{n} app(s) restaurée(s).',
 };
 
 const es: Record<string, string> = {
@@ -671,6 +685,13 @@ const es: Record<string, string> = {
   'sessions.current': 'Este dispositivo',
   'sessions.revoke': 'Revocar',
   'sessions.unknown': 'Dispositivo desconocido',
+
+  'data.title': 'Copia de seguridad y restauración',
+  'data.desc': 'Exporta todas las apps alojadas (archivos + metadatos), o restáuralas desde una copia.',
+  'data.export': 'Descargar copia',
+  'data.import': 'Restaurar copia',
+  'data.importHint': 'Sube un .zip de copia de Dashy. Las apps se añaden (las existentes se conservan).',
+  'data.restored': '{n} app(s) restaurada(s).',
 };
 
 const de: Record<string, string> = {
@@ -892,6 +913,13 @@ const de: Record<string, string> = {
   'sessions.current': 'Dieses Gerät',
   'sessions.revoke': 'Widerrufen',
   'sessions.unknown': 'Unbekanntes Gerät',
+
+  'data.title': 'Sicherung & Wiederherstellung',
+  'data.desc': 'Exportiere alle gehosteten Apps (Dateien + Metadaten) oder stelle sie aus einer Sicherung wieder her.',
+  'data.export': 'Sicherung herunterladen',
+  'data.import': 'Aus Sicherung wiederherstellen',
+  'data.importHint': 'Lade ein Dashy-Backup .zip hoch. Apps werden hinzugefügt (vorhandene bleiben erhalten).',
+  'data.restored': '{n} App(s) wiederhergestellt.',
 };
 
 const it: Record<string, string> = {
@@ -1113,6 +1141,13 @@ const it: Record<string, string> = {
   'sessions.current': 'Questo dispositivo',
   'sessions.revoke': 'Revoca',
   'sessions.unknown': 'Dispositivo sconosciuto',
+
+  'data.title': 'Backup e ripristino',
+  'data.desc': 'Esporta tutte le app ospitate (file + metadati) o ripristinale da un backup.',
+  'data.export': 'Scarica il backup',
+  'data.import': 'Ripristina da backup',
+  'data.importHint': 'Carica un .zip di backup Dashy. Le app vengono aggiunte (quelle esistenti restano).',
+  'data.restored': '{n} app ripristinate.',
 };
 
 const zh: Record<string, string> = {
@@ -1334,6 +1369,13 @@ const zh: Record<string, string> = {
   'sessions.current': '当前设备',
   'sessions.revoke': '撤销',
   'sessions.unknown': '未知设备',
+
+  'data.title': '备份与恢复',
+  'data.desc': '导出所有托管应用（文件 + 元数据），或从备份恢复。',
+  'data.export': '下载备份',
+  'data.import': '从备份恢复',
+  'data.importHint': '上传 Dashy 备份 .zip。应用会被添加（现有应用保留）。',
+  'data.restored': '已恢复 {n} 个应用。',
 };
 
 const ru: Record<string, string> = {
@@ -1555,6 +1597,13 @@ const ru: Record<string, string> = {
   'sessions.current': 'Это устройство',
   'sessions.revoke': 'Отозвать',
   'sessions.unknown': 'Неизвестное устройство',
+
+  'data.title': 'Резервное копирование',
+  'data.desc': 'Экспортируйте все размещённые приложения (файлы + метаданные) или восстановите их из резервной копии.',
+  'data.export': 'Скачать резервную копию',
+  'data.import': 'Восстановить из копии',
+  'data.importHint': 'Загрузите .zip резервной копии Dashy. Приложения добавляются (существующие сохраняются).',
+  'data.restored': 'Восстановлено приложений: {n}.',
 };
 
 export const translations: Record<Lang, Record<string, string>> = {

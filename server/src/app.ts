@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import appsRoutes from './routes/apps.js';
 import usersRoutes from './routes/users.js';
 import statsRoutes from './routes/stats.js';
+import adminRoutes from './routes/admin.js';
 import hostedRoutes from './routes/hosted.js';
 import shareRoutes from './routes/share.js';
 
@@ -73,6 +74,7 @@ export function createApp(): Express {
   app.use('/api/apps', appsRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/stats', statsRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);

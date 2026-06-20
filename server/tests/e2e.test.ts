@@ -464,6 +464,38 @@ test('lists active sessions and revokes another device', async () => {
   assert.equal(checkB.status, 401);
 });
 
+test('admin can export and restore a backup', async () => {
+  const res = await fetch(baseUrl + '/api/admin/backup', {
+    headers: { Cookie: cookieHeader() },
+    redirect: 'manual',
+  });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type') ?? '', /zip/);
+
+  const buf = Buffer.from(await res.arrayBuffer());
+  const zip = new AdmZip(buf);
+  const manifestEntry = zip.getEntry('manifest.json');
+  assert.ok(manifestEntry, 'backup must contain manifest.json');
+  const manifest = JSON.parse(zip.readAsText(manifestEntry!));
+  assert.ok(Array.isArray(manifest.apps) && manifest.apps.length >= 1);
+
+  const before = (await (await api('GET', '/api/apps')).json()).apps.length;
+
+  const form = new FormData();
+  form.set('backup', new Blob([buf], { type: 'application/zip' }), 'backup.zip');
+  const restore = await fetch(baseUrl + '/api/admin/restore', {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  assert.equal(restore.status, 200);
+  const { restored } = await restore.json();
+  assert.ok(restored >= 1);
+
+  const after = (await (await api('GET', '/api/apps')).json()).apps.length;
+  assert.equal(after, before + restored);
+});
+
 test('logout-all invalidates previously issued tokens', async () => {
   cookies.clear();
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
@@ -551,6 +583,8 @@ test('regular user is blocked from admin-only endpoints', async () => {
     (await api('POST', `/api/apps/${appId}/share`, { password: '', expiresInDays: null })).status,
     403,
   );
+  // Regular users cannot export backups.
+  assert.equal((await api('GET', '/api/admin/backup')).status, 403);
 
   const form = new FormData();
   form.set('name', 'Should Fail');

@@ -109,6 +109,21 @@ export const contentUpload = multer({
   },
 }).single('content');
 
+/** Upload handler for restoring a backup archive (.zip only). */
+export const backupUpload = multer({
+  storage,
+  limits: { fileSize: 500 * 1024 * 1024, files: 1 },
+  fileFilter(_req, file, cb) {
+    if (file.fieldname !== 'backup') {
+      return cb(new Error(`Unexpected field: ${file.fieldname}`));
+    }
+    if (path.extname(file.originalname).toLowerCase() !== '.zip') {
+      return cb(new Error('Backup must be a .zip archive'));
+    }
+    return cb(null, true);
+  },
+}).single('backup');
+
 /** Upload handler for replacing just the preview image (app edit). */
 export const previewUpload = multer({
   storage,
