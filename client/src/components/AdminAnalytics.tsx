@@ -189,7 +189,7 @@ function StoragePanel({ data }: { data: StorageStats }) {
   const max = Math.max(1, ...top.map((a) => a.size));
   return (
     <div className="card relative overflow-hidden p-5">
-      <TileDecor variant="blob" />
+      <TileDecor variant="storage" />
       <PanelHeader
         icon={<HardDriveIcon className="h-5 w-5" />}
         title={t('analytics.storageUsage')}

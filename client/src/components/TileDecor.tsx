@@ -1,4 +1,4 @@
-export type DecorVariant = 'rings' | 'dots' | 'waves' | 'blob' | 'sphere';
+export type DecorVariant = 'rings' | 'dots' | 'waves' | 'blob' | 'sphere' | 'storage';
 
 /**
  * Subtle, theme-aware decorative motif for a dashboard tile. Render it as a
@@ -18,6 +18,28 @@ export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
             'radial-gradient(circle at 32% 32%, rgba(255,255,255,0.14), transparent 55%), radial-gradient(circle, rgb(var(--ember-500) / 0.22), transparent 70%)',
         }}
       />
+    );
+  }
+
+  if (variant === 'storage') {
+    // Stacked-disks cylinder (the classic "storage" symbol), in the corner.
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 80 84"
+        className={`${base} -bottom-5 -right-4 h-36 w-36 text-ember-500/20`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      >
+        <ellipse cx="40" cy="18" rx="26" ry="9" />
+        <path d="M14 18 V 62" />
+        <path d="M66 18 V 62" />
+        <path d="M14 62 A 26 9 0 0 0 66 62" />
+        <path d="M14 35 A 26 9 0 0 0 66 35" opacity="0.7" />
+        <path d="M14 48 A 26 9 0 0 0 66 48" opacity="0.7" />
+      </svg>
     );
   }
 
