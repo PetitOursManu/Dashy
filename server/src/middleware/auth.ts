@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { COOKIE_NAME, verifyToken, type JwtPayload } from '../utils/jwt.js';
 import { User } from '../models/User.js';
+import { Session } from '../models/Session.js';
 import { ApiError } from './error.js';
 
 declare global {
@@ -38,7 +39,24 @@ export async function requireAuth(
       throw new ApiError(401, 'Session expired, please sign in again');
     }
 
-    req.user = { sub: payload.sub, role: payload.role, tv: payload.tv };
+    // Tokens issued with a session id (jti) are revocable per-device: the
+    // session must still exist. Older tokens without a jti skip this check.
+    if (payload.jti) {
+      const session = await Session.findOne({ jti: payload.jti, user: payload.sub }).select(
+        'lastSeenAt',
+      );
+      if (!session) {
+        throw new ApiError(401, 'Session expired, please sign in again');
+      }
+      // Refresh last-seen at most once per minute (fire-and-forget).
+      if (Date.now() - session.lastSeenAt.getTime() > 60_000) {
+        Session.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } }).catch(
+          () => {},
+        );
+      }
+    }
+
+    req.user = { sub: payload.sub, role: payload.role, tv: payload.tv, jti: payload.jti };
     next();
   } catch (err) {
     next(err instanceof ApiError ? err : new ApiError(401, 'Invalid or expired session'));

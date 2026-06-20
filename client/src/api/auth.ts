@@ -1,5 +1,5 @@
 import { http } from './client';
-import type { TwoFactorSetup, User } from '../types';
+import type { Session, TwoFactorSetup, User } from '../types';
 
 export const authApi = {
   me: () => http.get<{ user: User }>('/api/auth/me'),
@@ -43,6 +43,10 @@ export const authApi = {
   }) => http.patch<{ user: User }>('/api/auth/profile', payload),
 
   logoutAll: () => http.post<{ ok: true }>('/api/auth/logout-all'),
+
+  listSessions: () => http.get<{ sessions: Session[] }>('/api/auth/sessions'),
+  revokeSession: (id: string) =>
+    http.del<{ ok: true; current: boolean }>(`/api/auth/sessions/${id}`),
 
   uploadAvatar: (file: File) => {
     const form = new FormData();

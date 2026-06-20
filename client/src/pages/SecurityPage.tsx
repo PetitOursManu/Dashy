@@ -1,13 +1,124 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
-import type { TwoFactorSetup } from '../types';
+import { useFormat } from '../hooks/useFormat';
+import type { Session, TwoFactorSetup } from '../types';
 import { Spinner } from '../components/Spinner';
 import { ShieldIcon } from '../components/Icons';
 import { BackupCodes } from '../components/BackupCodes';
+
+function deviceLabel(ua: string): string {
+  if (!ua) return '';
+  const browser = /Edg/.test(ua)
+    ? 'Edge'
+    : /OPR|Opera/.test(ua)
+      ? 'Opera'
+      : /Chrome/.test(ua)
+        ? 'Chrome'
+        : /Firefox/.test(ua)
+          ? 'Firefox'
+          : /Safari/.test(ua)
+            ? 'Safari'
+            : '';
+  const os = /Windows/.test(ua)
+    ? 'Windows'
+    : /Mac OS X|Macintosh/.test(ua)
+      ? 'macOS'
+      : /Android/.test(ua)
+        ? 'Android'
+        : /iPhone|iPad|iOS/.test(ua)
+          ? 'iOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : '';
+  return [browser, os].filter(Boolean).join(' · ');
+}
+
+function SessionsSection() {
+  const { t } = useI18n();
+  const { relativeTime } = useFormat();
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { sessions } = await authApi.listSessions();
+        setSessions(sessions);
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const revoke = async (s: Session) => {
+    setBusyId(s.id);
+    try {
+      const { current } = await authApi.revokeSession(s.id);
+      if (current) {
+        setUser(null);
+        navigate('/login', { replace: true });
+        return;
+      }
+      setSessions((prev) => prev.filter((x) => x.id !== s.id));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <h2 className="font-semibold">{t('sessions.title')}</h2>
+      <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('sessions.desc')}</p>
+      {loading ? (
+        <div className="flex justify-center py-6">
+          <Spinner className="h-6 w-6 text-ember-500" />
+        </div>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {sessions.map((s) => (
+            <li
+              key={s.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-sand-200 px-3 py-2.5 text-sm dark:border-sand-700"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 font-medium">
+                  <span className="truncate">{deviceLabel(s.userAgent) || t('sessions.unknown')}</span>
+                  {s.current && (
+                    <span className="shrink-0 rounded-full bg-ember-500/15 px-1.5 py-0.5 text-[10px] font-medium text-ember-600 dark:text-ember-300">
+                      {t('sessions.current')}
+                    </span>
+                  )}
+                </div>
+                <div className="truncate text-xs text-sand-400">
+                  {s.ip ? `${s.ip} · ` : ''}
+                  {relativeTime(s.lastSeenAt)}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-ghost shrink-0 text-red-500 hover:bg-red-500/10 !py-1 !text-xs"
+                onClick={() => revoke(s)}
+                disabled={busyId === s.id}
+              >
+                {busyId === s.id && <Spinner className="h-3.5 w-3.5" />}
+                {t('sessions.revoke')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export function SecurityPage() {
   const { user, refresh } = useAuth();
@@ -18,6 +129,7 @@ export function SecurityPage() {
       <p className="text-sm text-sand-500 dark:text-sand-400">{t('sec.subtitle')}</p>
       <TwoFactorSection enabled={user?.twoFactorEnabled ?? false} onChange={refresh} />
       <PasswordSection />
+      <SessionsSection />
       <SignOutAllSection />
     </div>
   );

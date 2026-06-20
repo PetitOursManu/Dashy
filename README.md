@@ -27,7 +27,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
 - 🌍 **7 languages** — the whole interface is translated: English (default), Français, Español, Deutsch, Italiano, 简体中文, Русский.
 - 🎨 **3 themes** — Light, Dark, and Violet (purple accent), warm "ember/sand" palette, mobile-first responsive layout.
-- 🔒 **Session control** — "sign out of all devices" invalidates every active session (JWT versioning).
+- 🔒 **Session control** — see your active sessions (device, IP, last seen), revoke any one individually, or "sign out of all devices" at once.
 - 🛡️ **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, encrypted TOTP secrets at rest (AES-256-GCM).
 - 🐳 **One-command deploy** — multi-stage Docker build + `docker-compose`, single container serving both API and SPA.
 

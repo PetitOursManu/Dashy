@@ -431,6 +431,39 @@ test('expired share returns 410 and revoke removes it', async () => {
   assert.equal(gone.status, 404);
 });
 
+test('lists active sessions and revokes another device', async () => {
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }); // device A
+
+  // Second device logs in; capture its token separately.
+  const resB = await fetch(baseUrl + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+    redirect: 'manual',
+  });
+  const tokenB = (resB.headers.getSetCookie?.() ?? [])
+    .map((c) => c.split(';')[0])
+    .find((c) => c.startsWith('dashy_token='))!;
+
+  const { sessions } = await (await api('GET', '/api/auth/sessions')).json();
+  assert.ok(sessions.length >= 2);
+  assert.equal(sessions.filter((s: { current: boolean }) => s.current).length, 1);
+
+  // Revoke a non-current session from device A.
+  const other = sessions.find((s: { current: boolean }) => !s.current);
+  const rev = await api('DELETE', `/api/auth/sessions/${other.id}`);
+  assert.equal(rev.status, 200);
+  assert.equal((await rev.json()).current, false);
+
+  // The revoked device's token is now rejected.
+  const checkB = await fetch(baseUrl + '/api/auth/me', {
+    headers: { Cookie: tokenB },
+    redirect: 'manual',
+  });
+  assert.equal(checkB.status, 401);
+});
+
 test('logout-all invalidates previously issued tokens', async () => {
   cookies.clear();
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });

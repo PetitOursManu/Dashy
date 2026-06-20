@@ -223,6 +223,12 @@ const en: Record<string, string> = {
   'versions.updateHint': 'Standalone .html or a .zip site. The current version is saved for rollback.',
   'versions.previous': 'Previous versions',
   'versions.rollback': 'Restore',
+
+  'sessions.title': 'Active sessions',
+  'sessions.desc': 'Devices currently signed in to your account.',
+  'sessions.current': 'This device',
+  'sessions.revoke': 'Revoke',
+  'sessions.unknown': 'Unknown device',
 };
 
 const fr: Record<string, string> = {
@@ -438,6 +444,12 @@ const fr: Record<string, string> = {
   'versions.updateHint': 'Fichier .html autonome ou site .zip. La version actuelle est sauvegardée pour un rollback.',
   'versions.previous': 'Versions précédentes',
   'versions.rollback': 'Restaurer',
+
+  'sessions.title': 'Sessions actives',
+  'sessions.desc': 'Appareils actuellement connectés à ton compte.',
+  'sessions.current': 'Cet appareil',
+  'sessions.revoke': 'Révoquer',
+  'sessions.unknown': 'Appareil inconnu',
 };
 
 const es: Record<string, string> = {
@@ -653,6 +665,12 @@ const es: Record<string, string> = {
   'versions.updateHint': 'Archivo .html independiente o sitio .zip. La versión actual se guarda para revertir.',
   'versions.previous': 'Versiones anteriores',
   'versions.rollback': 'Restaurar',
+
+  'sessions.title': 'Sesiones activas',
+  'sessions.desc': 'Dispositivos con sesión iniciada en tu cuenta.',
+  'sessions.current': 'Este dispositivo',
+  'sessions.revoke': 'Revocar',
+  'sessions.unknown': 'Dispositivo desconocido',
 };
 
 const de: Record<string, string> = {
@@ -868,6 +886,12 @@ const de: Record<string, string> = {
   'versions.updateHint': 'Eigenständige .html oder .zip-Website. Die aktuelle Version wird für ein Rollback gesichert.',
   'versions.previous': 'Frühere Versionen',
   'versions.rollback': 'Wiederherstellen',
+
+  'sessions.title': 'Aktive Sitzungen',
+  'sessions.desc': 'Geräte, die aktuell in deinem Konto angemeldet sind.',
+  'sessions.current': 'Dieses Gerät',
+  'sessions.revoke': 'Widerrufen',
+  'sessions.unknown': 'Unbekanntes Gerät',
 };
 
 const it: Record<string, string> = {
@@ -1083,6 +1107,12 @@ const it: Record<string, string> = {
   'versions.updateHint': 'File .html autonomo o sito .zip. La versione attuale viene salvata per il ripristino.',
   'versions.previous': 'Versioni precedenti',
   'versions.rollback': 'Ripristina',
+
+  'sessions.title': 'Sessioni attive',
+  'sessions.desc': 'Dispositivi attualmente connessi al tuo account.',
+  'sessions.current': 'Questo dispositivo',
+  'sessions.revoke': 'Revoca',
+  'sessions.unknown': 'Dispositivo sconosciuto',
 };
 
 const zh: Record<string, string> = {
@@ -1298,6 +1328,12 @@ const zh: Record<string, string> = {
   'versions.updateHint': '独立 .html 或 .zip 网站。当前版本会被保存以便回滚。',
   'versions.previous': '历史版本',
   'versions.rollback': '恢复',
+
+  'sessions.title': '活动会话',
+  'sessions.desc': '当前登录到你账户的设备。',
+  'sessions.current': '当前设备',
+  'sessions.revoke': '撤销',
+  'sessions.unknown': '未知设备',
 };
 
 const ru: Record<string, string> = {
@@ -1513,6 +1549,12 @@ const ru: Record<string, string> = {
   'versions.updateHint': 'Отдельный .html или сайт .zip. Текущая версия сохраняется для отката.',
   'versions.previous': 'Предыдущие версии',
   'versions.rollback': 'Восстановить',
+
+  'sessions.title': 'Активные сессии',
+  'sessions.desc': 'Устройства, на которых выполнен вход в ваш аккаунт.',
+  'sessions.current': 'Это устройство',
+  'sessions.revoke': 'Отозвать',
+  'sessions.unknown': 'Неизвестное устройство',
 };
 
 export const translations: Record<Lang, Record<string, string>> = {

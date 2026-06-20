@@ -22,10 +22,12 @@ router.post(
   validateBody(auth.twoFactorVerifySchema),
   asyncHandler(auth.verifyTwoFactorLogin),
 );
-router.post('/logout', auth.logout);
+router.post('/logout', asyncHandler(auth.logout));
 
 // --- Authenticated session ---
 router.get('/me', requireAuth, asyncHandler(auth.me));
+router.get('/sessions', requireAuth, asyncHandler(auth.listSessions));
+router.delete('/sessions/:id', requireAuth, asyncHandler(auth.revokeSession));
 router.patch(
   '/profile',
   requireAuth,

@@ -41,6 +41,15 @@ export interface HostedApp {
   updatedAt: string;
 }
 
+export interface Session {
+  id: string;
+  userAgent: string;
+  ip: string;
+  createdAt: string;
+  lastSeenAt: string;
+  current: boolean;
+}
+
 export interface OverviewStats {
   totalApps: number;
   totalUsers: number;

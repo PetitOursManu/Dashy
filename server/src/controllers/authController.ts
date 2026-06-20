@@ -2,11 +2,13 @@ import type { Request, Response } from 'express';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import argon2 from 'argon2';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import { z } from 'zod';
 import { User, type UserDoc } from '../models/User.js';
+import { Session } from '../models/Session.js';
 import { env } from '../config/env.js';
 import { AVATARS_DIR } from '../config/paths.js';
 import { ApiError } from '../middleware/error.js';
@@ -19,6 +21,7 @@ import {
   signPendingToken,
   verifyToken,
   type PendingPayload,
+  type JwtPayload,
 } from '../utils/jwt.js';
 
 const ACCESS_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -58,13 +61,21 @@ export const profileSchema = z
 
 // --------------------------------- helpers -----------------------------------
 
-function setAuthCookie(
-  res: Response,
-  userId: string,
-  role: 'admin' | 'user',
-  tokenVersion: number,
-): void {
-  const token = signAccessToken({ sub: userId, role, tv: tokenVersion });
+/** Create a session record + set the signed access-token cookie. */
+async function setAuthCookie(req: Request, res: Response, user: UserDoc): Promise<void> {
+  const jti = crypto.randomBytes(16).toString('hex');
+  await Session.create({
+    user: user.id,
+    jti,
+    userAgent: String(req.headers['user-agent'] ?? '').slice(0, 250),
+    ip: req.ip ?? '',
+  });
+  const token = signAccessToken({
+    sub: user.id,
+    role: user.role as 'admin' | 'user',
+    tv: user.tokenVersion,
+    jti,
+  });
   res.cookie(COOKIE_NAME, token, cookieOptions(ACCESS_COOKIE_MAX_AGE));
 }
 
@@ -96,7 +107,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     role: isFirst ? 'admin' : 'user',
   });
 
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
+  await setAuthCookie(req, res, user);
   res.status(201).json({ user: user.toJSON() });
 }
 
@@ -118,7 +129,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
+  await setAuthCookie(req, res, user);
   res.json({ user: user.toJSON() });
 }
 
@@ -145,7 +156,7 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
   if (!ok) throw new ApiError(401, 'Invalid two-factor code');
 
   await user.save(); // persist a consumed backup code if one was used
-  setAuthCookie(res, user.id, user.role as 'admin' | 'user', user.tokenVersion);
+  await setAuthCookie(req, res, user);
   res.json({ user: user.toJSON() });
 }
 
@@ -179,9 +190,36 @@ export async function me(req: Request, res: Response): Promise<void> {
   res.json({ user: user.toJSON() });
 }
 
-export function logout(_req: Request, res: Response): void {
+export async function logout(req: Request, res: Response): Promise<void> {
+  const token = req.cookies?.[COOKIE_NAME];
+  if (token) {
+    try {
+      const payload = verifyToken<JwtPayload>(token);
+      if (payload.jti) await Session.deleteOne({ jti: payload.jti });
+    } catch {
+      /* token already invalid — nothing to revoke */
+    }
+  }
   res.clearCookie(COOKIE_NAME, cookieOptions());
   res.json({ ok: true });
+}
+
+/** List the current user's active sessions (most recent first). */
+export async function listSessions(req: Request, res: Response): Promise<void> {
+  const sessions = await Session.find({ user: req.user!.sub }).sort({ lastSeenAt: -1 });
+  res.json({
+    sessions: sessions.map((s) => ({ ...s.toJSON(), current: s.jti === req.user!.jti })),
+  });
+}
+
+/** Revoke a single session (logs out that device). */
+export async function revokeSession(req: Request, res: Response): Promise<void> {
+  const session = await Session.findOne({ _id: req.params.id, user: req.user!.sub });
+  if (!session) throw new ApiError(404, 'Session not found');
+  const isCurrent = session.jti === req.user!.jti;
+  await session.deleteOne();
+  if (isCurrent) res.clearCookie(COOKIE_NAME, cookieOptions());
+  res.json({ ok: true, current: isCurrent });
 }
 
 /** Update the current user's own profile + preferences. */
@@ -202,9 +240,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   res.json({ user: user.toJSON() });
 }
 
-/** Sign out of every device by invalidating all issued tokens. */
+/** Sign out of every device by invalidating all issued tokens + sessions. */
 export async function logoutAll(req: Request, res: Response): Promise<void> {
   await User.updateOne({ _id: req.user!.sub }, { $inc: { tokenVersion: 1 } });
+  await Session.deleteMany({ user: req.user!.sub });
   res.clearCookie(COOKIE_NAME, cookieOptions());
   res.json({ ok: true });
 }

@@ -5,6 +5,7 @@ export interface JwtPayload {
   sub: string; // user id
   role: 'admin' | 'user';
   tv: number; // token version (for "sign out everywhere")
+  jti?: string; // session id (for per-device revocation)
 }
 
 /**
