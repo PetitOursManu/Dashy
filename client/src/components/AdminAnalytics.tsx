@@ -9,6 +9,7 @@ import { Spinner } from './Spinner';
 import {
   ActivityIcon,
   ChartIcon,
+  EditIcon,
   HardDriveIcon,
   ShieldIcon,
   TrashIcon,
@@ -144,6 +145,7 @@ function TopApps({ apps }: { apps: OverviewStats['topApps'] }) {
 
 const ACTIVITY_ICON: Record<string, ReactNode> = {
   'app.imported': <UploadIcon className="h-4 w-4" />,
+  'app.updated': <EditIcon className="h-4 w-4" />,
   'app.deleted': <TrashIcon className="h-4 w-4" />,
   'user.created': <UsersIcon className="h-4 w-4" />,
   'user.deleted': <UsersIcon className="h-4 w-4" />,

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { appsApi } from '../api/apps';
 import { ApiError } from '../api/client';
@@ -7,7 +7,7 @@ import { useFormat } from '../hooks/useFormat';
 import type { HostedApp } from '../types';
 import { Spinner, FullPageSpinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ExternalIcon, ShareIcon, TrashIcon } from '../components/Icons';
+import { ClockIcon, ExternalIcon, ShareIcon, TrashIcon, UploadIcon } from '../components/Icons';
 
 function ShareSection({
   app,
@@ -139,6 +139,110 @@ function ShareSection({
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+function VersionsSection({
+  app,
+  onUpdated,
+}: {
+  app: HostedApp;
+  onUpdated: (app: HostedApp) => void;
+}) {
+  const { t } = useI18n();
+  const { formatDate } = useFormat();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const onFile = async (file: File | null) => {
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const { app: updated } = await appsApi.updateContent(app.id, file);
+      onUpdated(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update the content.');
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+
+  const rollback = async (vid: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { app: updated } = await appsApi.rollback(app.id, vid);
+      onUpdated(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not roll back.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card mt-6 p-6">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <ClockIcon className="h-5 w-5 text-ember-500" />
+        {t('versions.title')}
+      </h2>
+      <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('versions.desc')}</p>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => fileInput.current?.click()}
+          disabled={busy}
+        >
+          {busy ? <Spinner className="h-4 w-4" /> : <UploadIcon className="h-4 w-4" />}
+          {t('versions.update')}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".html,.htm,.zip"
+          className="hidden"
+          onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+        />
+        <p className="mt-1 text-xs text-sand-400">{t('versions.updateHint')}</p>
+      </div>
+
+      {error && (
+        <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
+
+      {app.versions.length > 0 && (
+        <div className="mt-5">
+          <p className="label">{t('versions.previous')}</p>
+          <ul className="space-y-2">
+            {app.versions.map((v) => (
+              <li
+                key={v.vid}
+                className="flex items-center justify-between gap-3 rounded-lg border border-sand-200 px-3 py-2 text-sm dark:border-sand-700"
+              >
+                <span className="truncate text-sand-500 dark:text-sand-400">
+                  {formatDate(v.createdAt)} · <code className="text-xs">{v.entryFile}</code>
+                </span>
+                <button
+                  type="button"
+                  className="btn-ghost shrink-0 !py-1 !text-xs"
+                  onClick={() => rollback(v.vid)}
+                  disabled={busy}
+                >
+                  {t('versions.rollback')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
@@ -349,6 +453,8 @@ export function AppEditPage() {
           </button>
         </div>
       </form>
+
+      <VersionsSection app={app} onUpdated={setApp} />
 
       <ShareSection app={app} onUpdated={setApp} />
 

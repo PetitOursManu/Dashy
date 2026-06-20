@@ -7,6 +7,12 @@ export interface IShare {
   createdAt: Date | null;
 }
 
+export interface IAppVersion {
+  vid: string;
+  entryFile: string;
+  createdAt: Date;
+}
+
 export interface IHostedApp {
   name: string;
   description: string;
@@ -19,6 +25,8 @@ export interface IHostedApp {
   lastOpenedAt: Date | null;
   // Public-share settings (created by an admin). token=null means not shared.
   share: IShare;
+  // Snapshotted previous versions (newest first) that can be rolled back to.
+  versions: IAppVersion[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +69,21 @@ const hostedAppSchema = new Schema<IHostedApp>(
     share: {
       type: shareSchema,
       default: () => ({ token: null, passwordHash: null, expiresAt: null, createdAt: null }),
+    },
+
+    // Previous content snapshots (for rollback).
+    versions: {
+      type: [
+        new Schema<IAppVersion>(
+          {
+            vid: { type: String, required: true },
+            entryFile: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
     },
   },
   { timestamps: true },

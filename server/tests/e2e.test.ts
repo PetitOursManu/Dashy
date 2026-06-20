@@ -323,6 +323,40 @@ test('avatar upload, fetch, and delete', async () => {
   assert.equal((await del.json()).user.hasAvatar, false);
 });
 
+test('admin can update app content and roll back', async () => {
+  // Replace the standalone app's content with new HTML.
+  const form = new FormData();
+  form.set(
+    'content',
+    new Blob(['<!doctype html><title>V2</title><h1>Version Two</h1>'], { type: 'text/html' }),
+    'v2.html',
+  );
+  const up = await fetch(`${baseUrl}/api/apps/${appId}/content`, {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  assert.equal(up.status, 200);
+  const { app } = await up.json();
+  assert.equal(app.versions.length, 1);
+  const oldVid = app.versions[0].vid;
+
+  // The hosted app now serves the new content.
+  let html = await (
+    await fetch(`${baseUrl}/hosted/${slug}/`, { headers: { Cookie: cookieHeader() } })
+  ).text();
+  assert.match(html, /Version Two/);
+
+  // Roll back to the previous version.
+  const rb = await api('POST', `/api/apps/${appId}/versions/${oldVid}/rollback`);
+  assert.equal(rb.status, 200);
+
+  html = await (
+    await fetch(`${baseUrl}/hosted/${slug}/`, { headers: { Cookie: cookieHeader() } })
+  ).text();
+  assert.match(html, /Hello Dashy/);
+});
+
 test('admin can create a public share link (served without auth)', async () => {
   const res = await api('POST', `/api/apps/${appId}/share`, { password: '', expiresInDays: null });
   assert.equal(res.status, 200);

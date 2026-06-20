@@ -19,6 +19,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - 📦 **Import apps** — upload a standalone `.html` (stored as `index.html`) or a `.zip` static site (safely extracted, entry file auto-detected).
 - 🖼️ **Preview cards** — responsive grid (1 → 4 columns), upload a preview image or get an auto-generated placeholder.
 - ✏️ **Manage** — rename, edit description, change the entry file, replace the preview, delete (removes files from disk).
+- 🕒 **Update & roll back** — re-upload an app's content in place (the URL, opens and favorites are kept); previous versions are snapshotted so you can roll back.
 - 👥 **Multi-user & access control** — admins create users and choose, per user, which apps each one can open; regular users see only their assigned apps. Everyone can self-enable 2FA.
 - 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.

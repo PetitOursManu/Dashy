@@ -216,6 +216,13 @@ const en: Record<string, string> = {
   'share.update': 'Update link',
   'share.revoke': 'Revoke link',
   'share.protected': 'Password-protected',
+
+  'versions.title': 'Content & versions',
+  'versions.desc': 'Replace the content — the URL, opens and favorites stay the same.',
+  'versions.update': 'Upload new content',
+  'versions.updateHint': 'Standalone .html or a .zip site. The current version is saved for rollback.',
+  'versions.previous': 'Previous versions',
+  'versions.rollback': 'Restore',
 };
 
 const fr: Record<string, string> = {
@@ -424,6 +431,13 @@ const fr: Record<string, string> = {
   'share.update': 'Mettre à jour le lien',
   'share.revoke': 'Révoquer le lien',
   'share.protected': 'Protégé par mot de passe',
+
+  'versions.title': 'Contenu et versions',
+  'versions.desc': 'Remplace le contenu — l’URL, les ouvertures et les favoris sont conservés.',
+  'versions.update': 'Téléverser un nouveau contenu',
+  'versions.updateHint': 'Fichier .html autonome ou site .zip. La version actuelle est sauvegardée pour un rollback.',
+  'versions.previous': 'Versions précédentes',
+  'versions.rollback': 'Restaurer',
 };
 
 const es: Record<string, string> = {
@@ -632,6 +646,13 @@ const es: Record<string, string> = {
   'share.update': 'Actualizar enlace',
   'share.revoke': 'Revocar enlace',
   'share.protected': 'Protegido con contraseña',
+
+  'versions.title': 'Contenido y versiones',
+  'versions.desc': 'Reemplaza el contenido: la URL, las aperturas y los favoritos se mantienen.',
+  'versions.update': 'Subir nuevo contenido',
+  'versions.updateHint': 'Archivo .html independiente o sitio .zip. La versión actual se guarda para revertir.',
+  'versions.previous': 'Versiones anteriores',
+  'versions.rollback': 'Restaurar',
 };
 
 const de: Record<string, string> = {
@@ -840,6 +861,13 @@ const de: Record<string, string> = {
   'share.update': 'Link aktualisieren',
   'share.revoke': 'Link widerrufen',
   'share.protected': 'Passwortgeschützt',
+
+  'versions.title': 'Inhalt & Versionen',
+  'versions.desc': 'Inhalt ersetzen — URL, Aufrufe und Favoriten bleiben erhalten.',
+  'versions.update': 'Neuen Inhalt hochladen',
+  'versions.updateHint': 'Eigenständige .html oder .zip-Website. Die aktuelle Version wird für ein Rollback gesichert.',
+  'versions.previous': 'Frühere Versionen',
+  'versions.rollback': 'Wiederherstellen',
 };
 
 const it: Record<string, string> = {
@@ -1048,6 +1076,13 @@ const it: Record<string, string> = {
   'share.update': 'Aggiorna link',
   'share.revoke': 'Revoca link',
   'share.protected': 'Protetto da password',
+
+  'versions.title': 'Contenuto e versioni',
+  'versions.desc': 'Sostituisci il contenuto — URL, aperture e preferiti restano invariati.',
+  'versions.update': 'Carica nuovo contenuto',
+  'versions.updateHint': 'File .html autonomo o sito .zip. La versione attuale viene salvata per il ripristino.',
+  'versions.previous': 'Versioni precedenti',
+  'versions.rollback': 'Ripristina',
 };
 
 const zh: Record<string, string> = {
@@ -1256,6 +1291,13 @@ const zh: Record<string, string> = {
   'share.update': '更新链接',
   'share.revoke': '撤销链接',
   'share.protected': '密码保护',
+
+  'versions.title': '内容与版本',
+  'versions.desc': '替换内容 — URL、打开次数和收藏保持不变。',
+  'versions.update': '上传新内容',
+  'versions.updateHint': '独立 .html 或 .zip 网站。当前版本会被保存以便回滚。',
+  'versions.previous': '历史版本',
+  'versions.rollback': '恢复',
 };
 
 const ru: Record<string, string> = {
@@ -1464,6 +1506,13 @@ const ru: Record<string, string> = {
   'share.update': 'Обновить ссылку',
   'share.revoke': 'Отозвать ссылку',
   'share.protected': 'Защищено паролем',
+
+  'versions.title': 'Содержимое и версии',
+  'versions.desc': 'Заменить содержимое — URL, открытия и избранное сохранятся.',
+  'versions.update': 'Загрузить новое содержимое',
+  'versions.updateHint': 'Отдельный .html или сайт .zip. Текущая версия сохраняется для отката.',
+  'versions.previous': 'Предыдущие версии',
+  'versions.rollback': 'Восстановить',
 };
 
 export const translations: Record<Lang, Record<string, string>> = {

@@ -21,6 +21,9 @@ export const PREVIEWS_DIR = path.join(DATA_DIR, 'previews');
 /** Where user avatars are stored: `<DATA_DIR>/avatars/`. */
 export const AVATARS_DIR = path.join(DATA_DIR, 'avatars');
 
+/** Where previous app versions are snapshotted: `<DATA_DIR>/versions/<appId>/<vid>/`. */
+export const VERSIONS_DIR = path.join(DATA_DIR, 'versions');
+
 /** Temp dir for in-flight uploads before they are validated/moved. */
 export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 
@@ -28,7 +31,7 @@ export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 export const CLIENT_DIST_DIR = path.resolve(__dirname, '../../public');
 
 export function ensureDataDirs(): void {
-  for (const dir of [DATA_DIR, APPS_DIR, PREVIEWS_DIR, AVATARS_DIR, TMP_DIR]) {
+  for (const dir of [DATA_DIR, APPS_DIR, PREVIEWS_DIR, AVATARS_DIR, VERSIONS_DIR, TMP_DIR]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
@@ -36,4 +39,9 @@ export function ensureDataDirs(): void {
 /** Absolute path to a hosted app's directory. */
 export function appDir(appId: string): string {
   return path.join(APPS_DIR, appId);
+}
+
+/** Absolute path to a snapshotted version's directory. */
+export function versionDir(appId: string, vid: string): string {
+  return path.join(VERSIONS_DIR, appId, vid);
 }

@@ -34,6 +34,7 @@ export interface HostedApp {
     expiresAt: string | null;
     hasPassword: boolean;
   } | null;
+  versions: { vid: string; entryFile: string; createdAt: string }[];
   url: string; // /hosted/<slug>/
   previewUrl: string; // /api/apps/<id>/preview
   createdAt: string;

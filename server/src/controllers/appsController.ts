@@ -9,6 +9,13 @@ import { OpenEvent } from '../models/OpenEvent.js';
 import { ApiError } from '../middleware/error.js';
 import { assertCanAccessApp } from '../services/access.js';
 import { logActivity, emailOf } from '../services/activity.js';
+import {
+  placeContent,
+  snapshotCurrent,
+  restoreVersion,
+  removeVersion,
+  removeAllVersions,
+} from '../services/appContent.js';
 import { appDir, PREVIEWS_DIR } from '../config/paths.js';
 import { slugify, withRandomSuffix } from '../utils/slug.js';
 import { safeExtractZip, findEntryFile, ZipExtractionError } from '../utils/zip.js';
@@ -234,6 +241,61 @@ export async function updateApp(req: Request, res: Response): Promise<void> {
   res.json({ app: serializeApp(app) });
 }
 
+const MAX_VERSIONS = 10;
+
+/** Replace an app's content (keeping its URL/stats), snapshotting the old version. */
+export async function updateContent(req: Request, res: Response): Promise<void> {
+  const app = await HostedApp.findById(req.params.id);
+  if (!app) throw new ApiError(404, 'App not found');
+  const contentFile = req.file;
+  if (!contentFile) throw new ApiError(400, 'A .html file or .zip archive is required');
+
+  try {
+    const snapshot = await snapshotCurrent(app.id, app.entryFile);
+    try {
+      const entry = await placeContent(contentFile, appDir(app.id));
+      app.versions.unshift(snapshot);
+      app.entryFile = entry;
+      while (app.versions.length > MAX_VERSIONS) {
+        const old = app.versions.pop();
+        if (old) await removeVersion(app.id, old.vid);
+      }
+      await app.save();
+    } catch (err) {
+      // Keep the app serving its previous content if the new upload is invalid.
+      await restoreVersion(app.id, snapshot.vid).catch(() => {});
+      throw err;
+    }
+  } finally {
+    await fsp.rm(contentFile.path, { force: true }).catch(() => {});
+  }
+
+  logActivity('app.updated', await emailOf(req.user!.sub), `updated "${app.name}"`);
+  res.json({ app: serializeApp(app) });
+}
+
+/** Roll an app back to a snapshotted version (snapshotting the current one first). */
+export async function rollbackVersion(req: Request, res: Response): Promise<void> {
+  const app = await HostedApp.findById(req.params.id);
+  if (!app) throw new ApiError(404, 'App not found');
+  const target = app.versions.find((v) => v.vid === req.params.vid);
+  if (!target) throw new ApiError(404, 'Version not found');
+
+  const snapshot = await snapshotCurrent(app.id, app.entryFile);
+  await restoreVersion(app.id, target.vid);
+  app.versions = app.versions.filter((v) => v.vid !== target.vid);
+  app.versions.unshift(snapshot);
+  app.entryFile = target.entryFile;
+  while (app.versions.length > MAX_VERSIONS) {
+    const old = app.versions.pop();
+    if (old) await removeVersion(app.id, old.vid);
+  }
+  await app.save();
+
+  logActivity('app.updated', await emailOf(req.user!.sub), `rolled back "${app.name}"`);
+  res.json({ app: serializeApp(app) });
+}
+
 export async function deleteApp(req: Request, res: Response): Promise<void> {
   const app = await HostedApp.findById(req.params.id);
   if (!app) throw new ApiError(404, 'App not found');
@@ -241,6 +303,7 @@ export async function deleteApp(req: Request, res: Response): Promise<void> {
   const name = app.name;
   await app.deleteOne();
   await removeAppFiles({ id: app.id, previewImage: app.previewImage });
+  await removeAllVersions(app.id);
   // Drop the now-dangling references from users' access + favorite lists.
   await User.updateMany(
     { $or: [{ allowedApps: app._id }, { favorites: app._id }] },

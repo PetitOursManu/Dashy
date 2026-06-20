@@ -50,5 +50,14 @@ export const appsApi = {
 
   revokeShare: (id: string) => http.del<{ app: HostedApp }>(`/api/apps/${id}/share`),
 
+  updateContent: (id: string, content: File) => {
+    const form = new FormData();
+    form.set('content', content);
+    return http.postForm<{ app: HostedApp }>(`/api/apps/${id}/content`, form);
+  },
+
+  rollback: (id: string, vid: string) =>
+    http.post<{ app: HostedApp }>(`/api/apps/${id}/versions/${vid}/rollback`),
+
   remove: (id: string) => http.del<{ ok: true }>(`/api/apps/${id}`),
 };

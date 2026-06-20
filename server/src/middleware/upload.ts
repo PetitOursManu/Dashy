@@ -93,6 +93,22 @@ export const importUpload = multer({
   { name: 'preview', maxCount: 1 },
 ]);
 
+/** Upload handler for replacing just an app's content (.html/.zip) on update. */
+export const contentUpload = multer({
+  storage,
+  limits: { fileSize: env.MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
+  fileFilter(_req, file, cb) {
+    if (file.fieldname !== 'content') {
+      return cb(new Error(`Unexpected field: ${file.fieldname}`));
+    }
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!CONTENT_EXTS.has(ext)) {
+      return cb(new Error('Only .html or .zip files are allowed'));
+    }
+    return cb(null, true);
+  },
+}).single('content');
+
 /** Upload handler for replacing just the preview image (app edit). */
 export const previewUpload = multer({
   storage,

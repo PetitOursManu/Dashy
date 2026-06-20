@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import { importUpload, previewUpload } from '../middleware/upload.js';
+import { importUpload, previewUpload, contentUpload } from '../middleware/upload.js';
 import { uploadLimiter } from '../middleware/rateLimit.js';
 import { validateBody } from '../middleware/validate.js';
 import * as apps from '../controllers/appsController.js';
@@ -23,6 +23,16 @@ router.post('/:id/favorite', asyncHandler(apps.toggleFavorite));
 router.post('/', requireAdmin, uploadLimiter, importUpload, asyncHandler(apps.importApp));
 router.patch('/:id', requireAdmin, previewUpload, asyncHandler(apps.updateApp));
 router.delete('/:id', requireAdmin, asyncHandler(apps.deleteApp));
+
+// Content update + version rollback (admin-only).
+router.post(
+  '/:id/content',
+  requireAdmin,
+  uploadLimiter,
+  contentUpload,
+  asyncHandler(apps.updateContent),
+);
+router.post('/:id/versions/:vid/rollback', requireAdmin, asyncHandler(apps.rollbackVersion));
 
 // Public-share management is admin-only.
 router.post(

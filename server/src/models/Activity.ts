@@ -2,6 +2,7 @@ import mongoose, { Schema, type HydratedDocument } from 'mongoose';
 
 export type ActivityType =
   | 'app.imported'
+  | 'app.updated'
   | 'app.deleted'
   | 'user.created'
   | 'user.deleted'
