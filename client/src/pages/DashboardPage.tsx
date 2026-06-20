@@ -123,25 +123,43 @@ export function DashboardPage() {
 
   const stats = isAdmin
     ? [
-        { icon: <LayersIcon className="h-5 w-5" />, label: t('dash.hostedApps'), value: apps.length },
-        { icon: <UsersIcon className="h-5 w-5" />, label: t('dash.teamMembers'), value: users.length },
+        {
+          icon: <LayersIcon className="h-5 w-5" />,
+          label: t('dash.hostedApps'),
+          value: apps.length,
+          decor: 'rings' as const,
+        },
+        {
+          icon: <UsersIcon className="h-5 w-5" />,
+          label: t('dash.teamMembers'),
+          value: users.length,
+          decor: 'dots' as const,
+        },
         {
           icon: <ShieldIcon className="h-5 w-5" />,
           label: t('dash.twoFaEnabled'),
           value: users.filter((u) => u.twoFactorEnabled).length,
+          decor: 'waves' as const,
         },
       ]
     : [
-        { icon: <LayersIcon className="h-5 w-5" />, label: t('dash.appsAvailable'), value: apps.length },
+        {
+          icon: <LayersIcon className="h-5 w-5" />,
+          label: t('dash.appsAvailable'),
+          value: apps.length,
+          decor: 'rings' as const,
+        },
         {
           icon: <StarIcon className="h-5 w-5" />,
           label: t('dash.favorites'),
           value: apps.filter((a) => a.isFavorite).length,
+          decor: 'dots' as const,
         },
         {
           icon: <ShieldIcon className="h-5 w-5" />,
           label: t('dash.twoFactor'),
           value: user?.twoFactorEnabled ? t('dash.on') : t('dash.off'),
+          decor: 'waves' as const,
         },
       ];
 
@@ -163,7 +181,7 @@ export function DashboardPage() {
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((s) => (
-            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} />
+            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} decor={s.decor} />
           ))}
         </div>
       </section>

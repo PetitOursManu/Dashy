@@ -4,6 +4,7 @@ import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
 import type { ActivityItem, OverviewStats, StorageStats } from '../types';
 import { formatBytes } from '../utils/format';
+import { TileDecor } from './TileDecor';
 import { Spinner } from './Spinner';
 import {
   ActivityIcon,
@@ -80,7 +81,8 @@ function OpensChart({ data, total }: { data: OverviewStats['opensByMonth']; tota
   const { t } = useI18n();
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
-    <div className="card p-5 lg:col-span-2">
+    <div className="card relative overflow-hidden p-5 lg:col-span-2">
+      <TileDecor variant="rings" />
       <PanelHeader icon={<ChartIcon className="h-5 w-5" />} title={t('analytics.appOpens')} />
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold tracking-tight">{total}</span>
@@ -108,7 +110,8 @@ function TopApps({ apps }: { apps: OverviewStats['topApps'] }) {
   const { t } = useI18n();
   const max = Math.max(1, ...apps.map((a) => a.openCount));
   return (
-    <div className="card p-5">
+    <div className="card relative overflow-hidden p-5">
+      <TileDecor variant="blob" />
       <PanelHeader icon={<TrophyIcon className="h-5 w-5" />} title={t('analytics.mostOpened')} />
       {apps.length === 0 || apps.every((a) => a.openCount === 0) ? (
         <p className="py-6 text-center text-sm text-sand-400">{t('analytics.noOpens')}</p>
@@ -151,8 +154,9 @@ function ActivityFeed({ items }: { items: ActivityItem[] }) {
   const { t } = useI18n();
   const { relativeTime } = useFormat();
   return (
-    <div className="rounded-3xl bg-sand-900 p-5 text-sand-100 shadow-soft dark:bg-black/40">
-      <div className="mb-4 flex items-center gap-2">
+    <div className="relative overflow-hidden rounded-3xl bg-sand-900 p-5 text-sand-100 shadow-soft dark:bg-black/40">
+      <TileDecor variant="sphere" />
+      <div className="relative mb-4 flex items-center gap-2">
         <ActivityIcon className="h-5 w-5 text-ember-400" />
         <h3 className="font-semibold">{t('analytics.recentActivity')}</h3>
       </div>
@@ -184,7 +188,8 @@ function StoragePanel({ data }: { data: StorageStats }) {
   const top = data.apps.slice(0, 6);
   const max = Math.max(1, ...top.map((a) => a.size));
   return (
-    <div className="card p-5">
+    <div className="card relative overflow-hidden p-5">
+      <TileDecor variant="blob" />
       <PanelHeader
         icon={<HardDriveIcon className="h-5 w-5" />}
         title={t('analytics.storageUsage')}
