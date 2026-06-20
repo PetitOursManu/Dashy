@@ -9,6 +9,7 @@ import { avatarUrl } from '../api/auth';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { UserFormModal } from '../components/UserFormModal';
+import { UserDetailModal } from '../components/UserDetailModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EditIcon, PlusIcon, TrashIcon } from '../components/Icons';
 
@@ -23,6 +24,7 @@ export function UsersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editing, setEditing] = useState<User | null>(null);
+  const [detailUser, setDetailUser] = useState<User | null>(null);
   const [toDelete, setToDelete] = useState<User | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -108,6 +110,7 @@ export function UsersPage() {
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('users.colName')}</th>
                 <th className="px-4 py-3 font-medium">{t('users.colRole')}</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">{t('users.col2fa')}</th>
+                <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('users.colChat')}</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">
                   {t('users.colAccess')}
                 </th>
@@ -116,7 +119,11 @@ export function UsersPage() {
             </thead>
             <tbody className="divide-y divide-sand-100 dark:divide-sand-800">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-sand-50 dark:hover:bg-sand-800/40">
+                <tr
+                  key={u.id}
+                  onClick={() => setDetailUser(u)}
+                  className="cursor-pointer hover:bg-sand-50 dark:hover:bg-sand-800/40"
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <Avatar
@@ -162,6 +169,13 @@ export function UsersPage() {
                       <span className="text-sand-400">{t('dash.off')}</span>
                     )}
                   </td>
+                  <td className="hidden px-4 py-3 xl:table-cell">
+                    {u.chatEnabled ? (
+                      <span className="text-green-600 dark:text-green-400">{t('dash.on')}</span>
+                    ) : (
+                      <span className="text-sand-400">{t('dash.off')}</span>
+                    )}
+                  </td>
                   <td className="hidden px-4 py-3 text-sand-500 dark:text-sand-400 lg:table-cell">
                     {u.role === 'admin'
                       ? t('users.allApps')
@@ -176,7 +190,10 @@ export function UsersPage() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        onClick={() => openEdit(u)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit(u);
+                        }}
                         className="btn-ghost !px-2 !py-1"
                         aria-label={`Edit ${u.email}`}
                       >
@@ -184,7 +201,10 @@ export function UsersPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setToDelete(u)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setToDelete(u);
+                        }}
                         disabled={u.id === me?.id}
                         className="btn-ghost !px-2 !py-1 text-red-500 hover:bg-red-500/10 disabled:opacity-30 disabled:hover:bg-transparent"
                         aria-label={`Delete ${u.email}`}
@@ -207,6 +227,11 @@ export function UsersPage() {
         apps={apps}
         onClose={() => setFormOpen(false)}
         onSaved={onSaved}
+      />
+      <UserDetailModal
+        open={detailUser !== null}
+        user={detailUser}
+        onClose={() => setDetailUser(null)}
       />
       <ConfirmDialog
         open={toDelete !== null}

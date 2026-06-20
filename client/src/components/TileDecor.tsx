@@ -1,4 +1,11 @@
-export type DecorVariant = 'rings' | 'dots' | 'waves' | 'blob' | 'sphere' | 'storage';
+export type DecorVariant =
+  | 'rings'
+  | 'dots'
+  | 'waves'
+  | 'blob'
+  | 'sphere'
+  | 'storage'
+  | 'bell';
 
 /**
  * Subtle, theme-aware decorative motif for a dashboard tile. Render it as a
@@ -39,6 +46,26 @@ export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
         <path d="M14 62 A 26 9 0 0 0 66 62" />
         <path d="M14 35 A 26 9 0 0 0 66 35" opacity="0.7" />
         <path d="M14 48 A 26 9 0 0 0 66 48" opacity="0.7" />
+      </svg>
+    );
+  }
+
+  if (variant === 'bell') {
+    // A bell with a little notification bubble, in the corner.
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 80 84"
+        className={`${base} -bottom-4 -right-3 h-36 w-36 text-ember-500/20`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M58 46c0-23-9-29-18-29s-18 6-18 29c0 8-5 11-5 11h46s-5-3-5-11" />
+        <path d="M34 68a6 6 0 0 0 12 0" />
+        <circle cx="60" cy="20" r="11" fill="currentColor" stroke="none" opacity="0.5" />
       </svg>
     );
   }

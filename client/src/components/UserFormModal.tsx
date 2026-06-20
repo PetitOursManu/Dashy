@@ -21,6 +21,7 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
   const [allowed, setAllowed] = useState<Set<string>>(new Set());
+  const [chatEnabled, setChatEnabled] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +32,7 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
     setPassword('');
     setRole(user?.role ?? 'user');
     setAllowed(new Set(user?.allowedApps ?? []));
+    setChatEnabled(user?.chatEnabled ?? true);
     setError(null);
   }, [open, user]);
 
@@ -50,12 +52,19 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
     try {
       const allowedApps = role === 'admin' ? [] : [...allowed];
       if (mode === 'create') {
-        const { user } = await usersApi.create({ email, password, role, allowedApps });
+        const { user } = await usersApi.create({
+          email,
+          password,
+          role,
+          allowedApps,
+          chatEnabled,
+        });
         onSaved(user);
       } else if (user) {
         const { user: updated } = await usersApi.update(user.id, {
           role,
           allowedApps,
+          chatEnabled,
           ...(password ? { password } : {}),
         });
         onSaved(updated);
@@ -151,6 +160,19 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
             </div>
           )}
         </div>
+
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-sand-200 px-3 py-2.5 dark:border-sand-700">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-sand-300 text-ember-500 focus:ring-ember-400"
+            checked={chatEnabled}
+            onChange={(e) => setChatEnabled(e.target.checked)}
+          />
+          <span className="text-sm">
+            <span className="font-medium">{t('form.chatAccess')}</span>
+            <span className="block text-xs text-sand-400">{t('form.chatAccessHint')}</span>
+          </span>
+        </label>
 
         {error && (
           <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">

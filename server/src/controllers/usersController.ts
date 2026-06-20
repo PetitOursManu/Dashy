@@ -4,6 +4,9 @@ import mongoose, { type Types } from 'mongoose';
 import { z } from 'zod';
 import { User } from '../models/User.js';
 import { HostedApp } from '../models/HostedApp.js';
+import { OpenEvent } from '../models/OpenEvent.js';
+import { ChatAlert } from '../models/ChatAlert.js';
+import { Notification } from '../models/Notification.js';
 import { ApiError } from '../middleware/error.js';
 import { logActivity, emailOf } from '../services/activity.js';
 
@@ -14,6 +17,8 @@ export const createUserSchema = z.object({
   password: z.string().min(8).max(200),
   role: z.enum(['admin', 'user']).default('user'),
   allowedApps: z.array(z.string()).optional().default([]),
+  // Assistant access is granted by default for new users.
+  chatEnabled: z.boolean().optional().default(true),
 });
 
 export const updateUserSchema = z
@@ -21,8 +26,14 @@ export const updateUserSchema = z
     role: z.enum(['admin', 'user']).optional(),
     password: z.string().min(8).max(200).optional(),
     allowedApps: z.array(z.string()).optional(),
+    chatEnabled: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
+export const chatTimeoutSchema = z.object({
+  // Minutes to time out the assistant; 0 or null clears the time-out.
+  minutes: z.number().int().min(0).max(60 * 24 * 30).nullable(),
+});
 
 // --------------------------------- helpers -----------------------------------
 
@@ -42,7 +53,9 @@ export async function listUsers(_req: Request, res: Response): Promise<void> {
 }
 
 export async function createUser(req: Request, res: Response): Promise<void> {
-  const { email, password, role, allowedApps } = req.body as z.infer<typeof createUserSchema>;
+  const { email, password, role, allowedApps, chatEnabled } = req.body as z.infer<
+    typeof createUserSchema
+  >;
 
   if (await User.findOne({ email })) {
     throw new ApiError(409, 'An account with this email already exists');
@@ -54,6 +67,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     passwordHash,
     role,
     allowedApps: await resolveAllowedApps(allowedApps),
+    chatEnabled,
   });
 
   logActivity('user.created', await emailOf(req.user!.sub), `created user ${user.email}`);
@@ -85,8 +99,75 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     user.passwordHash = await argon2.hash(updates.password, { type: argon2.argon2id });
   }
 
+  if (updates.chatEnabled !== undefined) {
+    user.chatEnabled = updates.chatEnabled;
+  }
+
   await user.save();
   res.json({ user: user.toJSON() });
+}
+
+/**
+ * Admin: a user's Dashy history — most-used apps, assistant misuse count and
+ * recent flagged messages, 2FA status, current assistant time-out, and recent
+ * dashboard notifications sent to them (with read receipts).
+ */
+export async function userHistory(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'User not found');
+  const user = await User.findById(req.params.id);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const [topAppsAgg, alertCount, recentAlerts, notifications] = await Promise.all([
+    OpenEvent.aggregate<{ _id: Types.ObjectId; count: number }>([
+      { $match: { user: user._id } },
+      { $group: { _id: '$app', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]),
+    ChatAlert.countDocuments({ user: user._id }),
+    ChatAlert.find({ user: user._id }).sort({ createdAt: -1 }).limit(3),
+    Notification.find({ user: user._id }).sort({ createdAt: -1 }).limit(8),
+  ]);
+
+  // Resolve app names for the top-used apps.
+  const apps = await HostedApp.find({ _id: { $in: topAppsAgg.map((t) => t._id) } }).select('name');
+  const nameById = new Map(apps.map((a) => [String(a._id), a.name]));
+  const topApps = topAppsAgg.map((t) => ({
+    id: String(t._id),
+    name: nameById.get(String(t._id)) ?? '(deleted app)',
+    opens: t.count,
+  }));
+
+  const now = Date.now();
+  const timedOut = user.chatTimeoutUntil ? user.chatTimeoutUntil.getTime() > now : false;
+
+  res.json({
+    twoFactorEnabled: user.twoFactorEnabled,
+    chatEnabled: user.chatEnabled !== false,
+    chatTimeoutUntil: timedOut ? user.chatTimeoutUntil : null,
+    botAlertCount: alertCount,
+    recentBotMessages: recentAlerts.flatMap((a) => a.messages).slice(0, 6),
+    topApps,
+    notifications: notifications.map((n) => ({
+      id: n.id,
+      message: n.message,
+      readAt: n.readAt,
+      createdAt: n.createdAt,
+    })),
+  });
+}
+
+/** Admin: time out (or clear) the assistant for a user. */
+export async function setChatTimeout(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'User not found');
+  const user = await User.findById(req.params.id);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const { minutes } = req.body as z.infer<typeof chatTimeoutSchema>;
+  user.chatTimeoutUntil =
+    minutes && minutes > 0 ? new Date(Date.now() + minutes * 60_000) : null;
+  await user.save();
+  res.json({ chatTimeoutUntil: user.chatTimeoutUntil });
 }
 
 export async function deleteUser(req: Request, res: Response): Promise<void> {

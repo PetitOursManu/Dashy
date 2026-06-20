@@ -21,15 +21,17 @@ No SaaS, no paid services — everything runs on a single machine.
 - ✏️ **Manage** — rename, edit description, change the entry file, replace the preview, delete (removes files from disk).
 - 🕒 **Update & roll back** — re-upload an app's content in place (the URL, opens and favorites are kept); previous versions are snapshotted so you can roll back.
 - 👥 **Multi-user & access control** — admins create users and choose, per user, which apps each one can open; regular users see only their assigned apps. Everyone can self-enable 2FA.
+- 🗂️ **User insights & messaging** (admin) — click a user to see their Dashy history: most-used apps, 2FA status, assistant-misuse flags (with a one-click **assistant time-out** of 15 min → 7 days), and the notifications they've been sent. Push a **text notification to any user's dashboard** — they must acknowledge it to dismiss it, and you get the read receipt back in a dedicated **Notifications** tile (kept out of the activity feed).
 - 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
+- 🤖 **AI assistant ("Dashy" bot)** — an optional in-app chatbot that explains how Dashy works and recommends the right app for a user's needs, with one-click links to open them, step-by-step "how do I…" guidance, and replies in the user's own language. Admins choose the provider (**OpenRouter, OpenAI, Deepseek, or Claude**), the model, and enter their API key (encrypted at rest), and enable the assistant per user (on by default for new users).
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
 - 🌍 **7 languages** — the whole interface is translated: English (default), Français, Español, Deutsch, Italiano, 简体中文, Русский.
 - 🎨 **3 themes** — Light, Dark, and Violet (purple accent), warm "ember/sand" palette, mobile-first responsive layout.
 - 🔒 **Session control** — see your active sessions (device, IP, last seen), revoke any one individually, or "sign out of all devices" at once.
 - 💾 **Backup & restore** (admin) — download every hosted app (files + metadata) as a single `.zip`, and restore from it on another server.
-- 🛡️ **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, encrypted TOTP secrets at rest (AES-256-GCM).
+- 🛡️ **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, encrypted secrets at rest (TOTP secrets and LLM API keys, AES-256-GCM).
 - 🐳 **One-command deploy** — multi-stage Docker build + `docker-compose`, single container serving both API and SPA.
 
 ---
@@ -58,7 +60,7 @@ Dashy/
 │   │   ├── models/         # User, HostedApp (Mongoose)
 │   │   ├── middleware/     # auth, upload, rate-limit, validation, errors
 │   │   ├── controllers/    # auth + apps logic
-│   │   ├── routes/         # /api/auth, /api/apps, /api/users, /api/stats, /hosted
+│   │   ├── routes/         # /api/auth, /api/apps, /api/users, /api/stats, /api/chat, /hosted
 │   │   ├── services/       # admin seed
 │   │   ├── utils/          # crypto, slug, safe-zip, jwt
 │   │   └── index.ts        # entry point

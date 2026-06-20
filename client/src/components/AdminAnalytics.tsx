@@ -1,14 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { statsApi } from '../api/stats';
+import { notificationsApi } from '../api/notifications';
 import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
-import type { ActivityItem, OverviewStats, StorageStats } from '../types';
+import type { ActivityItem, AdminNotification, OverviewStats, StorageStats } from '../types';
 import { formatBytes } from '../utils/format';
 import { TileDecor } from './TileDecor';
 import { Spinner } from './Spinner';
 import {
   ActivityIcon,
+  BellIcon,
   ChartIcon,
+  CloseIcon,
   EditIcon,
   HardDriveIcon,
   ShieldIcon,
@@ -62,6 +65,72 @@ export function AdminAnalytics() {
         <ActivityFeed items={activity} />
         {storage && <StoragePanel data={storage} />}
       </div>
+      <NotificationsPanel />
+    </div>
+  );
+}
+
+function NotificationsPanel() {
+  const { t } = useI18n();
+  const { relativeTime } = useFormat();
+  const [items, setItems] = useState<AdminNotification[]>([]);
+
+  useEffect(() => {
+    notificationsApi
+      .adminList()
+      .then((r) => setItems(r.notifications))
+      .catch(() => setItems([]));
+  }, []);
+
+  const dismiss = async (id: string) => {
+    setItems((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await notificationsApi.dismiss(id);
+    } catch {
+      /* best effort */
+    }
+  };
+
+  return (
+    <div className="card relative overflow-hidden p-5">
+      <TileDecor variant="bell" />
+      <PanelHeader icon={<BellIcon className="h-5 w-5" />} title={t('notif.title')} />
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-sand-400">{t('notif.empty')}</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((n) => (
+            <li
+              key={n.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-sand-200 px-3 py-2.5 dark:border-sand-700"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm" title={n.message}>
+                  {n.message}
+                </p>
+                <p className="mt-0.5 text-xs text-sand-400">
+                  <span className="font-medium">{n.userEmail}</span> ·{' '}
+                  {n.readAt ? (
+                    <span className="text-green-600 dark:text-green-400">
+                      {t('notif.readAt', { time: relativeTime(n.readAt) })}
+                    </span>
+                  ) : (
+                    <span>{t('notif.pending')}</span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => dismiss(n.id)}
+                className="btn-ghost shrink-0 !px-1.5 !py-1"
+                aria-label={t('notif.dismiss')}
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

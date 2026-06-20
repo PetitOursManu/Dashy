@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { ProfileMenu } from './ProfileMenu';
+import { ChatWidget } from './ChatWidget';
 import {
   ChevronDownIcon,
   CloseIcon,
@@ -146,6 +147,8 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <ChatWidget />
     </div>
   );
 }

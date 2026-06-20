@@ -1,17 +1,19 @@
 import { http } from './client';
-import type { User } from '../types';
+import type { User, UserHistory } from '../types';
 
 export interface CreateUserPayload {
   email: string;
   password: string;
   role: 'admin' | 'user';
   allowedApps: string[];
+  chatEnabled?: boolean;
 }
 
 export interface UpdateUserPayload {
   role?: 'admin' | 'user';
   password?: string;
   allowedApps?: string[];
+  chatEnabled?: boolean;
 }
 
 export const usersApi = {
@@ -20,4 +22,7 @@ export const usersApi = {
   update: (id: string, payload: UpdateUserPayload) =>
     http.patch<{ user: User }>(`/api/users/${id}`, payload),
   remove: (id: string) => http.del<{ ok: true }>(`/api/users/${id}`),
+  history: (id: string) => http.get<UserHistory>(`/api/users/${id}/history`),
+  setChatTimeout: (id: string, minutes: number | null) =>
+    http.post<{ chatTimeoutUntil: string | null }>(`/api/users/${id}/chat-timeout`, { minutes }),
 };

@@ -10,6 +10,7 @@ export interface User {
   theme: string;
   timezone: string;
   dateFormat: string;
+  chatEnabled: boolean;
   twoFactorEnabled: boolean;
   /** App ids a regular user may open (present in admin user listings). */
   allowedApps?: string[];
@@ -69,6 +70,54 @@ export interface ActivityItem {
 export interface StorageStats {
   total: number;
   apps: { id: string; name: string; size: number }[];
+}
+
+export type ChatProvider = 'openrouter' | 'openai' | 'deepseek' | 'claude';
+
+export interface ChatConfig {
+  enabled: boolean;
+  provider: ChatProvider;
+  model: string;
+  hasApiKey: boolean;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatAlert {
+  id: string;
+  userEmail: string;
+  messages: string[];
+  createdAt: string;
+}
+
+export interface UserHistory {
+  twoFactorEnabled: boolean;
+  chatEnabled: boolean;
+  chatTimeoutUntil: string | null;
+  botAlertCount: number;
+  recentBotMessages: string[];
+  topApps: { id: string; name: string; opens: number }[];
+  notifications: { id: string; message: string; readAt: string | null; createdAt: string }[];
+}
+
+/** A notification shown to the current user on their own dashboard. */
+export interface UserNotification {
+  id: string;
+  message: string;
+  createdAt: string;
+}
+
+/** A notification row in the admin "Notifications" tile. */
+export interface AdminNotification {
+  id: string;
+  userEmail: string;
+  message: string;
+  createdByEmail: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface TwoFactorSetup {

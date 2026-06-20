@@ -546,6 +546,197 @@ test('admin can list users', async () => {
   assert.ok(emails.includes(BOB_EMAIL));
 });
 
+// ------------------------------- AI assistant --------------------------------
+
+test('new users get assistant access by default', async () => {
+  const { users } = await (await api('GET', '/api/users')).json();
+  const bob = users.find((u: { email: string }) => u.email === BOB_EMAIL);
+  assert.equal(bob.chatEnabled, true);
+});
+
+test('chat config is admin-only and never returns the key', async () => {
+  const res = await api('GET', '/api/chat/config');
+  assert.equal(res.status, 200);
+  const { config, providers } = await res.json();
+  assert.equal(config.hasApiKey, false);
+  assert.equal(config.apiKey, undefined);
+  assert.equal(config.apiKeyEnc, undefined);
+  assert.ok(providers.includes('claude'));
+});
+
+test('assistant cannot be enabled without an API key', async () => {
+  const res = await api('PUT', '/api/chat/config', { enabled: true });
+  assert.equal(res.status, 400);
+});
+
+test('admin can configure the assistant (key stored, not echoed)', async () => {
+  const res = await api('PUT', '/api/chat/config', {
+    provider: 'openai',
+    model: 'gpt-test',
+    apiKey: 'sk-test-key',
+    enabled: true,
+  });
+  assert.equal(res.status, 200);
+  const { config } = await res.json();
+  assert.equal(config.provider, 'openai');
+  assert.equal(config.model, 'gpt-test');
+  assert.equal(config.enabled, true);
+  assert.equal(config.hasApiKey, true);
+  assert.equal(config.apiKey, undefined);
+});
+
+test('assistant is available to an enabled user', async () => {
+  const { available } = await (await api('GET', '/api/chat/status')).json();
+  assert.equal(available, true);
+});
+
+test('admin can disable the assistant for a specific user', async () => {
+  const res = await api('PATCH', `/api/users/${bobId}`, { chatEnabled: false });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).user.chatEnabled, false);
+});
+
+test('a disabled user cannot use the assistant or its config', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+
+  const { available } = await (await api('GET', '/api/chat/status')).json();
+  assert.equal(available, false);
+
+  const chat = await api('POST', '/api/chat', { messages: [{ role: 'user', content: 'hi' }] });
+  assert.equal(chat.status, 403);
+
+  // Config + alert endpoints remain admin-only.
+  assert.equal((await api('GET', '/api/chat/config')).status, 403);
+  assert.equal((await api('PUT', '/api/chat/config', { enabled: false })).status, 403);
+  assert.equal((await api('GET', '/api/chat/alerts')).status, 403);
+});
+
+test('assistant misuse alerts are admin-only and start empty', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  const res = await api('GET', '/api/chat/alerts');
+  assert.equal(res.status, 200);
+  const { alerts } = await res.json();
+  assert.ok(Array.isArray(alerts));
+  assert.equal(alerts.length, 0);
+});
+
+// ------------------- user history, time-out & notifications ------------------
+
+test('admin can read a user history', async () => {
+  const res = await api('GET', `/api/users/${bobId}/history`);
+  assert.equal(res.status, 200);
+  const h = await res.json();
+  assert.equal(typeof h.twoFactorEnabled, 'boolean');
+  assert.equal(typeof h.botAlertCount, 'number');
+  assert.ok(Array.isArray(h.topApps));
+  assert.ok(Array.isArray(h.notifications));
+});
+
+test('admin can time out the assistant for a user (and clear it)', async () => {
+  // Enable the assistant + ensure Bob's access is on, so the time-out is the
+  // only thing gating him.
+  await api('PATCH', `/api/users/${bobId}`, { chatEnabled: true });
+  await api('PUT', '/api/chat/config', {
+    provider: 'openai',
+    model: 'gpt-test',
+    apiKey: 'sk-test-key',
+    enabled: true,
+  });
+
+  const set = await api('POST', `/api/users/${bobId}/chat-timeout`, { minutes: 60 });
+  assert.equal(set.status, 200);
+  assert.ok((await set.json()).chatTimeoutUntil);
+
+  // Bob is now timed out.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal((await (await api('GET', '/api/chat/status')).json()).available, false);
+  assert.equal(
+    (await api('POST', '/api/chat', { messages: [{ role: 'user', content: 'hi' }] })).status,
+    403,
+  );
+
+  // Admin clears it → available again.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const clear = await api('POST', `/api/users/${bobId}/chat-timeout`, { minutes: null });
+  assert.equal(clear.status, 200);
+  assert.equal((await clear.json()).chatTimeoutUntil, null);
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal((await (await api('GET', '/api/chat/status')).json()).available, true);
+
+  // Disable the assistant again for a clean state.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  await api('PUT', '/api/chat/config', { apiKey: '', enabled: false });
+});
+
+let notifId = '';
+
+test('admin sends a dashboard notification; user must acknowledge it', async () => {
+  const res = await api('POST', '/api/notifications', { userId: bobId, message: 'Welcome to Dashy!' });
+  assert.equal(res.status, 201);
+  notifId = (await res.json()).notification.id;
+
+  // Appears in the admin tile, unread.
+  const adminList = await (await api('GET', '/api/notifications/admin')).json();
+  const mine = adminList.notifications.find((n: { id: string }) => n.id === notifId);
+  assert.ok(mine);
+  assert.equal(mine.readAt, null);
+
+  // Bob sees it, reads it, then it's gone from his unread list.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  const before = await (await api('GET', '/api/notifications')).json();
+  assert.ok(before.notifications.some((n: { id: string }) => n.id === notifId));
+  assert.equal((await api('POST', `/api/notifications/${notifId}/read`)).status, 200);
+  const after = await (await api('GET', '/api/notifications')).json();
+  assert.equal(after.notifications.some((n: { id: string }) => n.id === notifId), false);
+});
+
+test('notification + history endpoints are admin-only; admin sees the read receipt', async () => {
+  // Bob (regular user) is blocked from admin notification + history endpoints.
+  assert.equal((await api('GET', '/api/notifications/admin')).status, 403);
+  assert.equal((await api('POST', '/api/notifications', { userId: bobId, message: 'x' })).status, 403);
+  assert.equal((await api('GET', `/api/users/${bobId}/history`)).status, 403);
+  assert.equal((await api('POST', `/api/users/${bobId}/chat-timeout`, { minutes: 15 })).status, 403);
+
+  // Admin now sees the read receipt, then dismisses the notification.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const list = await (await api('GET', '/api/notifications/admin')).json();
+  const read = list.notifications.find((n: { id: string }) => n.id === notifId);
+  assert.ok(read.readAt, 'notification should show a read timestamp');
+
+  assert.equal((await api('DELETE', `/api/notifications/${notifId}`)).status, 200);
+  const after = await (await api('GET', '/api/notifications/admin')).json();
+  assert.equal(after.notifications.some((n: { id: string }) => n.id === notifId), false);
+});
+
+test('assistant config is cleaned up + bob re-enabled', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  await api('PATCH', `/api/users/${bobId}`, { chatEnabled: true });
+  const res = await api('PUT', '/api/chat/config', { apiKey: '', enabled: false });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).config.hasApiKey, false);
+});
+
 test('regular user sees only their assigned apps', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

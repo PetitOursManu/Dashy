@@ -19,6 +19,15 @@ export interface IUser {
   theme: string;
   timezone: string;
   dateFormat: string;
+  // Whether this user may use the Dashy AI assistant (admin-toggleable,
+  // granted by default on user creation).
+  chatEnabled: boolean;
+  // Buffer of recent off-topic assistant requests (the user's messages), since
+  // the last admin alert was raised. Cleared each time an alert fires.
+  chatOffTopic: string[];
+  // If set and in the future, the assistant is temporarily blocked for this
+  // user (admin-imposed "time-out"). Null = no time-out.
+  chatTimeoutUntil: Date | null;
   // Bumped to invalidate all existing sessions ("sign out everywhere").
   tokenVersion: number;
   twoFactorEnabled: boolean;
@@ -73,6 +82,13 @@ const userSchema = new Schema<IUser>(
     timezone: { type: String, default: '', maxlength: 64 },
     dateFormat: { type: String, default: '', maxlength: 8 },
 
+    // Access to the Dashy AI assistant — on by default for new users.
+    chatEnabled: { type: Boolean, default: true },
+    // Off-topic strike buffer (internal; never serialized).
+    chatOffTopic: { type: [String], default: [] },
+    // Admin-imposed assistant time-out (null = none).
+    chatTimeoutUntil: { type: Date, default: null },
+
     // Session epoch — incrementing it invalidates all issued JWTs.
     tokenVersion: { type: Number, default: 0 },
 
@@ -113,6 +129,10 @@ userSchema.set('toJSON', {
     r.hasAvatar = Boolean(r.avatar);
     delete r.avatar;
     delete r.tokenVersion;
+    // Default to enabled for documents created before this field existed.
+    r.chatEnabled = r.chatEnabled !== false;
+    delete r.chatOffTopic;
+    delete r.chatTimeoutUntil;
     return r;
   },
 });

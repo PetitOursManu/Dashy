@@ -11,6 +11,12 @@ router.use(requireAuth, requireAdmin);
 
 router.get('/', asyncHandler(users.listUsers));
 router.post('/', validateBody(users.createUserSchema), asyncHandler(users.createUser));
+router.get('/:id/history', asyncHandler(users.userHistory));
+router.post(
+  '/:id/chat-timeout',
+  validateBody(users.chatTimeoutSchema),
+  asyncHandler(users.setChatTimeout),
+);
 router.patch('/:id', validateBody(users.updateUserSchema), asyncHandler(users.updateUser));
 router.delete('/:id', asyncHandler(users.deleteUser));
 

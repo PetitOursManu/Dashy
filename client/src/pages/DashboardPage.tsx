@@ -10,6 +10,8 @@ import { ImportModal } from '../components/ImportModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { StatCard } from '../components/StatCard';
 import { AdminAnalytics } from '../components/AdminAnalytics';
+import { ChatAlerts } from '../components/ChatAlerts';
+import { UserNotifications } from '../components/UserNotifications';
 import { Spinner } from '../components/Spinner';
 import {
   LayersIcon,
@@ -175,6 +177,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <UserNotifications />
       <section>
         <p className="text-sm text-sand-500 dark:text-sand-400">
           {t('dash.welcome', { name: greetingName })}
@@ -186,6 +189,7 @@ export function DashboardPage() {
         </div>
       </section>
 
+      {isAdmin && <ChatAlerts />}
       {isAdmin && <AdminAnalytics />}
 
       <section>

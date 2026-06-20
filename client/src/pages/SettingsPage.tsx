@@ -1,14 +1,216 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { useTheme, THEMES, type Theme } from '../context/ThemeContext';
 import { authApi, avatarUrl } from '../api/auth';
 import { adminApi, downloadBackup } from '../api/admin';
+import { chatApi } from '../api/chat';
 import { ApiError } from '../api/client';
 import { LANGUAGES, type Lang } from '../i18n/translations';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
-import { DownloadIcon, UploadIcon } from '../components/Icons';
+import { DownloadIcon, SparkleIcon, UploadIcon } from '../components/Icons';
+import type { ChatConfig, ChatProvider } from '../types';
+
+const PROVIDER_LABELS: Record<ChatProvider, string> = {
+  openrouter: 'OpenRouter',
+  openai: 'OpenAI',
+  deepseek: 'Deepseek',
+  claude: 'Claude (Anthropic)',
+};
+
+function AssistantSection() {
+  const { t } = useI18n();
+  const [config, setConfig] = useState<ChatConfig | null>(null);
+  const [providers, setProviders] = useState<ChatProvider[]>([]);
+  const [defaults, setDefaults] = useState<Record<string, string>>({});
+  const [provider, setProvider] = useState<ChatProvider>('openrouter');
+  const [model, setModel] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    chatApi
+      .getConfig()
+      .then((r) => {
+        setConfig(r.config);
+        setProviders(r.providers);
+        setDefaults(r.defaultModels);
+        setProvider(r.config.provider);
+        setModel(r.config.model);
+        setEnabled(r.config.enabled);
+      })
+      .catch(() => setError(t('chatcfg.loadError')));
+  }, [t]);
+
+  const save = async () => {
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    try {
+      const { config: updated } = await chatApi.updateConfig({
+        provider,
+        model,
+        enabled,
+        ...(apiKey ? { apiKey } : {}),
+      });
+      setConfig(updated);
+      setApiKey('');
+      setMessage(t('chatcfg.saved'));
+      window.dispatchEvent(new Event('dashy:chat-config-changed'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('chatcfg.saveError'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clearKey = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const { config: updated } = await chatApi.updateConfig({ apiKey: '', enabled: false });
+      setConfig(updated);
+      setEnabled(false);
+      setApiKey('');
+      setMessage(t('chatcfg.keyCleared'));
+      window.dispatchEvent(new Event('dashy:chat-config-changed'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('chatcfg.saveError'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const test = async () => {
+    setError(null);
+    setMessage(null);
+    setTesting(true);
+    try {
+      await chatApi.test();
+      setMessage(t('chatcfg.testOk'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('chatcfg.testFail'));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <SparkleIcon className="h-5 w-5 text-ember-500" />
+        {t('chatcfg.title')}
+      </h2>
+      <p className="text-sm text-sand-500 dark:text-sand-400">{t('chatcfg.desc')}</p>
+
+      <div className="mt-4 space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="chat-provider">
+              {t('chatcfg.provider')}
+            </label>
+            <select
+              id="chat-provider"
+              className="input"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as ChatProvider)}
+            >
+              {providers.map((p) => (
+                <option key={p} value={p}>
+                  {PROVIDER_LABELS[p]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="chat-model">
+              {t('chatcfg.model')}
+            </label>
+            <input
+              id="chat-model"
+              className="input"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={defaults[provider] ?? ''}
+              list="chat-model-suggestions"
+            />
+            <datalist id="chat-model-suggestions">
+              {defaults[provider] && <option value={defaults[provider]} />}
+            </datalist>
+          </div>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="chat-key">
+            {t('chatcfg.apiKey')}
+          </label>
+          <input
+            id="chat-key"
+            type="password"
+            className="input"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            autoComplete="off"
+            placeholder={config?.hasApiKey ? t('chatcfg.keySet') : t('chatcfg.keyPlaceholder')}
+          />
+          <p className="mt-1 text-xs text-sand-400">{t('chatcfg.keyHint')}</p>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-sand-300 text-ember-500 focus:ring-ember-400"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          <span className="text-sm font-medium">{t('chatcfg.enable')}</span>
+        </label>
+
+        {error && (
+          <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+            {message}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-primary" onClick={save} disabled={busy}>
+            {busy && <Spinner className="h-4 w-4" />}
+            {t('chatcfg.save')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={test}
+            disabled={testing || !config?.hasApiKey}
+          >
+            {testing && <Spinner className="h-4 w-4" />}
+            {t('chatcfg.test')}
+          </button>
+          {config?.hasApiKey && (
+            <button
+              type="button"
+              className="btn-ghost text-red-500"
+              onClick={clearKey}
+              disabled={busy}
+            >
+              {t('chatcfg.clearKey')}
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function BackupSection() {
   const { t } = useI18n();
@@ -380,7 +582,8 @@ export function SettingsPage() {
         </div>
       </section>
 
-      {/* Backup & restore (admin only) */}
+      {/* AI assistant + Backup & restore (admin only) */}
+      {user?.role === 'admin' && <AssistantSection />}
       {user?.role === 'admin' && <BackupSection />}
     </div>
   );
