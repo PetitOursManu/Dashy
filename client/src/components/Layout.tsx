@@ -151,7 +151,7 @@ export function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 pb-10 sm:px-6 lg:px-8">
+        <main className="flex-1 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
           {/* Re-keyed on navigation so each sub-menu animates in. */}
           <div key={location.pathname} className="animate-page">
             <Outlet />
