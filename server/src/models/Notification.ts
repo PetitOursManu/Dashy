@@ -15,6 +15,9 @@ export interface INotification {
   userEmail: string;
   kind: string;
   message: string;
+  // For replies to a project request: the user's original request text, so the
+  // notification carries its own context ("you asked X → here's the answer").
+  requestMessage: string;
   createdByEmail: string;
   readAt: Date | null;
   // Hidden from the admin tile once the admin dismisses it.
@@ -29,6 +32,7 @@ const notificationSchema = new Schema<INotification>(
     userEmail: { type: String, required: true },
     kind: { type: String, default: 'admin-message' },
     message: { type: String, required: true, trim: true, maxlength: 1000 },
+    requestMessage: { type: String, default: '' },
     createdByEmail: { type: String, default: '' },
     readAt: { type: Date, default: null },
     dismissedByAdmin: { type: Boolean, default: false, index: true },

@@ -821,21 +821,38 @@ test('admin can reply to a request, notifying the requester', async () => {
   assert.equal(reply.status, 200);
   assert.equal((await reply.json()).request.status, 'resolved');
 
-  // Bob receives the reply as a dashboard notification.
+  // Bob receives the reply as a dashboard notification, carrying the original
+  // request text so he knows what it's about.
   await api('POST', '/api/auth/logout');
   cookies.clear();
   await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
   const notifs = await (await api('GET', '/api/notifications')).json();
-  assert.ok(
-    notifs.notifications.some((n: { message: string }) => n.message === 'Sounds good — I added it!'),
+  const replyNotif = notifs.notifications.find(
+    (n: { message: string }) => n.message === 'Sounds good — I added it!',
   );
+  assert.ok(replyNotif);
+  assert.equal(replyNotif.requestMessage, 'Add my portfolio');
+  await api('POST', `/api/notifications/${replyNotif.id}/read`); // clear it
 
   // Reply is admin-only.
   assert.equal((await api('POST', `/api/requests/${id}/reply`, { message: 'x' })).status, 403);
 
+  // Admin archives the request → it leaves the default + all views but shows
+  // under ?status=archived.
   await api('POST', '/api/auth/logout');
   cookies.clear();
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  assert.equal((await api('POST', `/api/requests/${id}/archive`, { archived: true })).status, 200);
+
+  const visible = await (await api('GET', '/api/requests/admin?status=all')).json();
+  assert.equal(visible.requests.some((r: { id: string }) => r.id === id), false);
+  const archived = await (await api('GET', '/api/requests/admin?status=archived')).json();
+  assert.ok(archived.requests.some((r: { id: string }) => r.id === id));
+
+  // Unarchive brings it back.
+  assert.equal((await api('POST', `/api/requests/${id}/archive`, { archived: false })).status, 200);
+  const back = await (await api('GET', '/api/requests/admin?status=all')).json();
+  assert.ok(back.requests.some((r: { id: string }) => r.id === id));
 });
 
 test('assistant config is cleaned up + bob re-enabled', async () => {

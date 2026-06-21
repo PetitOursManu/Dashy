@@ -107,6 +107,8 @@ export interface UserHistory {
 export interface UserNotification {
   id: string;
   message: string;
+  /** For a reply to a project request: the user's original request text. */
+  requestMessage?: string | null;
   createdAt: string;
 }
 
@@ -130,6 +132,7 @@ export interface ProjectRequest {
   kind: ProjectRequestKind;
   message: string;
   status: ProjectRequestStatus;
+  archived: boolean;
   createdAt: string;
 }
 

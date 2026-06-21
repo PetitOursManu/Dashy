@@ -20,6 +20,10 @@ export const replyRequestSchema = z.object({
   message: z.string().min(1).max(1000),
 });
 
+export const archiveRequestSchema = z.object({
+  archived: z.boolean().default(true),
+});
+
 // -------------------------------- user actions -------------------------------
 
 /** User: send a project request (idea or file suggestion) to the admins. */
@@ -54,15 +58,34 @@ export async function listMyRequests(req: Request, res: Response): Promise<void>
  */
 export async function listAdminRequests(req: Request, res: Response): Promise<void> {
   const status = String(req.query.status ?? '');
-  const filter =
-    status === 'all'
-      ? {}
-      : ['pending', 'resolved', 'dismissed'].includes(status)
-        ? { status }
-        : { status: { $ne: 'dismissed' } };
+
+  // The "archived" filter shows archived requests; every other filter shows
+  // only non-archived ones.
+  let filter: Record<string, unknown>;
+  if (status === 'archived') {
+    filter = { archived: true };
+  } else if (status === 'all') {
+    filter = { archived: { $ne: true } };
+  } else if (['pending', 'resolved', 'dismissed'].includes(status)) {
+    filter = { status, archived: { $ne: true } };
+  } else {
+    filter = { status: { $ne: 'dismissed' }, archived: { $ne: true } };
+  }
 
   const requests = await ProjectRequest.find(filter).sort({ createdAt: -1 }).limit(100);
   res.json({ requests: requests.map((r) => r.toJSON()) });
+}
+
+/** Admin: archive (hide) or unarchive a request from the admin views. */
+export async function archiveRequest(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Request not found');
+  const request = await ProjectRequest.findById(req.params.id);
+  if (!request) throw new ApiError(404, 'Request not found');
+
+  const { archived } = req.body as z.infer<typeof archiveRequestSchema>;
+  request.archived = archived;
+  await request.save();
+  res.json({ request: request.toJSON() });
 }
 
 /** Admin: update a request's status (resolve / dismiss / reopen). */
@@ -92,6 +115,8 @@ export async function replyToRequest(req: Request, res: Response): Promise<void>
     userEmail: request.userEmail,
     kind: 'request-reply',
     message,
+    // Carry the original request so the user sees what this reply is about.
+    requestMessage: request.message,
     createdByEmail: await emailOf(req.user!.sub),
   });
 

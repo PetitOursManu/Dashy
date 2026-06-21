@@ -38,14 +38,27 @@ export function UserNotifications() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="card w-full max-w-md p-6">
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="card w-full max-w-md animate-pop-in p-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-ember-500 to-ember-700 text-white">
+          <span className="flex h-10 w-10 animate-wiggle items-center justify-center rounded-full bg-gradient-to-br from-ember-500 to-ember-700 text-white">
             <ChatIcon className="h-5 w-5" />
           </span>
           <h2 className="text-lg font-semibold">{t('usernotif.title')}</h2>
         </div>
+
+        {/* If this is a reply to a project request, show the original request. */}
+        {current.requestMessage && (
+          <div className="mt-4 rounded-xl border-l-2 border-ember-400 bg-sand-100 px-3 py-2 dark:bg-sand-800">
+            <p className="text-xs font-medium text-sand-500 dark:text-sand-400">
+              {t('usernotif.yourRequest')}
+            </p>
+            <p className="mt-0.5 whitespace-pre-wrap text-sm text-sand-600 dark:text-sand-300">
+              {current.requestMessage}
+            </p>
+          </div>
+        )}
+
         <p className="mt-4 whitespace-pre-wrap text-sm text-sand-700 dark:text-sand-200">
           {current.message}
         </p>

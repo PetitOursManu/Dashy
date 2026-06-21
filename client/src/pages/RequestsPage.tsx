@@ -8,9 +8,9 @@ import { Avatar } from '../components/Avatar';
 import { Spinner } from '../components/Spinner';
 import { SendIcon } from '../components/Icons';
 
-type Filter = 'all' | ProjectRequestStatus;
+type Filter = 'all' | 'archived' | ProjectRequestStatus;
 
-const FILTERS: Filter[] = ['all', 'pending', 'resolved', 'dismissed'];
+const FILTERS: Filter[] = ['all', 'pending', 'resolved', 'dismissed', 'archived'];
 
 const STATUS_STYLES: Record<ProjectRequestStatus, string> = {
   pending: 'bg-sand-200 text-sand-600 dark:bg-sand-800 dark:text-sand-300',
@@ -71,6 +71,16 @@ export function RequestsPage() {
     }
   };
 
+  const archive = async (id: string, archived: boolean) => {
+    try {
+      await requestsApi.archive(id, archived);
+      await load(filter);
+      window.dispatchEvent(new Event('dashy:requests-changed'));
+    } catch {
+      /* ignore */
+    }
+  };
+
   const sendReply = async (id: string) => {
     if (!replyText.trim()) return;
     setReplyBusy(true);
@@ -103,7 +113,11 @@ export function RequestsPage() {
                   : 'border border-sand-200 bg-white/60 text-sand-600 hover:bg-white dark:border-sand-700 dark:bg-sand-800/60 dark:text-sand-300'
               }`}
             >
-              {f === 'all' ? t('requests.filterAll') : statusLabel(f)}
+              {f === 'all'
+                ? t('requests.filterAll')
+                : f === 'archived'
+                  ? t('requests.filterArchived')
+                  : statusLabel(f)}
             </button>
           ))}
         </div>
@@ -126,7 +140,7 @@ export function RequestsPage() {
       ) : (
         <div className="space-y-4">
           {requests.map((r) => (
-            <div key={r.id} className="card p-5">
+            <div key={r.id} className="card animate-slide-in p-5">
               <div className="flex items-start gap-3">
                 <Avatar email={r.userEmail} className="h-9 w-9 text-xs" />
                 <div className="min-w-0 flex-1">
@@ -198,13 +212,30 @@ export function RequestsPage() {
                           {t('notif.markDone')}
                         </button>
                       )}
-                      {r.status !== 'dismissed' && (
+                      {!r.archived && r.status !== 'dismissed' && (
                         <button
                           type="button"
                           className="btn-ghost !py-1.5 !text-xs text-red-500"
                           onClick={() => void setStatus(r.id, 'dismissed')}
                         >
                           {t('notif.dismiss')}
+                        </button>
+                      )}
+                      {r.archived ? (
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs"
+                          onClick={() => void archive(r.id, false)}
+                        >
+                          {t('requests.unarchive')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs"
+                          onClick={() => void archive(r.id, true)}
+                        >
+                          {t('requests.archive')}
                         </button>
                       )}
                     </div>

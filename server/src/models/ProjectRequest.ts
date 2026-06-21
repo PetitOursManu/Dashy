@@ -15,6 +15,8 @@ export interface IProjectRequest {
   kind: RequestKind;
   message: string;
   status: RequestStatus;
+  // Hidden from the admin views once archived (the requester still keeps it).
+  archived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +33,7 @@ const projectRequestSchema = new Schema<IProjectRequest>(
       default: 'pending',
       index: true,
     },
+    archived: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
 );

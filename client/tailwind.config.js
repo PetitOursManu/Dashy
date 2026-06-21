@@ -52,9 +52,27 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(6px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(0.92) translateY(8px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        'slide-in': {
+          '0%': { opacity: '0', transform: 'translateX(10px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '20%': { transform: 'rotate(-12deg)' },
+          '40%': { transform: 'rotate(10deg)' },
+          '60%': { transform: 'rotate(-6deg)' },
+          '80%': { transform: 'rotate(4deg)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s ease-out both',
+        'pop-in': 'pop-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'slide-in': 'slide-in 0.3s ease-out both',
+        wiggle: 'wiggle 0.7s ease-in-out',
       },
     },
   },

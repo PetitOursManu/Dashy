@@ -31,7 +31,7 @@ export function ChatAlerts() {
   if (alerts.length === 0) return null;
 
   return (
-    <section className="card border border-amber-300/60 bg-amber-50/60 p-5 dark:border-amber-500/30 dark:bg-amber-500/10">
+    <section className="card animate-fade-in border border-amber-300/60 bg-amber-50/60 p-5 dark:border-amber-500/30 dark:bg-amber-500/10">
       <h2 className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
         <AlertTriangleIcon className="h-5 w-5" />
         {t('chatalert.heading')}

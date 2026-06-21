@@ -59,6 +59,7 @@ export async function listMyNotifications(req: Request, res: Response): Promise<
     notifications: notifications.map((n) => ({
       id: n.id,
       message: n.message,
+      requestMessage: n.requestMessage || null,
       createdAt: n.createdAt,
     })),
   });

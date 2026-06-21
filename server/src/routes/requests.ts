@@ -26,5 +26,11 @@ router.post(
   validateBody(requests.replyRequestSchema),
   asyncHandler(requests.replyToRequest),
 );
+router.post(
+  '/:id/archive',
+  requireAdmin,
+  validateBody(requests.archiveRequestSchema),
+  asyncHandler(requests.archiveRequest),
+);
 
 export default router;
