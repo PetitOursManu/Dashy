@@ -130,6 +130,20 @@ html.theme-image.dark body {
     var(--user-bg, none);
 }
 
+/* The sidebar always needs a readable panel in the image theme — even when the
+   glass option is off (otherwise the menu sits straight on the photo). The
+   glass rules below turn this panel translucent/frosted when enabled. */
+html.theme-image aside {
+  background-color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 34px -16px rgba(0, 0, 0, 0.35);
+}
+html.theme-image.dark aside {
+  background-color: rgba(18, 16, 14, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 /* --- Glass surfaces (only when the glass option is on) --- */
 
 /* Light glass: bright, translucent white with a crisp highlight. */
