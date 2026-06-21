@@ -323,6 +323,36 @@ test('avatar upload, fetch, and delete', async () => {
   assert.equal((await del.json()).user.hasAvatar, false);
 });
 
+test('image theme: glass preference, background upload, fetch, and delete', async () => {
+  // Switch to the image theme and turn glass off.
+  const prof = await api('PATCH', '/api/auth/profile', { theme: 'image', glass: false });
+  assert.equal(prof.status, 200);
+  const pj = await prof.json();
+  assert.equal(pj.user.theme, 'image');
+  assert.equal(pj.user.glass, false);
+
+  // Upload a background image.
+  const form = new FormData();
+  const png = Buffer.from('89504e470d0a1a0a0000', 'hex');
+  form.set('background', new Blob([png], { type: 'image/png' }), 'bg.png');
+  const up = await fetch(baseUrl + '/api/auth/background', {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  assert.equal(up.status, 200);
+  assert.equal((await up.json()).user.hasBackground, true);
+
+  const img = await fetch(`${baseUrl}/api/auth/background`, { headers: { Cookie: cookieHeader() } });
+  assert.equal(img.status, 200);
+
+  const del = await api('DELETE', '/api/auth/background');
+  assert.equal((await del.json()).user.hasBackground, false);
+
+  // Restore the default theme so later tests aren't affected.
+  await api('PATCH', '/api/auth/profile', { theme: 'light', glass: true });
+});
+
 test('admin can update app content and roll back', async () => {
   // Replace the standalone app's content with new HTML.
   const form = new FormData();

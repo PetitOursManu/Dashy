@@ -29,7 +29,7 @@ export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }:
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -37,7 +37,7 @@ export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }:
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`card w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}>
+      <div className={`card w-full ${maxWidth} max-h-[90vh] animate-pop-in overflow-y-auto`}>
         <div className="flex items-center justify-between border-b border-sand-200 px-5 py-4 dark:border-sand-800">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button

@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { User, type UserDoc } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { env } from '../config/env.js';
-import { AVATARS_DIR } from '../config/paths.js';
+import { AVATARS_DIR, BACKGROUNDS_DIR } from '../config/paths.js';
 import { ApiError } from '../middleware/error.js';
 import { encrypt, decrypt, generateBackupCodes } from '../utils/crypto.js';
 import { sanitizeNoteHtml } from '../utils/sanitizeHtml.js';
@@ -58,7 +58,8 @@ export const profileSchema = z
     fullName: z.string().max(120).trim().optional(),
     jobTitle: z.string().max(120).trim().optional(),
     language: z.enum(['en', 'fr', 'es', 'de', 'it', 'zh', 'ru']).optional(),
-    theme: z.enum(['light', 'dark', 'violet']).optional(),
+    theme: z.enum(['light', 'dark', 'violet', 'image']).optional(),
+    glass: z.boolean().optional(),
     timezone: z.string().max(64).optional(),
     dateFormat: z.enum(['', 'dmy', 'mdy', 'iso']).optional(),
   })
@@ -238,6 +239,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   if (updates.jobTitle !== undefined) user.jobTitle = updates.jobTitle;
   if (updates.language !== undefined) user.language = updates.language;
   if (updates.theme !== undefined) user.theme = updates.theme;
+  if (updates.glass !== undefined) user.glass = updates.glass;
   if (updates.timezone !== undefined) user.timezone = updates.timezone;
   if (updates.dateFormat !== undefined) user.dateFormat = updates.dateFormat;
 
@@ -297,6 +299,45 @@ export async function deleteAvatar(req: Request, res: Response): Promise<void> {
     await user.save();
   }
   res.json({ user: user.toJSON() });
+}
+
+// ----------------------------- background image ------------------------------
+
+export async function uploadBackground(req: Request, res: Response): Promise<void> {
+  if (!req.file) throw new ApiError(400, 'No image uploaded');
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const old = user.background;
+  user.background = path.basename(req.file.filename);
+  await user.save();
+  if (old) {
+    await fsp.rm(path.join(BACKGROUNDS_DIR, path.basename(old)), { force: true }).catch(() => {});
+  }
+  res.json({ user: user.toJSON() });
+}
+
+export async function deleteBackground(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.background) {
+    await fsp
+      .rm(path.join(BACKGROUNDS_DIR, path.basename(user.background)), { force: true })
+      .catch(() => {});
+    user.background = null;
+    await user.save();
+  }
+  res.json({ user: user.toJSON() });
+}
+
+/** Serve the current user's own background image. */
+export async function getBackground(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub).select('background');
+  if (!user || !user.background) throw new ApiError(404, 'No background');
+  const file = path.join(BACKGROUNDS_DIR, path.basename(user.background));
+  if (!fs.existsSync(file)) throw new ApiError(404, 'No background');
+  res.set('Cache-Control', 'private, max-age=60');
+  res.sendFile(file);
 }
 
 /** Serve any team member's avatar image (auth required). */

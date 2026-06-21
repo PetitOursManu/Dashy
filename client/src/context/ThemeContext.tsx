@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type Theme = 'light' | 'dark' | 'violet';
-export const THEMES: Theme[] = ['light', 'dark', 'violet'];
+export type Theme = 'light' | 'dark' | 'violet' | 'image';
+export const THEMES: Theme[] = ['light', 'dark', 'violet', 'image'];
 
 interface ThemeContextValue {
   theme: Theme;
@@ -13,8 +13,11 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function applyTheme(theme: Theme): void {
   const el = document.documentElement;
-  el.classList.toggle('dark', theme === 'dark');
+  // The image theme builds on the dark palette (light text on dark, translucent
+  // surfaces) and adds a photo background + optional glass.
+  el.classList.toggle('dark', theme === 'dark' || theme === 'image');
   el.classList.toggle('violet', theme === 'violet');
+  el.classList.toggle('theme-image', theme === 'image');
 }
 
 function readInitialTheme(): Theme {

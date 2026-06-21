@@ -6,6 +6,8 @@ export interface User {
   fullName: string;
   jobTitle: string;
   hasAvatar: boolean;
+  hasBackground: boolean;
+  glass: boolean;
   language: string;
   theme: string;
   timezone: string;

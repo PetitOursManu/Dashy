@@ -40,6 +40,7 @@ export const authApi = {
     theme?: string;
     timezone?: string;
     dateFormat?: string;
+    glass?: boolean;
   }) => http.patch<{ user: User }>('/api/auth/profile', payload),
 
   logoutAll: () => http.post<{ ok: true }>('/api/auth/logout-all'),
@@ -55,9 +56,22 @@ export const authApi = {
   },
 
   removeAvatar: () => http.del<{ user: User }>('/api/auth/avatar'),
+
+  uploadBackground: (file: File) => {
+    const form = new FormData();
+    form.set('background', file);
+    return http.postForm<{ user: User }>('/api/auth/background', form);
+  },
+
+  removeBackground: () => http.del<{ user: User }>('/api/auth/background'),
 };
 
 /** URL for a user's avatar image (only meaningful when hasAvatar is true). */
 export function avatarUrl(userId: string): string {
   return `/api/auth/avatar/${userId}`;
+}
+
+/** URL for the current user's background image (only when hasBackground). */
+export function backgroundUrl(): string {
+  return `/api/auth/background`;
 }

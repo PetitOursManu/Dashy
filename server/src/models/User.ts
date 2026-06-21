@@ -17,6 +17,11 @@ export interface IUser {
   // --- Preferences ---
   language: string;
   theme: string;
+  // Filename of the uploaded background image under BACKGROUNDS_DIR (for the
+  // "image" theme), or null.
+  background: string | null;
+  // Whether the frosted-glass effect is enabled (image theme only).
+  glass: boolean;
   timezone: string;
   dateFormat: string;
   // Whether this user may use the Dashy AI assistant (admin-toggleable,
@@ -81,6 +86,8 @@ const userSchema = new Schema<IUser>(
     // --- Preferences ---
     language: { type: String, default: 'en', maxlength: 8 },
     theme: { type: String, default: 'light', maxlength: 16 },
+    background: { type: String, default: null },
+    glass: { type: Boolean, default: true },
     timezone: { type: String, default: '', maxlength: 64 },
     dateFormat: { type: String, default: '', maxlength: 8 },
 
@@ -132,6 +139,9 @@ userSchema.set('toJSON', {
     // Expose only whether an avatar exists, not the internal filename / counters.
     r.hasAvatar = Boolean(r.avatar);
     delete r.avatar;
+    r.hasBackground = Boolean(r.background);
+    delete r.background;
+    r.glass = r.glass !== false;
     delete r.tokenVersion;
     // Default to enabled for documents created before this field existed.
     r.chatEnabled = r.chatEnabled !== false;

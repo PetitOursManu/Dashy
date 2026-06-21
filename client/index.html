@@ -12,8 +12,10 @@
       (function () {
         try {
           var t = localStorage.getItem('dashy-theme');
-          if (t === 'dark') document.documentElement.classList.add('dark');
-          else if (t === 'violet') document.documentElement.classList.add('violet');
+          var el = document.documentElement;
+          if (t === 'dark') el.classList.add('dark');
+          else if (t === 'violet') el.classList.add('violet');
+          else if (t === 'image') el.classList.add('dark', 'theme-image');
         } catch (e) {}
       })();
     </script>

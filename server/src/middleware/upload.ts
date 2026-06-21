@@ -2,7 +2,13 @@ import multer from 'multer';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { env } from '../config/env.js';
-import { TMP_DIR, PREVIEWS_DIR, AVATARS_DIR, ensureDataDirs } from '../config/paths.js';
+import {
+  TMP_DIR,
+  PREVIEWS_DIR,
+  AVATARS_DIR,
+  BACKGROUNDS_DIR,
+  ensureDataDirs,
+} from '../config/paths.js';
 
 ensureDataDirs();
 
@@ -64,6 +70,26 @@ export const avatarUpload = multer({
     imageFilter(req, file, cb);
   },
 }).single('avatar');
+
+/** Upload handler for a user background image (single image, ~10 MB). */
+export const backgroundUpload = multer({
+  storage: multer.diskStorage({
+    destination(_req, _file, cb) {
+      cb(null, BACKGROUNDS_DIR);
+    },
+    filename(_req, file, cb) {
+      cb(null, randomName(file.originalname));
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter(req, file, cb) {
+    if (file.fieldname !== 'background') {
+      cb(new Error(`Unexpected field: ${file.fieldname}`));
+      return;
+    }
+    imageFilter(req, file, cb);
+  },
+}).single('background');
 
 /**
  * Upload handler for importing an app: one `content` file (.html/.zip) and an

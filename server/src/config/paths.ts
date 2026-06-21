@@ -21,6 +21,9 @@ export const PREVIEWS_DIR = path.join(DATA_DIR, 'previews');
 /** Where user avatars are stored: `<DATA_DIR>/avatars/`. */
 export const AVATARS_DIR = path.join(DATA_DIR, 'avatars');
 
+/** Where user background images are stored: `<DATA_DIR>/backgrounds/`. */
+export const BACKGROUNDS_DIR = path.join(DATA_DIR, 'backgrounds');
+
 /** Where previous app versions are snapshotted: `<DATA_DIR>/versions/<appId>/<vid>/`. */
 export const VERSIONS_DIR = path.join(DATA_DIR, 'versions');
 
@@ -31,7 +34,15 @@ export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 export const CLIENT_DIST_DIR = path.resolve(__dirname, '../../public');
 
 export function ensureDataDirs(): void {
-  for (const dir of [DATA_DIR, APPS_DIR, PREVIEWS_DIR, AVATARS_DIR, VERSIONS_DIR, TMP_DIR]) {
+  for (const dir of [
+    DATA_DIR,
+    APPS_DIR,
+    PREVIEWS_DIR,
+    AVATARS_DIR,
+    BACKGROUNDS_DIR,
+    VERSIONS_DIR,
+    TMP_DIR,
+  ]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }

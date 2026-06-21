@@ -106,3 +106,53 @@
     @apply bg-white text-sand-900 shadow-card dark:bg-sand-800 dark:text-white;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Image theme: a user-uploaded photo background, with an optional frosted
+   "liquid glass" effect on tiles and the menu. The glass look reuses the
+   inset-highlight + backdrop-blur technique from the reference snippet.
+   ------------------------------------------------------------------------- */
+html.theme-image body {
+  background-color: #100e0c;
+  /* Dark wash over the photo keeps light text and glass readable. */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.55)),
+    var(--user-bg, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed, fixed;
+}
+
+/* Glass surfaces (only when the glass option is on). */
+html.theme-image.glass .card {
+  background-color: rgba(22, 19, 16, 0.34);
+  border-color: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.75),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.4),
+    0 12px 34px -14px rgba(0, 0, 0, 0.6);
+}
+
+html.theme-image.glass aside {
+  background-color: rgba(22, 19, 16, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 1.5rem;
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.6),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.3);
+}
+
+html.theme-image.glass .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+html.theme-image.glass .nav-link-active {
+  background-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.7),
+    inset 0 0 3px 1px rgba(255, 255, 255, 0.4);
+}

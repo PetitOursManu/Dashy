@@ -29,7 +29,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - 📝 **Personal notes** — a per-user note tile with **bold / italic / underline**, auto-saved server-side so it survives logout and refresh.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
 - 🌍 **7 languages** — the whole interface is translated: English (default), Français, Español, Deutsch, Italiano, 简体中文, Русский.
-- 🎨 **3 themes** — Light, Dark, and Violet (purple accent), warm "ember/sand" palette, mobile-first responsive layout.
+- 🎨 **4 themes** — Light, Dark, Violet (purple accent), and **Image**: upload your own background photo (remembered per user) with an optional **frosted "liquid glass"** effect on tiles and the menu. Warm "ember/sand" palette, subtle page/dialog animations, mobile-first responsive layout.
 - 🔒 **Session control** — see your active sessions (device, IP, last seen), revoke any one individually, or "sign out of all devices" at once.
 - 💾 **Backup & restore** (admin) — download every hosted app (files + metadata) as a single `.zip`, and restore from it on another server.
 - 🛡️ **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, encrypted secrets at rest (TOTP secrets and LLM API keys, AES-256-GCM).

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { useTheme, THEMES, type Theme } from '../context/ThemeContext';
-import { authApi, avatarUrl } from '../api/auth';
+import { authApi, avatarUrl, backgroundUrl } from '../api/auth';
 import { adminApi, downloadBackup } from '../api/admin';
 import { chatApi } from '../api/chat';
 import { ApiError } from '../api/client';
@@ -318,6 +318,7 @@ export function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
+  const bgInput = useRef<HTMLInputElement>(null);
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
@@ -373,10 +374,31 @@ export function SettingsPage() {
     void savePref({ theme: value });
   };
 
+  const onBackgroundSelected = async (file: File | null) => {
+    if (!file) return;
+    setError(null);
+    try {
+      const { user: updated } = await authApi.uploadBackground(file);
+      setUser(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not upload the image.');
+    }
+  };
+
+  const removeBackground = async () => {
+    try {
+      const { user: updated } = await authApi.removeBackground();
+      setUser(updated);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const themeSwatch: Record<Theme, string> = {
     light: 'linear-gradient(135deg,#f8ddc8,#ef6a2e)',
     dark: 'linear-gradient(135deg,#3f3631,#ef6a2e)',
     violet: 'linear-gradient(135deg,#e6def7,#8b5cf6)',
+    image: 'linear-gradient(135deg,#5b7c5a,#c2603b)',
   };
 
   return (
@@ -517,7 +539,7 @@ export function SettingsPage() {
       <section className="card p-6">
         <h2 className="font-semibold">{t('settings.appearanceTitle')}</h2>
         <p className="text-sm text-sand-500 dark:text-sand-400">{t('settings.appearanceDesc')}</p>
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {THEMES.map((value) => (
             <button
               key={value}
@@ -537,6 +559,65 @@ export function SettingsPage() {
             </button>
           ))}
         </div>
+        {/* Image-theme controls: background upload + glass toggle */}
+        {theme === 'image' && (
+          <div className="mt-5 space-y-4 border-t border-sand-200 pt-5 dark:border-sand-700">
+            <div>
+              <span className="label">{t('settings.background')}</span>
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-16 w-24 shrink-0 rounded-xl border border-sand-200 bg-sand-100 bg-cover bg-center dark:border-sand-700 dark:bg-sand-800"
+                  style={
+                    user?.hasBackground
+                      ? { backgroundImage: `url(${backgroundUrl()}?t=${user.updatedAt})` }
+                      : undefined
+                  }
+                />
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-secondary !py-1.5 !text-xs"
+                      onClick={() => bgInput.current?.click()}
+                    >
+                      {t('settings.uploadBackground')}
+                    </button>
+                    {user?.hasBackground && (
+                      <button
+                        type="button"
+                        className="btn-ghost !py-1.5 !text-xs text-red-500"
+                        onClick={removeBackground}
+                      >
+                        {t('settings.removeBackground')}
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-xs text-sand-400">{t('settings.backgroundHint')}</span>
+                </div>
+                <input
+                  ref={bgInput}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => onBackgroundSelected(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            </div>
+
+            <label className="flex cursor-pointer items-center justify-between gap-3">
+              <span className="text-sm">
+                <span className="font-medium">{t('settings.glass')}</span>
+                <span className="block text-xs text-sand-400">{t('settings.glassHint')}</span>
+              </span>
+              <input
+                type="checkbox"
+                className="h-5 w-5 rounded border-sand-300 text-ember-500 focus:ring-ember-400"
+                checked={user?.glass ?? true}
+                onChange={(e) => savePref({ glass: e.target.checked })}
+              />
+            </label>
+          </div>
+        )}
       </section>
 
       {/* Date & time */}

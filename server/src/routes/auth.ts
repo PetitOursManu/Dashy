@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
-import { avatarUpload } from '../middleware/upload.js';
+import { avatarUpload, backgroundUpload } from '../middleware/upload.js';
 import * as auth from '../controllers/authController.js';
 
 const router = Router();
@@ -44,6 +44,11 @@ router.put('/note', requireAuth, validateBody(auth.noteSchema), asyncHandler(aut
 router.post('/avatar', requireAuth, avatarUpload, asyncHandler(auth.uploadAvatar));
 router.delete('/avatar', requireAuth, asyncHandler(auth.deleteAvatar));
 router.get('/avatar/:id', requireAuth, asyncHandler(auth.getAvatar));
+
+// --- Background image (image theme) ---
+router.post('/background', requireAuth, backgroundUpload, asyncHandler(auth.uploadBackground));
+router.delete('/background', requireAuth, asyncHandler(auth.deleteBackground));
+router.get('/background', requireAuth, asyncHandler(auth.getBackground));
 
 // --- 2FA management ---
 router.post('/2fa/setup', requireAuth, asyncHandler(auth.setupTwoFactor));

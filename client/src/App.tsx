@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme, THEMES, type Theme } from './context/ThemeContext';
 import { LanguageProvider, useI18n } from './context/LanguageContext';
+import { backgroundUrl } from './api/auth';
 import type { Lang } from './i18n/translations';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
@@ -39,6 +40,25 @@ function PreferencesSync() {
   return null;
 }
 
+/** Applies the user's background image + glass toggle for the "image" theme. */
+function ThemeBackground() {
+  const { theme } = useTheme();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const el = document.documentElement;
+    const isImage = theme === 'image';
+    if (isImage && user?.hasBackground) {
+      el.style.setProperty('--user-bg', `url("${backgroundUrl()}?t=${user.updatedAt}")`);
+    } else {
+      el.style.removeProperty('--user-bg');
+    }
+    el.classList.toggle('glass', isImage && (user?.glass ?? true));
+  }, [theme, user?.hasBackground, user?.glass, user?.updatedAt]);
+
+  return null;
+}
+
 function LoginRoute() {
   const { user, loading } = useAuth();
   if (loading) return <FullPageSpinner />;
@@ -53,6 +73,7 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <PreferencesSync />
+            <ThemeBackground />
             <Routes>
               <Route path="/login" element={<LoginRoute />} />
               <Route element={<ProtectedRoute />}>
