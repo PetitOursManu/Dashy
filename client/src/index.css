@@ -112,10 +112,10 @@
    "liquid glass" effect on tiles and the menu. The glass look reuses the
    inset-highlight + backdrop-blur technique from the reference snippet.
    ------------------------------------------------------------------------- */
+/* Light variant (default): a soft light wash so the photo stays bright. */
 html.theme-image body {
-  background-color: #100e0c;
-  /* Dark wash over the photo keeps light text and glass readable. */
-  background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.55)),
+  background-color: #e9e6e1;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.4)),
     var(--user-bg, none);
   background-size: cover, cover;
   background-position: center, center;
@@ -123,34 +123,72 @@ html.theme-image body {
   background-attachment: fixed, fixed;
 }
 
-/* Glass surfaces (only when the glass option is on). */
+/* Dark variant: darken the photo for light text + smoked glass. */
+html.theme-image.dark body {
+  background-color: #100e0c;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.52)),
+    var(--user-bg, none);
+}
+
+/* --- Glass surfaces (only when the glass option is on) --- */
+
+/* Light glass: bright, translucent white with a crisp highlight. */
 html.theme-image.glass .card {
-  background-color: rgba(22, 19, 16, 0.34);
-  border-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.65);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.9),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.55),
+    0 12px 34px -14px rgba(0, 0, 0, 0.3);
+}
+
+html.theme-image.glass aside {
+  background-color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 1.5rem;
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.85),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.45);
+}
+
+html.theme-image.glass .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+html.theme-image.glass .nav-link-active {
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 2px 2px 0 -2px rgba(255, 255, 255, 0.9),
+    inset 0 0 3px 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Dark glass overrides (image theme + dark tint). */
+html.theme-image.glass.dark .card {
+  background-color: rgba(22, 19, 16, 0.34);
+  border-color: rgba(255, 255, 255, 0.22);
   box-shadow:
     inset 2px 2px 0 -2px rgba(255, 255, 255, 0.75),
     inset 0 0 4px 1px rgba(255, 255, 255, 0.4),
     0 12px 34px -14px rgba(0, 0, 0, 0.6);
 }
 
-html.theme-image.glass aside {
+html.theme-image.glass.dark aside {
   background-color: rgba(22, 19, 16, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 1.5rem;
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
+  border-color: rgba(255, 255, 255, 0.18);
   box-shadow:
     inset 2px 2px 0 -2px rgba(255, 255, 255, 0.6),
     inset 0 0 4px 1px rgba(255, 255, 255, 0.3);
 }
 
-html.theme-image.glass .nav-link:hover {
+html.theme-image.glass.dark .nav-link:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-html.theme-image.glass .nav-link-active {
+html.theme-image.glass.dark .nav-link-active {
   background-color: rgba(255, 255, 255, 0.18);
   box-shadow:
     inset 2px 2px 0 -2px rgba(255, 255, 255, 0.7),

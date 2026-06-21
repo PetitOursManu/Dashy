@@ -60,6 +60,7 @@ export const profileSchema = z
     language: z.enum(['en', 'fr', 'es', 'de', 'it', 'zh', 'ru']).optional(),
     theme: z.enum(['light', 'dark', 'violet', 'image']).optional(),
     glass: z.boolean().optional(),
+    glassDark: z.boolean().optional(),
     timezone: z.string().max(64).optional(),
     dateFormat: z.enum(['', 'dmy', 'mdy', 'iso']).optional(),
   })
@@ -240,6 +241,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   if (updates.language !== undefined) user.language = updates.language;
   if (updates.theme !== undefined) user.theme = updates.theme;
   if (updates.glass !== undefined) user.glass = updates.glass;
+  if (updates.glassDark !== undefined) user.glassDark = updates.glassDark;
   if (updates.timezone !== undefined) user.timezone = updates.timezone;
   if (updates.dateFormat !== undefined) user.dateFormat = updates.dateFormat;
 

@@ -324,12 +324,17 @@ test('avatar upload, fetch, and delete', async () => {
 });
 
 test('image theme: glass preference, background upload, fetch, and delete', async () => {
-  // Switch to the image theme and turn glass off.
+  // Switch to the image theme and turn glass off. Tint defaults to light.
   const prof = await api('PATCH', '/api/auth/profile', { theme: 'image', glass: false });
   assert.equal(prof.status, 200);
   const pj = await prof.json();
   assert.equal(pj.user.theme, 'image');
   assert.equal(pj.user.glass, false);
+  assert.equal(pj.user.glassDark, false);
+
+  // Switching the tint to dark persists.
+  const dark = await api('PATCH', '/api/auth/profile', { glassDark: true });
+  assert.equal((await dark.json()).user.glassDark, true);
 
   // Upload a background image.
   const form = new FormData();

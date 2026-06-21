@@ -41,6 +41,7 @@ export const authApi = {
     timezone?: string;
     dateFormat?: string;
     glass?: boolean;
+    glassDark?: boolean;
   }) => http.patch<{ user: User }>('/api/auth/profile', payload),
 
   logoutAll: () => http.post<{ ok: true }>('/api/auth/logout-all'),

@@ -54,7 +54,11 @@ function ThemeBackground() {
       el.style.removeProperty('--user-bg');
     }
     el.classList.toggle('glass', isImage && (user?.glass ?? true));
-  }, [theme, user?.hasBackground, user?.glass, user?.updatedAt]);
+    // The image theme's light/dark tint is user-chosen (light by default).
+    if (isImage) {
+      el.classList.toggle('dark', user?.glassDark === true);
+    }
+  }, [theme, user?.hasBackground, user?.glass, user?.glassDark, user?.updatedAt]);
 
   return null;
 }

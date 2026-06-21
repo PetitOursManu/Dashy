@@ -8,6 +8,7 @@ export interface User {
   hasAvatar: boolean;
   hasBackground: boolean;
   glass: boolean;
+  glassDark: boolean;
   language: string;
   theme: string;
   timezone: string;

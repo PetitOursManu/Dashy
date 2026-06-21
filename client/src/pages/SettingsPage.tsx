@@ -616,6 +616,29 @@ export function SettingsPage() {
                 onChange={(e) => savePref({ glass: e.target.checked })}
               />
             </label>
+
+            <div>
+              <span className="label">{t('settings.tint')}</span>
+              <div className="inline-flex rounded-xl border border-sand-200 p-1 dark:border-sand-700">
+                {[
+                  { dark: false, label: t('settings.tintLight') },
+                  { dark: true, label: t('settings.tintDark') },
+                ].map((opt) => (
+                  <button
+                    key={String(opt.dark)}
+                    type="button"
+                    onClick={() => savePref({ glassDark: opt.dark })}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                      (user?.glassDark ?? false) === opt.dark
+                        ? 'bg-ember-500 text-white'
+                        : 'text-sand-600 hover:bg-sand-100 dark:text-sand-300 dark:hover:bg-sand-800'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </section>

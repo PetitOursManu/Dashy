@@ -2156,6 +2156,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Shown behind the dashboard, saved to your account.',
     'settings.glass': 'Glass effect',
     'settings.glassHint': 'Frosted, translucent tiles and menu.',
+    'settings.tint': 'Tint',
+    'settings.tintLight': 'Light',
+    'settings.tintDark': 'Dark',
   },
   fr: {
     'req.title': 'Demander un projet',
@@ -2203,6 +2206,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Affichée derrière le tableau de bord, enregistrée sur votre compte.',
     'settings.glass': 'Effet verre',
     'settings.glassHint': 'Tuiles et menu translucides, effet givré.',
+    'settings.tint': 'Teinte',
+    'settings.tintLight': 'Clair',
+    'settings.tintDark': 'Foncé',
   },
   es: {
     'req.title': 'Solicitar un proyecto',
@@ -2250,6 +2256,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Se muestra detrás del panel, guardada en tu cuenta.',
     'settings.glass': 'Efecto cristal',
     'settings.glassHint': 'Tiles y menú translúcidos, efecto esmerilado.',
+    'settings.tint': 'Tono',
+    'settings.tintLight': 'Claro',
+    'settings.tintDark': 'Oscuro',
   },
   de: {
     'req.title': 'Projekt anfragen',
@@ -2297,6 +2306,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Hinter dem Dashboard angezeigt, in deinem Konto gespeichert.',
     'settings.glass': 'Glaseffekt',
     'settings.glassHint': 'Matte, durchscheinende Kacheln und Menü.',
+    'settings.tint': 'Tönung',
+    'settings.tintLight': 'Hell',
+    'settings.tintDark': 'Dunkel',
   },
   it: {
     'req.title': 'Richiedi un progetto',
@@ -2344,6 +2356,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Mostrata dietro la dashboard, salvata sul tuo account.',
     'settings.glass': 'Effetto vetro',
     'settings.glassHint': 'Tile e menu traslucidi, effetto smerigliato.',
+    'settings.tint': 'Tinta',
+    'settings.tintLight': 'Chiaro',
+    'settings.tintDark': 'Scuro',
   },
   zh: {
     'req.title': '请求添加项目',
@@ -2391,6 +2406,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': '显示在仪表盘背后，保存到你的账户。',
     'settings.glass': '玻璃效果',
     'settings.glassHint': '磨砂半透明的磁贴和菜单。',
+    'settings.tint': '色调',
+    'settings.tintLight': '浅色',
+    'settings.tintDark': '深色',
   },
   ru: {
     'req.title': 'Запросить проект',
@@ -2438,6 +2456,9 @@ const featureStrings: Record<Lang, Record<string, string>> = {
     'settings.backgroundHint': 'Показывается за панелью, сохраняется в вашем аккаунте.',
     'settings.glass': 'Эффект стекла',
     'settings.glassHint': 'Матовые полупрозрачные плитки и меню.',
+    'settings.tint': 'Оттенок',
+    'settings.tintLight': 'Светлый',
+    'settings.tintDark': 'Тёмный',
   },
 };
 

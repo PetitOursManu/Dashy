@@ -13,11 +13,13 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function applyTheme(theme: Theme): void {
   const el = document.documentElement;
-  // The image theme builds on the dark palette (light text on dark, translucent
-  // surfaces) and adds a photo background + optional glass.
-  el.classList.toggle('dark', theme === 'dark' || theme === 'image');
   el.classList.toggle('violet', theme === 'violet');
   el.classList.toggle('theme-image', theme === 'image');
+  // For the image theme the light/dark tint is user-chosen, so ThemeBackground
+  // owns the `dark` class; here we only manage it for the non-image themes.
+  if (theme !== 'image') {
+    el.classList.toggle('dark', theme === 'dark');
+  }
 }
 
 function readInitialTheme(): Theme {

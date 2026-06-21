@@ -22,6 +22,8 @@ export interface IUser {
   background: string | null;
   // Whether the frosted-glass effect is enabled (image theme only).
   glass: boolean;
+  // Image theme tint: true = dark surfaces/light text, false = light (default).
+  glassDark: boolean;
   timezone: string;
   dateFormat: string;
   // Whether this user may use the Dashy AI assistant (admin-toggleable,
@@ -88,6 +90,7 @@ const userSchema = new Schema<IUser>(
     theme: { type: String, default: 'light', maxlength: 16 },
     background: { type: String, default: null },
     glass: { type: Boolean, default: true },
+    glassDark: { type: Boolean, default: false },
     timezone: { type: String, default: '', maxlength: 64 },
     dateFormat: { type: String, default: '', maxlength: 8 },
 
@@ -142,6 +145,7 @@ userSchema.set('toJSON', {
     r.hasBackground = Boolean(r.background);
     delete r.background;
     r.glass = r.glass !== false;
+    r.glassDark = r.glassDark === true;
     delete r.tokenVersion;
     // Default to enabled for documents created before this field existed.
     r.chatEnabled = r.chatEnabled !== false;
