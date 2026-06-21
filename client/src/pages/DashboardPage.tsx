@@ -181,7 +181,7 @@ export function DashboardPage() {
     <div className="space-y-8">
       <UserNotifications />
       <section>
-        <p className="text-sm text-sand-500 dark:text-sand-400">
+        <p className="text-[15px] font-medium text-sand-600 dark:text-sand-300">
           {t('dash.welcome', { name: greetingName })}
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

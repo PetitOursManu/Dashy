@@ -129,24 +129,24 @@ export function Layout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 bg-gradient-to-b from-sand-50/75 via-sand-50/35 to-transparent px-4 py-4 backdrop-blur-md dark:from-sand-950/75 dark:via-sand-950/35 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="btn-ghost !px-2 lg:hidden"
-              aria-label="Open menu"
-            >
-              <MenuIcon className="h-5 w-5" />
-            </button>
-            <h1
-              key={location.pathname}
-              className="page-title animate-slide-in text-2xl font-bold tracking-tight sm:text-[28px]"
-            >
-              {title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
+        <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="card flex items-center justify-between gap-4 px-4 py-2.5 sm:px-5">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="btn-ghost !px-2 lg:hidden"
+                aria-label="Open menu"
+              >
+                <MenuIcon className="h-5 w-5" />
+              </button>
+              <h1
+                key={location.pathname}
+                className="page-title animate-slide-in text-2xl font-bold tracking-tight sm:text-[26px]"
+              >
+                {title}
+              </h1>
+            </div>
             <ProfileMenu />
           </div>
         </header>
