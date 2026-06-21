@@ -134,8 +134,8 @@ html.theme-image.dark body {
 
 /* Light glass: bright, translucent white with a crisp highlight. */
 html.theme-image.glass .card {
-  background-color: rgba(255, 255, 255, 0.45);
-  border-color: rgba(255, 255, 255, 0.65);
+  background-color: rgba(255, 255, 255, 0.58);
+  border-color: rgba(255, 255, 255, 0.7);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
@@ -145,8 +145,8 @@ html.theme-image.glass .card {
 }
 
 html.theme-image.glass aside {
-  background-color: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: 1.5rem;
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
@@ -164,6 +164,45 @@ html.theme-image.glass .nav-link-active {
   box-shadow:
     inset 2px 2px 0 -2px rgba(255, 255, 255, 0.9),
     inset 0 0 3px 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Light image theme: lift the contrast of muted text and faint surfaces so
+   everything stays legible over the bright glass. Scoped to the light tint. */
+html.theme-image:not(.dark) .text-sand-400 {
+  color: #6f6357;
+}
+html.theme-image:not(.dark) .text-sand-500 {
+  color: #574b42;
+}
+html.theme-image:not(.dark) .text-sand-600 {
+  color: #463c34;
+}
+html.theme-image:not(.dark) .placeholder-sand-400::-moz-placeholder {
+  color: #6f6357;
+}
+html.theme-image:not(.dark) .placeholder-sand-400::placeholder {
+  color: #6f6357;
+}
+/* Faint tracks (chart/progress bars), dividers and borders become visible. */
+html.theme-image:not(.dark) .bg-sand-100 {
+  background-color: rgba(70, 60, 50, 0.16);
+}
+html.theme-image:not(.dark) .bg-sand-200 {
+  background-color: rgba(70, 60, 50, 0.2);
+}
+html.theme-image:not(.dark) .border-sand-100 {
+  border-color: rgba(70, 60, 50, 0.18);
+}
+html.theme-image:not(.dark) .border-sand-200 {
+  border-color: rgba(70, 60, 50, 0.22);
+}
+html.theme-image:not(.dark) .divide-sand-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(70, 60, 50, 0.18);
+}
+/* Inputs / note editor: a more solid surface for readability. */
+html.theme-image:not(.dark) .input,
+html.theme-image:not(.dark) .note-editor {
+  background-color: rgba(255, 255, 255, 0.75);
 }
 
 /* Dark glass overrides (image theme + dark tint). */
