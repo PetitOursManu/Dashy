@@ -59,7 +59,14 @@ async function chatAvailability(userId: string): Promise<boolean> {
 
 /** Lightweight status check the chat widget uses to decide whether to render. */
 export async function status(req: Request, res: Response): Promise<void> {
-  res.json({ available: await chatAvailability(req.user!.sub) });
+  const [available, user] = await Promise.all([
+    chatAvailability(req.user!.sub),
+    User.findById(req.user!.sub).select('chatEnabled'),
+  ]);
+  // Contacting an admin (project requests) is allowed whenever the user has
+  // assistant access, even if the AI provider isn't configured or they're
+  // currently timed out.
+  res.json({ available, canRequest: user?.chatEnabled !== false });
 }
 
 /** Admin: read the current assistant configuration (key never returned). */

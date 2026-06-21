@@ -13,6 +13,7 @@ import { env } from '../config/env.js';
 import { AVATARS_DIR } from '../config/paths.js';
 import { ApiError } from '../middleware/error.js';
 import { encrypt, decrypt, generateBackupCodes } from '../utils/crypto.js';
+import { sanitizeNoteHtml } from '../utils/sanitizeHtml.js';
 import { logActivity } from '../services/activity.js';
 import {
   COOKIE_NAME,
@@ -45,6 +46,10 @@ export const passwordChangeSchema = z.object({
 
 export const disable2faSchema = z.object({
   password: z.string().min(1).max(200),
+});
+
+export const noteSchema = z.object({
+  content: z.string().max(20_000),
 });
 
 export const profileSchema = z
@@ -238,6 +243,23 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
 
   await user.save();
   res.json({ user: user.toJSON() });
+}
+
+/** Get the current user's personal note. */
+export async function getNote(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub).select('note');
+  if (!user) throw new ApiError(404, 'User not found');
+  res.json({ content: user.note ?? '' });
+}
+
+/** Save the current user's personal note (sanitized rich text). */
+export async function updateNote(req: Request, res: Response): Promise<void> {
+  const user = await User.findById(req.user!.sub);
+  if (!user) throw new ApiError(404, 'User not found');
+  const { content } = req.body as z.infer<typeof noteSchema>;
+  user.note = sanitizeNoteHtml(content);
+  await user.save();
+  res.json({ content: user.note });
 }
 
 /** Sign out of every device by invalidating all issued tokens + sessions. */

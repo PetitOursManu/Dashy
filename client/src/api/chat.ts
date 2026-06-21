@@ -10,7 +10,7 @@ export interface UpdateChatConfigPayload {
 }
 
 export const chatApi = {
-  status: () => http.get<{ available: boolean }>('/api/chat/status'),
+  status: () => http.get<{ available: boolean; canRequest: boolean }>('/api/chat/status'),
 
   send: (messages: ChatMessage[]) => http.post<{ reply: string }>('/api/chat', { messages }),
 

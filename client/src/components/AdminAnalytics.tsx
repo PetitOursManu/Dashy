@@ -1,9 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { statsApi } from '../api/stats';
 import { notificationsApi } from '../api/notifications';
+import { requestsApi } from '../api/requests';
 import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
-import type { ActivityItem, AdminNotification, OverviewStats, StorageStats } from '../types';
+import type {
+  ActivityItem,
+  AdminNotification,
+  OverviewStats,
+  ProjectRequest,
+  StorageStats,
+} from '../types';
 import { formatBytes } from '../utils/format';
 import { TileDecor } from './TileDecor';
 import { Spinner } from './Spinner';
@@ -74,12 +81,21 @@ function NotificationsPanel() {
   const { t } = useI18n();
   const { relativeTime } = useFormat();
   const [items, setItems] = useState<AdminNotification[]>([]);
+  const [requests, setRequests] = useState<ProjectRequest[]>([]);
 
   useEffect(() => {
     notificationsApi
       .adminList()
       .then((r) => setItems(r.notifications))
       .catch(() => setItems([]));
+    const loadRequests = () =>
+      requestsApi
+        .adminList()
+        .then((r) => setRequests(r.requests))
+        .catch(() => setRequests([]));
+    loadRequests();
+    window.addEventListener('dashy:requests-changed', loadRequests);
+    return () => window.removeEventListener('dashy:requests-changed', loadRequests);
   }, []);
 
   const dismiss = async (id: string) => {
@@ -91,11 +107,85 @@ function NotificationsPanel() {
     }
   };
 
+  const resolveRequest = async (id: string) => {
+    setRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'resolved' } : r)),
+    );
+    try {
+      await requestsApi.setStatus(id, 'resolved');
+    } catch {
+      /* best effort */
+    }
+  };
+
+  const dismissRequest = async (id: string) => {
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await requestsApi.setStatus(id, 'dismissed');
+    } catch {
+      /* best effort */
+    }
+  };
+
   return (
     <div className="card relative overflow-hidden p-5">
       <TileDecor variant="bell" />
       <PanelHeader icon={<BellIcon className="h-5 w-5" />} title={t('notif.title')} />
-      {items.length === 0 ? (
+
+      {/* Inbound project requests from users */}
+      {requests.length > 0 && (
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sand-400">
+            {t('notif.requestsTitle')}
+          </p>
+          <ul className="space-y-2">
+            {requests.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-xl border border-ember-200/70 bg-ember-50/50 px-3 py-2.5 dark:border-ember-500/20 dark:bg-ember-500/5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs">
+                      <span className="font-medium">{r.userEmail}</span> ·{' '}
+                      <span className="text-ember-600 dark:text-ember-300">
+                        {r.kind === 'file' ? t('req.kindFile') : t('req.kindIdea')}
+                      </span>
+                      {r.status === 'resolved' && (
+                        <span className="ml-1 text-green-600 dark:text-green-400">
+                          · {t('req.statusResolved')}
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm">{r.message}</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  {r.status !== 'resolved' && (
+                    <button
+                      type="button"
+                      onClick={() => resolveRequest(r.id)}
+                      className="rounded-full bg-ember-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-ember-600"
+                    >
+                      {t('notif.markDone')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => dismissRequest(r.id)}
+                    className="rounded-full border border-sand-200 px-2.5 py-1 text-xs font-medium hover:bg-sand-100 dark:border-sand-700 dark:hover:bg-sand-800"
+                  >
+                    {t('notif.dismiss')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Outbound notifications to users (with read receipts) */}
+      {items.length === 0 && requests.length === 0 ? (
         <p className="py-6 text-center text-sm text-sand-400">{t('notif.empty')}</p>
       ) : (
         <ul className="space-y-2">

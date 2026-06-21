@@ -12,6 +12,8 @@ import { StatCard } from '../components/StatCard';
 import { AdminAnalytics } from '../components/AdminAnalytics';
 import { ChatAlerts } from '../components/ChatAlerts';
 import { UserNotifications } from '../components/UserNotifications';
+import { NotesTile } from '../components/NotesTile';
+import { MyRequests } from '../components/MyRequests';
 import { Spinner } from '../components/Spinner';
 import {
   LayersIcon,
@@ -190,6 +192,13 @@ export function DashboardPage() {
       </section>
 
       {isAdmin && <ChatAlerts />}
+
+      {/* Personal notes + (for regular users) their request history */}
+      <div className={`grid gap-5 ${isAdmin ? '' : 'lg:grid-cols-2'}`}>
+        <NotesTile />
+        {!isAdmin && <MyRequests />}
+      </div>
+
       {isAdmin && <AdminAnalytics />}
 
       <section>

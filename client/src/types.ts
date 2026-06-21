@@ -120,6 +120,18 @@ export interface AdminNotification {
   createdAt: string;
 }
 
+export type ProjectRequestKind = 'idea' | 'file';
+export type ProjectRequestStatus = 'pending' | 'resolved' | 'dismissed';
+
+export interface ProjectRequest {
+  id: string;
+  userEmail: string;
+  kind: ProjectRequestKind;
+  message: string;
+  status: ProjectRequestStatus;
+  createdAt: string;
+}
+
 export interface TwoFactorSetup {
   secret: string;
   otpauth: string;

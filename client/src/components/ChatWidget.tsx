@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { chatApi } from '../api/chat';
+import { requestsApi } from '../api/requests';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
-import type { ChatMessage } from '../types';
-import { ChatIcon, CloseIcon, SendIcon, SparkleIcon } from './Icons';
+import type { ChatMessage, ProjectRequestKind } from '../types';
+import { ChatIcon, CloseIcon, InboxIcon, SendIcon, SparkleIcon } from './Icons';
 import { Spinner } from './Spinner';
 
 /** Matches a Markdown link to an internal path, e.g. [Planner](/hosted/planner/). */
@@ -45,35 +46,48 @@ export function ChatWidget() {
   const { user } = useAuth();
   const { t } = useI18n();
   const [available, setAvailable] = useState(false);
+  const [canRequest, setCanRequest] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'chat' | 'request'>('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Project-request form
+  const [reqKind, setReqKind] = useState<ProjectRequestKind>('idea');
+  const [reqMessage, setReqMessage] = useState('');
+  const [reqSending, setReqSending] = useState(false);
+  const [reqSent, setReqSent] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
   const refreshStatus = useCallback(() => {
     if (!user) {
       setAvailable(false);
+      setCanRequest(false);
       return;
     }
     chatApi
       .status()
-      .then((r) => setAvailable(r.available))
-      .catch(() => setAvailable(false));
+      .then((r) => {
+        setAvailable(r.available);
+        setCanRequest(r.canRequest);
+      })
+      .catch(() => {
+        setAvailable(false);
+        setCanRequest(false);
+      });
   }, [user]);
 
-  // Re-check availability on login, on navigation, and when the tab regains
-  // focus — so the bubble appears as soon as an admin enables the assistant,
-  // without needing a full reload.
+  // Re-check on login, navigation, focus, and after the admin (un)configures it.
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus, location.pathname]);
 
   useEffect(() => {
     window.addEventListener('focus', refreshStatus);
-    // Fired by the admin Settings page right after the assistant is (un)configured.
     window.addEventListener('dashy:chat-config-changed', refreshStatus);
     return () => {
       window.removeEventListener('focus', refreshStatus);
@@ -85,7 +99,12 @@ export function ChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
-  if (!available) return null;
+  // When chat isn't available but requests are, open straight to the form.
+  useEffect(() => {
+    if (!available && canRequest) setMode('request');
+  }, [available, canRequest]);
+
+  if (!available && !canRequest) return null;
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -109,6 +128,24 @@ export function ChatWidget() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     void send(input);
+  };
+
+  const submitRequest = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!reqMessage.trim() || reqSending) return;
+    setReqSending(true);
+    setReqSent(false);
+    setError(null);
+    try {
+      await requestsApi.create(reqKind, reqMessage.trim());
+      setReqMessage('');
+      setReqSent(true);
+      window.dispatchEvent(new Event('dashy:requests-changed'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('req.error'));
+    } finally {
+      setReqSending(false);
+    }
   };
 
   const greetingName = user?.nickname || user?.fullName || '';
@@ -138,101 +175,182 @@ export function ChatWidget() {
                 <SparkleIcon className="h-5 w-5" />
               </span>
               <div className="leading-tight">
-                <p className="text-sm font-semibold">Dashy</p>
-                <p className="text-[11px] text-white/80">{t('chat.subtitle')}</p>
+                <p className="text-sm font-semibold">
+                  {mode === 'request' ? t('req.title') : 'Dashy'}
+                </p>
+                <p className="text-[11px] text-white/80">
+                  {mode === 'request' ? t('req.subtitle') : t('chat.subtitle')}
+                </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label={t('common.close')}
-              className="rounded-lg p-1.5 hover:bg-white/15"
-            >
-              <CloseIcon className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {/* Greeting + starter suggestions */}
-            <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-sm shadow-soft dark:bg-sand-900">
-                {greetingName
-                  ? t('chat.greetingNamed', { name: greetingName })
-                  : t('chat.greeting')}
-              </div>
-            </div>
-            {messages.length === 0 && (
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => void send(s)}
-                    className="rounded-full border border-ember-300 bg-ember-50 px-3 py-1.5 text-xs font-medium text-ember-700 transition-colors hover:bg-ember-100 dark:border-ember-500/40 dark:bg-ember-500/10 dark:text-ember-300"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm shadow-soft ${
-                    msg.role === 'user'
-                      ? 'rounded-tr-sm bg-ember-500 text-white'
-                      : 'rounded-tl-sm bg-white dark:bg-sand-900'
-                  }`}
+            <div className="flex items-center gap-1">
+              {canRequest && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReqSent(false);
+                    setMode((msel) => (msel === 'request' ? 'chat' : 'request'));
+                  }}
+                  aria-label={mode === 'request' ? t('req.backToChat') : t('req.open')}
+                  className={`rounded-lg p-1.5 hover:bg-white/15 ${
+                    mode === 'request' ? 'bg-white/20' : ''
+                  } ${!available ? 'hidden' : ''}`}
+                  title={t('req.open')}
                 >
-                  {msg.role === 'assistant' ? renderMessage(msg.content) : msg.content}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl rounded-tl-sm bg-white px-3 py-2.5 shadow-soft dark:bg-sand-900">
-                  <Spinner className="h-4 w-4 text-ember-500" />
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
-                {error}
-              </p>
-            )}
+                  <InboxIcon className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label={t('common.close')}
+                className="rounded-lg p-1.5 hover:bg-white/15"
+              >
+                <CloseIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          {/* Composer */}
-          <form
-            onSubmit={onSubmit}
-            className="flex items-end gap-2 border-t border-sand-200 p-3 dark:border-sand-800"
-          >
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void send(input);
-                }
-              }}
-              rows={1}
-              placeholder={t('chat.placeholder')}
-              className="input max-h-28 min-h-[42px] flex-1 resize-none py-2.5"
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              aria-label={t('chat.send')}
-              className="btn-primary !px-3 disabled:opacity-40"
-            >
-              <SendIcon className="h-5 w-5" />
-            </button>
-          </form>
+          {mode === 'request' ? (
+            /* ---- Project request form ---- */
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <p className="text-sm text-sand-500 dark:text-sand-400">{t('req.intro')}</p>
+              <form onSubmit={submitRequest} className="mt-4 space-y-3">
+                <div>
+                  <label className="label" htmlFor="req-kind">
+                    {t('req.kind')}
+                  </label>
+                  <select
+                    id="req-kind"
+                    className="input"
+                    value={reqKind}
+                    onChange={(e) => setReqKind(e.target.value as ProjectRequestKind)}
+                  >
+                    <option value="idea">{t('req.kindIdea')}</option>
+                    <option value="file">{t('req.kindFile')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="req-message">
+                    {t('req.message')}
+                  </label>
+                  <textarea
+                    id="req-message"
+                    className="input min-h-[120px] resize-none"
+                    value={reqMessage}
+                    onChange={(e) => setReqMessage(e.target.value)}
+                    placeholder={t('req.placeholder')}
+                    maxLength={2000}
+                  />
+                </div>
+                {reqSent && (
+                  <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+                    {t('req.sent')}
+                  </p>
+                )}
+                {error && (
+                  <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="btn-primary w-full justify-center"
+                  disabled={reqSending || !reqMessage.trim()}
+                >
+                  {reqSending && <Spinner className="h-4 w-4" />}
+                  {t('req.send')}
+                </button>
+                <p className="text-center text-xs text-sand-400">{t('req.historyHint')}</p>
+              </form>
+            </div>
+          ) : (
+            <>
+              {/* ---- Chat messages ---- */}
+              <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-sm shadow-soft dark:bg-sand-900">
+                    {greetingName
+                      ? t('chat.greetingNamed', { name: greetingName })
+                      : t('chat.greeting')}
+                  </div>
+                </div>
+                {messages.length === 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => void send(s)}
+                        className="rounded-full border border-ember-300 bg-ember-50 px-3 py-1.5 text-xs font-medium text-ember-700 transition-colors hover:bg-ember-100 dark:border-ember-500/40 dark:bg-ember-500/10 dark:text-ember-300"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm shadow-soft ${
+                        msg.role === 'user'
+                          ? 'rounded-tr-sm bg-ember-500 text-white'
+                          : 'rounded-tl-sm bg-white dark:bg-sand-900'
+                      }`}
+                    >
+                      {msg.role === 'assistant' ? renderMessage(msg.content) : msg.content}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl rounded-tl-sm bg-white px-3 py-2.5 shadow-soft dark:bg-sand-900">
+                      <Spinner className="h-4 w-4 text-ember-500" />
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
+              </div>
+
+              {/* Composer */}
+              <form
+                onSubmit={onSubmit}
+                className="flex items-end gap-2 border-t border-sand-200 p-3 dark:border-sand-800"
+              >
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void send(input);
+                    }
+                  }}
+                  rows={1}
+                  placeholder={t('chat.placeholder')}
+                  className="input max-h-28 min-h-[42px] flex-1 resize-none py-2.5"
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !input.trim()}
+                  aria-label={t('chat.send')}
+                  className="btn-primary !px-3 disabled:opacity-40"
+                >
+                  <SendIcon className="h-5 w-5" />
+                </button>
+              </form>
+            </>
+          )}
         </div>
       )}
     </>

@@ -28,6 +28,8 @@ export interface IUser {
   // If set and in the future, the assistant is temporarily blocked for this
   // user (admin-imposed "time-out"). Null = no time-out.
   chatTimeoutUntil: Date | null;
+  // Personal rich-text note (sanitized HTML), persisted across sessions.
+  note: string;
   // Bumped to invalidate all existing sessions ("sign out everywhere").
   tokenVersion: number;
   twoFactorEnabled: boolean;
@@ -88,6 +90,8 @@ const userSchema = new Schema<IUser>(
     chatOffTopic: { type: [String], default: [] },
     // Admin-imposed assistant time-out (null = none).
     chatTimeoutUntil: { type: Date, default: null },
+    // Personal rich-text note (sanitized HTML).
+    note: { type: String, default: '', maxlength: 20_000 },
 
     // Session epoch — incrementing it invalidates all issued JWTs.
     tokenVersion: { type: Number, default: 0 },
@@ -133,6 +137,7 @@ userSchema.set('toJSON', {
     r.chatEnabled = r.chatEnabled !== false;
     delete r.chatOffTopic;
     delete r.chatTimeoutUntil;
+    delete r.note;
     return r;
   },
 });

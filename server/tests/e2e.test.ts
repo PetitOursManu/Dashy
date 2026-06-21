@@ -726,6 +726,78 @@ test('notification + history endpoints are admin-only; admin sees the read recei
   assert.equal(after.notifications.some((n: { id: string }) => n.id === notifId), false);
 });
 
+// ----------------------------- notes & requests ------------------------------
+
+test('personal note is saved, sanitized, and reloads', async () => {
+  // (Admin session is active here.)
+  const save = await api('PUT', '/api/auth/note', {
+    content: '<b onclick="x()">Hi</b><script>alert(1)</script><i>there</i>',
+  });
+  assert.equal(save.status, 200);
+  assert.equal((await save.json()).content, '<b>Hi</b><i>there</i>');
+
+  const get = await api('GET', '/api/auth/note');
+  assert.equal((await get.json()).content, '<b>Hi</b><i>there</i>');
+});
+
+let reqId = '';
+
+test('user sends a project request; admin sees and resolves it; history is kept', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+
+  const create = await api('POST', '/api/requests', {
+    kind: 'idea',
+    message: 'Please add a unit converter',
+  });
+  assert.equal(create.status, 201);
+  reqId = (await create.json()).request.id;
+
+  const mine = await (await api('GET', '/api/requests')).json();
+  assert.ok(mine.requests.some((r: { id: string; status: string }) => r.id === reqId));
+
+  // Admin endpoints are off-limits to Bob.
+  assert.equal((await api('GET', '/api/requests/admin')).status, 403);
+  assert.equal(
+    (await api('POST', `/api/requests/${reqId}/status`, { status: 'resolved' })).status,
+    403,
+  );
+
+  // Admin sees it, resolves it, then dismisses it.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const adminList = await (await api('GET', '/api/requests/admin')).json();
+  assert.ok(adminList.requests.some((r: { id: string }) => r.id === reqId));
+
+  assert.equal(
+    (await api('POST', `/api/requests/${reqId}/status`, { status: 'resolved' })).status,
+    200,
+  );
+  assert.equal(
+    (await api('POST', `/api/requests/${reqId}/status`, { status: 'dismissed' })).status,
+    200,
+  );
+  // Dismissed → gone from the admin list.
+  const afterDismiss = await (await api('GET', '/api/requests/admin')).json();
+  assert.equal(afterDismiss.requests.some((r: { id: string }) => r.id === reqId), false);
+
+  // …but still in Bob's history, marked dismissed.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  const history = await (await api('GET', '/api/requests')).json();
+  const kept = history.requests.find((r: { id: string; status: string }) => r.id === reqId);
+  assert.ok(kept);
+  assert.equal(kept.status, 'dismissed');
+
+  // Restore admin session for the remaining tests.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

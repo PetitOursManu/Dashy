@@ -36,6 +36,10 @@ router.patch(
 );
 router.post('/logout-all', requireAuth, asyncHandler(auth.logoutAll));
 
+// --- Personal note ---
+router.get('/note', requireAuth, asyncHandler(auth.getNote));
+router.put('/note', requireAuth, validateBody(auth.noteSchema), asyncHandler(auth.updateNote));
+
 // --- Avatar ---
 router.post('/avatar', requireAuth, avatarUpload, asyncHandler(auth.uploadAvatar));
 router.delete('/avatar', requireAuth, asyncHandler(auth.deleteAvatar));
