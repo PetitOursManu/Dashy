@@ -5,7 +5,6 @@ import { useI18n } from '../context/LanguageContext';
 import { ProfileMenu } from './ProfileMenu';
 import { ChatWidget } from './ChatWidget';
 import {
-  ChevronDownIcon,
   CloseIcon,
   GridIcon,
   InboxIcon,
@@ -130,7 +129,7 @@ export function Layout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 bg-gradient-to-b from-sand-50/75 via-sand-50/35 to-transparent px-4 py-4 backdrop-blur-md dark:from-sand-950/75 dark:via-sand-950/35 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -142,11 +141,10 @@ export function Layout() {
             </button>
             <h1
               key={location.pathname}
-              className="animate-slide-in text-2xl font-bold tracking-tight sm:text-[28px]"
+              className="page-title animate-slide-in text-2xl font-bold tracking-tight sm:text-[28px]"
             >
               {title}
             </h1>
-            <ChevronDownIcon className="hidden h-5 w-5 text-sand-400 sm:block" />
           </div>
           <div className="flex items-center gap-2">
             <ProfileMenu />

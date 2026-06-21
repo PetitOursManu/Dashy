@@ -219,6 +219,14 @@ html.theme-image:not(.dark) .note-editor {
   background-color: rgba(255, 255, 255, 0.75);
 }
 
+/* Page title gets a soft halo over the photo for extra legibility. */
+html.theme-image .page-title {
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.5);
+}
+html.theme-image.dark .page-title {
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+}
+
 /* Dark glass overrides (image theme + dark tint). */
 html.theme-image.glass.dark .card {
   background-color: rgba(22, 19, 16, 0.34);
