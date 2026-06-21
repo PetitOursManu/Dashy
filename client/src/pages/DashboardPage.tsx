@@ -167,8 +167,6 @@ export function DashboardPage() {
         },
       ];
 
-  const greetingName = user?.nickname || user?.fullName || user?.email.split('@')[0] || '';
-
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -181,10 +179,7 @@ export function DashboardPage() {
     <div className="space-y-8">
       <UserNotifications />
       <section>
-        <p className="text-[15px] font-medium text-sand-600 dark:text-sand-300">
-          {t('dash.welcome', { name: greetingName })}
-        </p>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((s) => (
             <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} decor={s.decor} />
           ))}
