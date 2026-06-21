@@ -103,7 +103,7 @@
     @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sand-600 transition-all hover:bg-white/70 hover:text-sand-900 dark:text-sand-300 dark:hover:bg-sand-800/60 dark:hover:text-white;
   }
   .nav-link-active {
-    @apply bg-white text-sand-900 shadow-card dark:bg-sand-800 dark:text-white;
+    @apply animate-nav-active bg-white text-sand-900 shadow-card dark:bg-sand-800 dark:text-white;
   }
 }
 

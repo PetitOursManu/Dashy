@@ -140,7 +140,12 @@ export function Layout() {
             >
               <MenuIcon className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{title}</h1>
+            <h1
+              key={location.pathname}
+              className="animate-slide-in text-2xl font-bold tracking-tight sm:text-[28px]"
+            >
+              {title}
+            </h1>
             <ChevronDownIcon className="hidden h-5 w-5 text-sand-400 sm:block" />
           </div>
           <div className="flex items-center gap-2">

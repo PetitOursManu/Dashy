@@ -60,6 +60,10 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(10px) scale(0.995)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        'nav-active': {
+          '0%': { transform: 'translateX(-6px) scale(0.97)' },
+          '100%': { transform: 'translateX(0) scale(1)' },
+        },
         'slide-in': {
           '0%': { opacity: '0', transform: 'translateX(10px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
@@ -76,6 +80,7 @@ export default {
         'fade-in': 'fade-in 0.25s ease-out both',
         'pop-in': 'pop-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both',
         page: 'page 0.32s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'nav-active': 'nav-active 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
         'slide-in': 'slide-in 0.3s ease-out both',
         wiggle: 'wiggle 0.7s ease-in-out',
       },
