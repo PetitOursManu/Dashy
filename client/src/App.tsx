@@ -14,6 +14,7 @@ import { AppEditPage } from './pages/AppEditPage';
 import { SecurityPage } from './pages/SecurityPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
+import { RequestsPage } from './pages/RequestsPage';
 
 const VALID_LANGS: Lang[] = ['en', 'fr', 'es', 'de', 'it', 'zh', 'ru'];
 
@@ -62,6 +63,7 @@ export default function App() {
                   <Route element={<AdminRoute />}>
                     <Route path="/apps/:id/edit" element={<AppEditPage />} />
                     <Route path="/users" element={<UsersPage />} />
+                    <Route path="/requests" element={<RequestsPage />} />
                   </Route>
                 </Route>
               </Route>

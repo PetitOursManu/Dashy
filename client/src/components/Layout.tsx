@@ -8,6 +8,7 @@ import {
   ChevronDownIcon,
   CloseIcon,
   GridIcon,
+  InboxIcon,
   Logo,
   MenuIcon,
   SettingsIcon,
@@ -30,7 +31,10 @@ const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
   },
   {
     titleKey: 'nav.management',
-    items: [{ to: '/users', labelKey: 'nav.users', icon: UsersIcon, adminOnly: true }],
+    items: [
+      { to: '/users', labelKey: 'nav.users', icon: UsersIcon, adminOnly: true },
+      { to: '/requests', labelKey: 'nav.requests', icon: InboxIcon, adminOnly: true },
+    ],
   },
   {
     titleKey: 'nav.account',
@@ -86,6 +90,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 const TITLE_KEYS: Record<string, string> = {
   '/': 'nav.dashboard',
   '/users': 'nav.users',
+  '/requests': 'nav.requests',
   '/security': 'nav.security',
   '/settings': 'nav.settings',
 };

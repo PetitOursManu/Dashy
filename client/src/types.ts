@@ -125,6 +125,7 @@ export type ProjectRequestStatus = 'pending' | 'resolved' | 'dismissed';
 
 export interface ProjectRequest {
   id: string;
+  user: string;
   userEmail: string;
   kind: ProjectRequestKind;
   message: string;

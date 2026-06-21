@@ -8,7 +8,12 @@ export const requestsApi = {
     http.post<{ request: ProjectRequest }>('/api/requests', { kind, message }),
 
   // Admin
-  adminList: () => http.get<{ requests: ProjectRequest[] }>('/api/requests/admin'),
+  adminList: (status?: 'all' | ProjectRequestStatus) =>
+    http.get<{ requests: ProjectRequest[] }>(
+      `/api/requests/admin${status ? `?status=${status}` : ''}`,
+    ),
   setStatus: (id: string, status: ProjectRequestStatus) =>
     http.post<{ request: ProjectRequest }>(`/api/requests/${id}/status`, { status }),
+  reply: (id: string, message: string) =>
+    http.post<{ request: ProjectRequest }>(`/api/requests/${id}/reply`, { message }),
 };

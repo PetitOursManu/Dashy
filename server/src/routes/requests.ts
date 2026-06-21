@@ -20,5 +20,11 @@ router.post(
   validateBody(requests.requestStatusSchema),
   asyncHandler(requests.setRequestStatus),
 );
+router.post(
+  '/:id/reply',
+  requireAdmin,
+  validateBody(requests.replyRequestSchema),
+  asyncHandler(requests.replyToRequest),
+);
 
 export default router;

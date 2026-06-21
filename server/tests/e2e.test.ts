@@ -798,6 +798,46 @@ test('user sends a project request; admin sees and resolves it; history is kept'
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 });
 
+test('admin can reply to a request, notifying the requester', async () => {
+  // Bob files a fresh request.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  const create = await api('POST', '/api/requests', { kind: 'file', message: 'Add my portfolio' });
+  const id = (await create.json()).request.id;
+
+  // Admin replies → request resolved + a notification reaches Bob.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  // The `all` filter surfaces every status; the default view hides dismissed.
+  const all = await (await api('GET', '/api/requests/admin?status=all')).json();
+  assert.ok(all.requests.some((r: { id: string }) => r.id === id));
+
+  const reply = await api('POST', `/api/requests/${id}/reply`, {
+    message: 'Sounds good — I added it!',
+  });
+  assert.equal(reply.status, 200);
+  assert.equal((await reply.json()).request.status, 'resolved');
+
+  // Bob receives the reply as a dashboard notification.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  const notifs = await (await api('GET', '/api/notifications')).json();
+  assert.ok(
+    notifs.notifications.some((n: { message: string }) => n.message === 'Sounds good — I added it!'),
+  );
+
+  // Reply is admin-only.
+  assert.equal((await api('POST', `/api/requests/${id}/reply`, { message: 'x' })).status, 403);
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();
