@@ -27,6 +27,12 @@ export const BACKGROUNDS_DIR = path.join(DATA_DIR, 'backgrounds');
 /** Where previous app versions are snapshotted: `<DATA_DIR>/versions/<appId>/<vid>/`. */
 export const VERSIONS_DIR = path.join(DATA_DIR, 'versions');
 
+/** Where Store `static` apps are installed: `<DATA_DIR>/store-apps/<slug>/`. */
+export const STORE_APPS_DIR = path.join(DATA_DIR, 'store-apps');
+
+/** Where Store `deploy` compose files are written: `<DATA_DIR>/store-deploy/<slug>/`. */
+export const STORE_DEPLOY_DIR = path.join(DATA_DIR, 'store-deploy');
+
 /** Temp dir for in-flight uploads before they are validated/moved. */
 export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 
@@ -41,6 +47,8 @@ export function ensureDataDirs(): void {
     AVATARS_DIR,
     BACKGROUNDS_DIR,
     VERSIONS_DIR,
+    STORE_APPS_DIR,
+    STORE_DEPLOY_DIR,
     TMP_DIR,
   ]) {
     fs.mkdirSync(dir, { recursive: true });

@@ -12,6 +12,7 @@ import {
   MenuIcon,
   SettingsIcon,
   ShieldIcon,
+  StoreIcon,
   UsersIcon,
 } from './Icons';
 
@@ -26,7 +27,10 @@ interface NavItem {
 const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
   {
     titleKey: 'nav.mainMenu',
-    items: [{ to: '/', labelKey: 'nav.dashboard', icon: GridIcon, end: true }],
+    items: [
+      { to: '/', labelKey: 'nav.dashboard', icon: GridIcon, end: true },
+      { to: '/store', labelKey: 'nav.store', icon: StoreIcon, adminOnly: true },
+    ],
   },
   {
     titleKey: 'nav.management',
@@ -88,6 +92,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'nav.dashboard',
+  '/store': 'nav.store',
   '/users': 'nav.users',
   '/requests': 'nav.requests',
   '/security': 'nav.security',

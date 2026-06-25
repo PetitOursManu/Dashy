@@ -139,6 +139,82 @@ export interface ProjectRequest {
   createdAt: string;
 }
 
+// ------------------------------- Store module --------------------------------
+
+export type StoreAppType = 'tile' | 'deploy' | 'static';
+
+export interface StoreEnvVar {
+  key: string;
+  label: string;
+  default: string | null;
+  secret: boolean;
+}
+
+export interface StoreCatalogApp {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  author: string;
+  version: string;
+  type: StoreAppType;
+  tile?: { url: string; widget?: Record<string, unknown> };
+  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
+  static?: { source_url: string; entrypoint: string };
+  source: string;
+  installed: boolean;
+  updateAvailable: boolean;
+}
+
+export interface StoreSource {
+  id: string;
+  name: string;
+  type: 'local' | 'remote';
+  location: string;
+  enabled: boolean;
+  ttlMinutes: number;
+  appCount: number;
+  lastFetchedAt: string | null;
+  lastError: string | null;
+}
+
+export interface StoreInstalled {
+  id: string;
+  manifestId: string;
+  name: string;
+  type: StoreAppType;
+  sourceName: string;
+  installedVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  servingMode: 'path' | 'subdomain' | null;
+  deployDriver: string | null;
+  createdAt: string;
+}
+
+export interface StoreConfig {
+  coolifyEnabled: boolean;
+  coolifyBaseUrl: string;
+  hasCoolifyToken: boolean;
+  coolifyProjectUuid: string;
+  coolifyServerUuid: string;
+  coolifyDestinationUuid: string;
+  coolifyEnvUuid: string;
+  portainerEnabled: boolean;
+  portainerUrl: string;
+  hasPortainerKey: boolean;
+  portainerEndpointId: string;
+  dockerEnabled: boolean;
+  defaultDriver: string;
+  wildcardEnabled: boolean;
+  baseDomain: string;
+}
+
+export interface StoreDriver {
+  id: string;
+  label: string;
+}
+
 export interface TwoFactorSetup {
   secret: string;
   otpauth: string;

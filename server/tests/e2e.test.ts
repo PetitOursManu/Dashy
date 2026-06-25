@@ -890,6 +890,105 @@ test('admin can reply to a request, notifying the requester', async () => {
   assert.ok(back.requests.some((r: { id: string }) => r.id === id));
 });
 
+// ---------------------------------- Store ------------------------------------
+
+test('store endpoints are admin-only', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal((await api('GET', '/api/store/catalog')).status, 403);
+  assert.equal((await api('GET', '/api/store/config')).status, 403);
+  assert.equal((await api('POST', '/api/store/sources', {})).status, 403);
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+});
+
+let storeSourceId = '';
+
+test('store: a local source validates manifests and lists valid ones', async () => {
+  const catalog = {
+    apps: [
+      { id: 'demo-tile', name: 'Demo Tile', type: 'tile', version: '1.0.0', author: 'Tester', tile: { url: 'https://example.com/' } },
+      { id: 'BAD ID', name: 'Invalid', type: 'tile' },
+    ],
+  };
+  const file = path.join(TMP_DATA, 'catalog.json');
+  fs.writeFileSync(file, JSON.stringify(catalog));
+
+  const create = await api('POST', '/api/store/sources', {
+    name: 'Local Test',
+    type: 'local',
+    location: file,
+  });
+  assert.equal(create.status, 201);
+  storeSourceId = (await create.json()).source.id;
+
+  const res = await api('GET', '/api/store/catalog?refresh=1');
+  assert.equal(res.status, 200);
+  const apps = (await res.json()).apps as { id: string; source: string }[];
+  // The valid tile is listed; the malformed one is silently dropped.
+  assert.ok(apps.some((a) => a.id === 'demo-tile' && a.source === 'Local Test'));
+  assert.equal(apps.some((a) => a.id === 'BAD ID'), false);
+});
+
+let installedId = '';
+
+test('store: installing a tile creates a card and tracks it', async () => {
+  const res = await api('POST', '/api/store/install', { source: 'Local Test', manifestId: 'demo-tile' });
+  assert.equal(res.status, 201);
+  const { app } = await res.json();
+  assert.equal(app.url, 'https://example.com/');
+
+  // The card now shows in the dashboard app list.
+  const apps = (await (await api('GET', '/api/apps')).json()).apps as { id: string; url: string }[];
+  assert.ok(apps.some((a) => a.id === app.id && a.url === 'https://example.com/'));
+
+  // …and in the installed list, which the catalog marks as installed.
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string;
+    manifestId: string;
+  }[];
+  const mine = installed.find((i) => i.manifestId === 'demo-tile');
+  assert.ok(mine);
+  installedId = mine.id;
+
+  const cat = (await (await api('GET', '/api/store/catalog')).json()).apps as {
+    id: string;
+    installed: boolean;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'demo-tile')?.installed, true);
+});
+
+test('store: uninstall removes the card; config hides tokens', async () => {
+  const del = await api('DELETE', `/api/store/installed/${installedId}`);
+  assert.equal(del.status, 200);
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as unknown[];
+  assert.equal(installed.length, 0);
+
+  // Config: drivers always include manual; tokens are never echoed back.
+  const cfgRes = await api('PUT', '/api/store/config', {
+    coolifyEnabled: true,
+    coolifyBaseUrl: 'https://coolify.test',
+    coolifyToken: 'super-secret',
+    coolifyProjectUuid: 'p',
+    coolifyServerUuid: 's',
+    coolifyDestinationUuid: 'd',
+    wildcardEnabled: true,
+    baseDomain: 'apps.test',
+  });
+  assert.equal(cfgRes.status, 200);
+  const { config, drivers } = await cfgRes.json();
+  assert.equal(config.coolifyToken, undefined);
+  assert.equal(config.hasCoolifyToken, true);
+  assert.equal(config.wildcardEnabled, true);
+  assert.ok((drivers as { id: string }[]).some((d) => d.id === 'manual'));
+
+  // Clean up the test source.
+  await api('DELETE', `/api/store/sources/${storeSourceId}`);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

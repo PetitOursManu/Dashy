@@ -17,6 +17,8 @@ import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import notificationsRoutes from './routes/notifications.js';
 import requestsRoutes from './routes/requests.js';
+import storeRoutes from './routes/store.js';
+import storeStaticRoutes, { storeSubdomain } from './routes/storeStatic.js';
 import hostedRoutes from './routes/hosted.js';
 import shareRoutes from './routes/share.js';
 
@@ -47,10 +49,19 @@ export function createApp(): Express {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
+  // Serve Store `static` apps published on a dedicated subdomain (<slug>.<base>),
+  // before the dashboard routing/CSP. No-ops unless wildcard DNS is configured.
+  app.use(storeSubdomain);
+
   // Strict CSP for the dashboard (API + SPA). Skipped for /hosted so imported
   // apps can run their own inline scripts/styles.
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/hosted/') || req.path.startsWith('/share/')) return next();
+    if (
+      req.path.startsWith('/hosted/') ||
+      req.path.startsWith('/share/') ||
+      req.path.startsWith('/store-apps/')
+    )
+      return next();
     res.setHeader(
       'Content-Security-Policy',
       [
@@ -81,10 +92,14 @@ export function createApp(): Express {
   app.use('/api/chat', chatRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/requests', requestsRoutes);
+  app.use('/api/store', storeRoutes);
 
   // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);
   app.use('/share', shareRoutes);
+
+  // Store `static` apps served in path mode (public, CSP-exempt above).
+  app.use('/store-apps', storeStaticRoutes);
 
   // Unknown API routes → JSON 404 (never fall through to the SPA).
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
