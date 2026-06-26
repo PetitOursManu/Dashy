@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '../context/LanguageContext';
 import { CloseIcon } from './Icons';
 
@@ -27,7 +28,10 @@ export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }:
 
   if (!open) return null;
 
-  return (
+  // Render at the document root so the dialog isn't trapped inside an ancestor
+  // that creates a stacking context (e.g. a `.card` with backdrop-filter), which
+  // would let sibling page elements paint over it.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-md"
       role="dialog"
@@ -55,6 +59,7 @@ export function Modal({ open, title, onClose, children, maxWidth = 'max-w-lg' }:
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
