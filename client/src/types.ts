@@ -204,6 +204,8 @@ export interface StoreInstalled {
   updateAvailable: boolean;
   servingMode: 'path' | 'subdomain' | null;
   deployDriver: string | null;
+  managedSource: boolean;
+  sourceId: string | null;
   createdAt: string;
 }
 

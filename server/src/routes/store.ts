@@ -38,6 +38,7 @@ router.put('/config', validateBody(store.updateConfigSchema), asyncHandler(store
 router.get('/installed', asyncHandler(store.listInstalled));
 router.post('/install', validateBody(store.installSchema), asyncHandler(store.install));
 router.post('/installed/:id/update', asyncHandler(store.updateInstalled));
+router.post('/installed/:id/content', storeContentUpload, asyncHandler(store.updateInstalledContent));
 router.delete('/installed/:id', asyncHandler(store.uninstallApp));
 
 export default router;

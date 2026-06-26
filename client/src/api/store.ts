@@ -69,5 +69,14 @@ export const storeApi = {
     ),
   updateInstalled: (id: string) =>
     http.post<{ ok: true; installed: StoreInstalled }>(`/api/store/installed/${id}/update`),
+  updateInstalledContent: (id: string, file: File, version: string) => {
+    const form = new FormData();
+    form.set('content', file);
+    form.set('version', version);
+    return http.postForm<{ ok: true; installed: StoreInstalled }>(
+      `/api/store/installed/${id}/content`,
+      form,
+    );
+  },
   uninstall: (id: string) => http.del<{ ok: true }>(`/api/store/installed/${id}`),
 };

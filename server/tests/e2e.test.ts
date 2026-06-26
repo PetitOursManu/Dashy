@@ -1135,6 +1135,57 @@ test('store: admin can upload a static bundle from disk and install it', async (
   await api('DELETE', `/api/store/sources/${sid}`);
 });
 
+test('store: updating a managed static app content bumps catalogue + serves new content', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Content Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+
+  const f1 = new FormData();
+  f1.set('content', new Blob(['<h1>V1</h1>'], { type: 'text/html' }), 'a.html');
+  const ref1 = (
+    await (
+      await fetch(baseUrl + '/api/store/uploads', {
+        method: 'POST',
+        headers: { Cookie: cookieHeader() },
+        body: f1,
+      })
+    ).json()
+  ).ref as string;
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'edit-app', name: 'Edit App', type: 'static', version: '1.0.0',
+    static: { upload: ref1, entrypoint: 'index.html' },
+  });
+  const { app } = await (await api('POST', '/api/store/install', { source: 'Content Cat', manifestId: 'edit-app' })).json();
+
+  const list = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string; managedSource: boolean;
+  }[];
+  const mine = list.find((i) => i.manifestId === 'edit-app')!;
+  assert.equal(mine.managedSource, true);
+
+  // Update content to v2 from a new upload.
+  const f2 = new FormData();
+  f2.set('content', new Blob(['<h1>V2 content</h1>'], { type: 'text/html' }), 'b.html');
+  f2.set('version', '2.0.0');
+  const upd = await fetch(baseUrl + `/api/store/installed/${mine.id}/content`, {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: f2,
+  });
+  assert.equal(upd.status, 200);
+
+  // The catalogue version is bumped and the served files reflect the new content.
+  const cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; version: string;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'edit-app')?.version, '2.0.0');
+  const served = await fetch(baseUrl + app.url, { headers: { Cookie: cookieHeader() } });
+  assert.match(await served.text(), /V2 content/);
+
+  await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

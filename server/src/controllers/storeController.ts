@@ -213,6 +213,17 @@ export async function deleteCatalogApp(req: Request, res: Response): Promise<voi
   res.json({ ok: true });
 }
 
+/** Store an uploaded bundle under a fresh token dir; returns its upload ref. */
+async function storeBundle(file: Express.Multer.File): Promise<string> {
+  const token = crypto.randomBytes(16).toString('hex');
+  const dir = storeUploadDir(token);
+  await fsp.mkdir(dir, { recursive: true });
+  const isZip = path.extname(file.originalname).toLowerCase() === '.zip';
+  // The stored name only drives the zip/single-file heuristic at install time.
+  await fsp.rename(file.path, path.join(dir, isZip ? 'bundle.zip' : 'index.html'));
+  return `store-upload:${token}`;
+}
+
 /**
  * Store an admin-uploaded static bundle (.html/.zip) and return a reference the
  * author can drop into a `static` manifest's `upload` field.
@@ -220,13 +231,55 @@ export async function deleteCatalogApp(req: Request, res: Response): Promise<voi
 export async function uploadStaticBundle(req: Request, res: Response): Promise<void> {
   const file = req.file;
   if (!file) throw new ApiError(400, 'No file uploaded');
-  const token = crypto.randomBytes(16).toString('hex');
-  const dir = storeUploadDir(token);
-  await fsp.mkdir(dir, { recursive: true });
-  const isZip = path.extname(file.originalname).toLowerCase() === '.zip';
-  // The stored name only drives the zip/single-file heuristic at install time.
-  await fsp.rename(file.path, path.join(dir, isZip ? 'bundle.zip' : 'index.html'));
-  res.status(201).json({ ref: `store-upload:${token}`, filename: file.originalname });
+  const ref = await storeBundle(file);
+  res.status(201).json({ ref, filename: file.originalname });
+}
+
+/** Bump the patch component of a dotted version string (e.g. 1.2.3 → 1.2.4). */
+function bumpPatch(version: string): string {
+  const parts = (version || '0.0.0').split('.');
+  const last = Number(parts[parts.length - 1]);
+  if (Number.isFinite(last)) parts[parts.length - 1] = String(last + 1);
+  return parts.join('.');
+}
+
+/**
+ * Replace a managed-catalogue static app's content from an uploaded bundle,
+ * bump its version in the catalogue, and re-materialise the served files.
+ */
+export async function updateInstalledContent(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Install not found');
+  const installed = await StoreInstalledApp.findById(req.params.id);
+  if (!installed) throw new ApiError(404, 'Install not found');
+  if (installed.type !== 'static') throw new ApiError(400, 'Only static apps support content updates');
+
+  const source = await StoreCatalogSource.findOne({ name: installed.sourceName });
+  if (!source || !source.managed) {
+    throw new ApiError(400, 'This app does not come from a managed catalogue');
+  }
+  const file = req.file;
+  if (!file) throw new ApiError(400, 'A .html or .zip file is required');
+
+  const current = await findManifest(installed.sourceName, installed.manifestId);
+  if (!current) throw new ApiError(404, 'App no longer in the catalogue');
+
+  const version = String(req.body?.version ?? '').trim() || bumpPatch(installed.installedVersion);
+  const ref = await storeBundle(file);
+  const newManifest = await updateApp(source, installed.manifestId, {
+    id: current.id,
+    name: current.name,
+    description: current.description,
+    icon: current.icon,
+    author: current.author,
+    version,
+    type: 'static',
+    static: { upload: ref, entrypoint: current.static?.entrypoint || 'index.html' },
+  });
+  await bumpSource(source.id);
+  await updateStatic(installed, newManifest);
+  installed.installedVersion = version;
+  await installed.save();
+  res.json({ ok: true, installed: installed.toJSON() });
 }
 
 // ---------------------------------- config -----------------------------------
@@ -265,18 +318,23 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
 // -------------------------------- installed ----------------------------------
 
 export async function listInstalled(_req: Request, res: Response): Promise<void> {
-  const [installed, catalog] = await Promise.all([
+  const [installed, catalog, sources] = await Promise.all([
     StoreInstalledApp.find().sort({ createdAt: -1 }),
     getCatalog(false),
+    StoreCatalogSource.find().select('name managed'),
   ]);
   const catVersion = new Map(catalog.map((a) => [`${a.source}:${a.id}`, a.version]));
+  const srcByName = new Map(sources.map((s) => [s.name, s]));
   res.json({
     installed: installed.map((i) => {
       const latest = catVersion.get(`${i.sourceName}:${i.manifestId}`);
+      const src = srcByName.get(i.sourceName);
       return {
         ...i.toJSON(),
         latestVersion: latest ?? null,
         updateAvailable: latest !== undefined && latest !== i.installedVersion,
+        managedSource: Boolean(src?.managed),
+        sourceId: src ? src.id : null,
       };
     }),
   });

@@ -9,6 +9,7 @@ import type {
   StoreInstalled,
 } from '../types';
 import { InstallModal } from '../components/store/InstallModal';
+import { UpdateContentModal } from '../components/store/UpdateContentModal';
 import { Spinner } from '../components/Spinner';
 import { DownloadIcon, SearchIcon } from '../components/Icons';
 
@@ -41,6 +42,7 @@ export function StorePage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [installApp, setInstallApp] = useState<StoreCatalogApp | null>(null);
+  const [contentApp, setContentApp] = useState<StoreInstalled | null>(null);
 
   const load = async () => {
     try {
@@ -222,6 +224,15 @@ export function StorePage() {
                       {t('store.update')}
                     </button>
                   )}
+                  {i.type === 'static' && i.managedSource && (
+                    <button
+                      type="button"
+                      className="btn-ghost !py-1.5 !text-xs"
+                      onClick={() => setContentApp(i)}
+                    >
+                      {t('store.updateContent')}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-ghost !py-1.5 !text-xs text-red-500"
@@ -243,6 +254,15 @@ export function StorePage() {
         drivers={drivers}
         onClose={() => setInstallApp(null)}
         onInstalled={() => {
+          void load();
+        }}
+      />
+
+      <UpdateContentModal
+        open={contentApp !== null}
+        app={contentApp}
+        onClose={() => setContentApp(null)}
+        onDone={() => {
           void load();
         }}
       />
