@@ -13,6 +13,9 @@ router.use(requireAuth);
 router.get('/status', asyncHandler(chat.status));
 router.post('/', chatLimiter, validateBody(chat.chatSchema), asyncHandler(chat.chat));
 
+// --- Admin: execute an assistant-proposed Store action (after confirmation) ---
+router.post('/action', requireAdmin, validateBody(chat.actionSchema), asyncHandler(chat.runAction));
+
 // --- Admin configuration ---
 router.get('/config', requireAdmin, asyncHandler(chat.getConfig));
 router.put(

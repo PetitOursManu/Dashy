@@ -24,14 +24,8 @@ import {
   redeployInstall,
   restartInstall,
 } from '../store/install.js';
-import {
-  createCatalogFile,
-  deleteCatalogFile,
-  addApp,
-  updateApp,
-  removeApp,
-} from '../store/managedCatalog.js';
-import { slugify, withRandomSuffix } from '../utils/slug.js';
+import { deleteCatalogFile, addApp, updateApp, removeApp } from '../store/managedCatalog.js';
+import { createManagedCatalogue } from '../store/manage.js';
 
 // ----------------------------- validation schemas -----------------------------
 
@@ -177,31 +171,7 @@ async function getManagedSource(id: string) {
 
 export async function createManagedSource(req: Request, res: Response): Promise<void> {
   const { name } = req.body as z.infer<typeof createManagedSchema>;
-  if (await StoreCatalogSource.findOne({ name })) {
-    throw new ApiError(409, 'A source with this name already exists');
-  }
-  // Allocate a free catalogue file slug derived from the name.
-  let slug = slugify(name);
-  let file: string;
-  for (let i = 0; ; i++) {
-    try {
-      file = await createCatalogFile(slug);
-      break;
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409 && i < 6) {
-        slug = withRandomSuffix(slugify(name));
-        continue;
-      }
-      throw err;
-    }
-  }
-  const source = await StoreCatalogSource.create({
-    name,
-    type: 'local',
-    managed: true,
-    location: file,
-    ttlMinutes: 0, // managed files are read on demand; no staleness window
-  });
+  const source = await createManagedCatalogue(name);
   res.status(201).json({ source: source.toJSON() });
 }
 

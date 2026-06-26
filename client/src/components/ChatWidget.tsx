@@ -5,7 +5,7 @@ import { requestsApi } from '../api/requests';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
-import type { ChatMessage, ProjectRequestKind } from '../types';
+import type { ChatMessage, ChatProposal, ProjectRequestKind } from '../types';
 import { ChatIcon, CloseIcon, InboxIcon, SendIcon, SparkleIcon } from './Icons';
 import { Spinner } from './Spinner';
 
@@ -53,6 +53,8 @@ export function ChatWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<ChatProposal | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
 
   // Project-request form
   const [reqKind, setReqKind] = useState<ProjectRequestKind>('idea');
@@ -110,18 +112,43 @@ export function ChatWidget() {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
     setError(null);
+    setProposal(null);
     const next: ChatMessage[] = [...messages, { role: 'user', content: trimmed }];
     setMessages(next);
     setInput('');
     setLoading(true);
     try {
-      const { reply } = await chatApi.send(next.slice(-20));
+      const { reply, proposal: prop } = await chatApi.send(next.slice(-20));
       setMessages([...next, { role: 'assistant', content: reply }]);
+      if (prop) setProposal(prop);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('chat.error'));
       setMessages(next);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Short human summary of a proposed action for the confirmation card. */
+  const proposalSummary = (p: ChatProposal): string => {
+    if (p.type === 'add_catalogue') return t('chat.actionCatalogue', { name: p.name });
+    if (p.type === 'add_source') return t('chat.actionSource', { name: p.name, location: p.location });
+    return t('chat.actionApp', { name: p.manifest.name, source: p.source });
+  };
+
+  const confirmAction = async () => {
+    if (!proposal || actionBusy) return;
+    setActionBusy(true);
+    setError(null);
+    try {
+      await chatApi.runAction(proposal);
+      setProposal(null);
+      setMessages((prev) => [...prev, { role: 'assistant', content: t('chat.actionDone') }]);
+      window.dispatchEvent(new Event('dashy:store-changed'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('chat.actionError'));
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -306,6 +333,38 @@ export function ChatWidget() {
                     </div>
                   </div>
                 ))}
+
+                {proposal && !loading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[90%] rounded-2xl rounded-tl-sm border border-ember-300 bg-ember-50 px-3 py-2.5 text-sm shadow-soft dark:border-ember-500/40 dark:bg-ember-500/10">
+                      <p className="font-medium text-ember-700 dark:text-ember-300">
+                        {t('chat.actionTitle')}
+                      </p>
+                      <p className="mt-1 text-sand-600 dark:text-sand-300">
+                        {proposalSummary(proposal)}
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary !py-1.5 !text-xs"
+                          onClick={() => void confirmAction()}
+                          disabled={actionBusy}
+                        >
+                          {actionBusy && <Spinner className="h-3.5 w-3.5" />}
+                          {t('chat.actionConfirm')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary !py-1.5 !text-xs"
+                          onClick={() => setProposal(null)}
+                          disabled={actionBusy}
+                        >
+                          {t('chat.actionCancel')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {loading && (
                   <div className="flex justify-start">

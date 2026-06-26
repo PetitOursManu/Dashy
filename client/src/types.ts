@@ -89,6 +89,16 @@ export interface ChatMessage {
   content: string;
 }
 
+/** A Store action the assistant proposes; the admin confirms it before it runs. */
+export type ChatProposal =
+  | { type: 'add_catalogue'; name: string }
+  | { type: 'add_source'; name: string; sourceType: 'local' | 'remote'; location: string }
+  | {
+      type: 'add_app';
+      source: string;
+      manifest: { id: string; name: string; type: string; [k: string]: unknown };
+    };
+
 export interface ChatAlert {
   id: string;
   userEmail: string;

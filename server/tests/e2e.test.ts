@@ -1228,6 +1228,33 @@ test('store: deploy install persists compose/volumes; redeploy/restart guarded b
   await api('DELETE', `/api/store/sources/${sid}`);
 });
 
+test('chat: admin can execute a proposed Store action; regular users cannot', async () => {
+  // A regular user cannot run Store actions.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal(
+    (await api('POST', '/api/chat/action', { type: 'add_catalogue', name: 'Nope' })).status,
+    403,
+  );
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  // Admin: a malformed action is rejected.
+  assert.equal((await api('POST', '/api/chat/action', { type: 'bogus' })).status, 400);
+
+  // Admin: a confirmed add_catalogue action creates the managed catalogue.
+  const res = await api('POST', '/api/chat/action', { type: 'add_catalogue', name: 'Bot Cat' });
+  assert.equal(res.status, 201);
+  const sources = (await (await api('GET', '/api/store/sources')).json()).sources as {
+    id: string; name: string; managed: boolean;
+  }[];
+  const created = sources.find((s) => s.name === 'Bot Cat');
+  assert.ok(created && created.managed);
+  await api('DELETE', `/api/store/sources/${created!.id}`);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

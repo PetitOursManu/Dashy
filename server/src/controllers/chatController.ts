@@ -17,6 +17,12 @@ import {
   DEFAULT_MODELS,
   type ChatMessage,
 } from '../services/chatProvider.js';
+import { manifestSchema } from '../store/manifest.js';
+import {
+  createManagedCatalogue,
+  addCatalogSource,
+  addAppToManagedCatalogue,
+} from '../store/manage.js';
 
 // ----------------------------- validation schemas -----------------------------
 
@@ -42,6 +48,33 @@ export const chatSchema = z.object({
     .min(1)
     .max(40),
 });
+
+/** Admin-only Store actions the assistant may propose and the admin confirms. */
+export const actionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('add_catalogue'), name: z.string().min(1).max(80) }),
+  z.object({
+    type: z.literal('add_source'),
+    name: z.string().min(1).max(80),
+    sourceType: z.enum(['local', 'remote']),
+    location: z.string().min(1).max(2000),
+  }),
+  z.object({ type: z.literal('add_app'), source: z.string().min(1).max(80), manifest: manifestSchema }),
+]);
+
+const ACTION_RE = /\[\[ACTION\]\]\s*([\s\S]*?)\s*\[\[\/ACTION\]\]/;
+const ACTION_RE_G = /\[\[ACTION\]\][\s\S]*?\[\[\/ACTION\]\]/g;
+
+/** Extract a valid admin action proposal from a reply, if present. */
+function extractProposal(reply: string): z.infer<typeof actionSchema> | null {
+  const m = ACTION_RE.exec(reply);
+  if (!m) return null;
+  try {
+    const parsed = actionSchema.safeParse(JSON.parse(m[1]));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 // --------------------------------- helpers -----------------------------------
 
@@ -154,6 +187,12 @@ export async function chat(req: Request, res: Response): Promise<void> {
     throw new ApiError(502, 'The assistant could not respond');
   }
 
+  // Admins can have the assistant propose a Store action (create catalogue /
+  // source / app). Parse it from the reply, then strip the block from the
+  // visible text. The proposal does nothing until confirmed via POST /action.
+  const proposal = user.role === 'admin' ? extractProposal(reply) : null;
+  reply = reply.replace(ACTION_RE_G, '').trim();
+
   // The model prepends a marker when it declines an off-topic request. Strip it
   // from the visible reply, count the strike, and after 3 raise an admin alert
   // plus a gentle reminder to the user.
@@ -176,7 +215,28 @@ export async function chat(req: Request, res: Response): Promise<void> {
     await user.save();
   }
 
-  res.json({ reply });
+  res.json({ reply, proposal: proposal ?? undefined });
+}
+
+/** Admin: execute a Store action the assistant proposed (after confirmation). */
+export async function runAction(req: Request, res: Response): Promise<void> {
+  const action = req.body as z.infer<typeof actionSchema>;
+  if (action.type === 'add_catalogue') {
+    const source = await createManagedCatalogue(action.name);
+    res.status(201).json({ ok: true, kind: 'catalogue', name: source.name });
+    return;
+  }
+  if (action.type === 'add_source') {
+    const source = await addCatalogSource({
+      name: action.name,
+      type: action.sourceType,
+      location: action.location,
+    });
+    res.status(201).json({ ok: true, kind: 'source', name: source.name });
+    return;
+  }
+  const { source, manifest } = await addAppToManagedCatalogue(action.source, action.manifest);
+  res.status(201).json({ ok: true, kind: 'app', name: manifest.name, source: source.name });
 }
 
 /** Admin: list unacknowledged assistant-misuse alerts (newest first). */
