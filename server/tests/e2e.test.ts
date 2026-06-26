@@ -1224,6 +1224,33 @@ test('store: deploy install persists compose/volumes; redeploy/restart guarded b
   assert.equal((await api('POST', `/api/store/installed/${mine.id}/redeploy`, { env: { FOO: 'baz' } })).status, 400);
   assert.equal((await api('POST', `/api/store/installed/${mine.id}/restart`)).status, 400);
 
+  // Volumes declared in the manifest become the install's volumes by default.
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'deploy-vol',
+    name: 'Deploy Vol',
+    type: 'deploy',
+    version: '1.0.0',
+    deploy: {
+      docker_compose: 'services:\n  web:\n    image: nginx\n',
+      required_env: [],
+      volumes: [{ name: 'db', mountPath: '/var/lib/db' }],
+      default_port: 8080,
+    },
+  });
+  await api('POST', '/api/store/install', {
+    source: 'Deploy Cat',
+    manifestId: 'deploy-vol',
+    driver: 'manual',
+    finalUrl: 'https://vol.example.com/',
+  });
+  const list2 = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string; volumes: { name: string; mountPath: string }[];
+  }[];
+  const vol = list2.find((i) => i.manifestId === 'deploy-vol')!;
+  assert.equal(vol.volumes.length, 1);
+  assert.equal(vol.volumes[0].name, 'db');
+
+  await api('DELETE', `/api/store/installed/${vol.id}`);
   await api('DELETE', `/api/store/installed/${mine.id}`);
   await api('DELETE', `/api/store/sources/${sid}`);
 });

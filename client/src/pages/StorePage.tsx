@@ -7,10 +7,12 @@ import type {
   StoreConfig,
   StoreDriver,
   StoreInstalled,
+  StoreSource,
 } from '../types';
 import { InstallModal } from '../components/store/InstallModal';
 import { UpdateContentModal } from '../components/store/UpdateContentModal';
 import { DeployManageModal } from '../components/store/DeployManageModal';
+import { CatalogManagerModal } from '../components/store/CatalogManagerModal';
 import { Spinner } from '../components/Spinner';
 import { DownloadIcon, SearchIcon } from '../components/Icons';
 
@@ -42,21 +44,25 @@ export function StorePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [sources, setSources] = useState<StoreSource[]>([]);
   const [installApp, setInstallApp] = useState<StoreCatalogApp | null>(null);
   const [contentApp, setContentApp] = useState<StoreInstalled | null>(null);
   const [manageApp, setManageApp] = useState<StoreInstalled | null>(null);
+  const [manageCatalogue, setManageCatalogue] = useState<StoreSource | null>(null);
 
   const load = async () => {
     try {
-      const [c, i, cfg] = await Promise.all([
+      const [c, i, cfg, s] = await Promise.all([
         storeApi.catalog(),
         storeApi.installed(),
         storeApi.getConfig(),
+        storeApi.sources(),
       ]);
       setApps(c.apps);
       setInstalled(i.installed);
       setConfig(cfg.config);
       setDrivers(cfg.drivers);
+      setSources(s.sources);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load the store.');
     } finally {
@@ -150,6 +156,34 @@ export function StorePage() {
         <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
+      )}
+
+      {/* Managed catalogues — add / edit / remove their apps from here */}
+      {sources.some((s) => s.managed) && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">{t('store.manageCatalogues')}</h2>
+          <div className="card divide-y divide-sand-100 dark:divide-sand-800">
+            {sources
+              .filter((s) => s.managed)
+              .map((s) => (
+                <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{s.name}</p>
+                    <p className="text-xs text-sand-400">
+                      {s.appCount} {t('storecfg.apps')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary !py-1.5 !text-sm"
+                    onClick={() => setManageCatalogue(s)}
+                  >
+                    {t('storecfg.manageApps')}
+                  </button>
+                </div>
+              ))}
+          </div>
+        </section>
       )}
 
       {/* Catalogue */}
@@ -301,6 +335,15 @@ export function StorePage() {
         app={manageApp}
         onClose={() => setManageApp(null)}
         onDone={() => {
+          void load();
+        }}
+      />
+
+      <CatalogManagerModal
+        open={manageCatalogue !== null}
+        source={manageCatalogue}
+        onClose={() => setManageCatalogue(null)}
+        onChanged={() => {
           void load();
         }}
       />

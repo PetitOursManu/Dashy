@@ -5,7 +5,6 @@ import { useI18n } from '../../context/LanguageContext';
 import type { DockerDiagnostics, StoreConfig, StoreSource } from '../../types';
 import { Spinner } from '../Spinner';
 import { PlusIcon, StoreIcon, TrashIcon } from '../Icons';
-import { CatalogManagerModal } from './CatalogManagerModal';
 
 export function StoreSettings() {
   const { t } = useI18n();
@@ -25,7 +24,6 @@ export function StoreSettings() {
 
   // Managed catalogue (Dashy-owned, editable from the UI)
   const [mName, setMName] = useState('');
-  const [manageSource, setManageSource] = useState<StoreSource | null>(null);
 
   const load = async () => {
     try {
@@ -162,15 +160,6 @@ export function StoreSettings() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  {s.managed && (
-                    <button
-                      type="button"
-                      onClick={() => setManageSource(s)}
-                      className="btn-ghost !px-2 !py-1 text-xs"
-                    >
-                      {t('storecfg.manageApps')}
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={() => void toggleSource(s)}
@@ -352,13 +341,6 @@ export function StoreSettings() {
           </button>
         </>
       )}
-
-      <CatalogManagerModal
-        open={manageSource !== null}
-        source={manageSource}
-        onClose={() => setManageSource(null)}
-        onChanged={() => void load()}
-      />
     </section>
   );
 }

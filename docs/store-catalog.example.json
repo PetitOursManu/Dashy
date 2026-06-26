@@ -44,6 +44,7 @@
             "secret": false
           }
         ],
+        "volumes": [{ "name": "deploy-demo-data", "mountPath": "/data" }],
         "default_port": 8080
       }
     }

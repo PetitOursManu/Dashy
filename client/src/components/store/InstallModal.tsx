@@ -37,7 +37,7 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     setDriver(config?.defaultDriver || drivers[0]?.id || 'manual');
     setFinalUrl('');
     setCompose(app.deploy?.docker_compose ?? '');
-    setVolumes([]);
+    setVolumes(app.deploy?.volumes ?? []);
     setServiceName('');
     setError(null);
     setMessage(null);

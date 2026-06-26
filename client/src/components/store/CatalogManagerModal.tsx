@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
+import { VolumesEditor } from './VolumesEditor';
 import { storeApi } from '../../api/store';
 import { ApiError } from '../../api/client';
 import { useI18n } from '../../context/LanguageContext';
@@ -61,6 +62,7 @@ function toPayload(m: ManifestInput): ManifestInput {
     deploy: {
       docker_compose: m.deploy?.docker_compose ?? '',
       required_env: (m.deploy?.required_env ?? []).filter((e) => e.key.trim()),
+      volumes: (m.deploy?.volumes ?? []).filter((v) => v.name.trim() && v.mountPath.trim()),
       default_port: m.deploy?.default_port || 8080,
     },
   };
@@ -135,9 +137,10 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
         ? {
             docker_compose: a.deploy.docker_compose,
             required_env: a.deploy.required_env,
+            volumes: a.deploy.volumes ?? [],
             default_port: a.deploy.default_port,
           }
-        : { docker_compose: '', required_env: [], default_port: 8080 },
+        : { docker_compose: '', required_env: [], volumes: [], default_port: 8080 },
     });
     setEditingId(a.id);
     setIdTouched(true);
@@ -603,6 +606,21 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                   }
                 />
               </div>
+
+              {/* volumes editor */}
+              <VolumesEditor
+                volumes={form.deploy?.volumes ?? []}
+                onChange={(vols) =>
+                  patch({
+                    deploy: {
+                      docker_compose: form.deploy?.docker_compose ?? '',
+                      required_env: form.deploy?.required_env ?? [],
+                      default_port: form.deploy?.default_port ?? 8080,
+                      volumes: vols,
+                    },
+                  })
+                }
+              />
 
               {/* required_env editor */}
               <div className="space-y-2">

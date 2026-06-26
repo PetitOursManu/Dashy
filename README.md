@@ -195,9 +195,10 @@ installing an app drops a card onto the dashboard like any other hosted app.
    - `local` — a JSON file or folder on the server.
    - `remote` — a URL (e.g. a raw JSON file on GitHub).
    - **managed** — click *Create* under **Managed catalogue**: you give it a
-     name, Dashy creates and owns a catalogue file (under the data volume) and
-     lets you **add / edit / remove apps from the UI** — no JSON to write by
-     hand. Use *Manage apps* on the source to open the editor.
+     name and Dashy creates and owns a catalogue file (under the data volume), so
+     you can **add / edit / remove apps from the UI** — no JSON to write by hand.
+     You *create* managed catalogues here in Settings, but you **manage their
+     apps from the Store page** (*Store → Manage catalogues → Manage apps*).
 
    Each source has a refresh TTL (cached in the DB, 60 min by default) and an
    on/off switch. The `/store` page merges every enabled source and tags each
@@ -240,6 +241,7 @@ folder source may also hold **one `.json` file per app** — Dashy reads every
   "deploy": {
     "docker_compose": "services:\n  app:\n    image: …",
     "required_env": [{ "key": "API_KEY", "label": "API key", "secret": true }],
+    "volumes": [{ "name": "app-data", "mountPath": "/data" }],
     "default_port": 8080
   }
 }

@@ -66,7 +66,8 @@ export function createApp(): Express {
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        "img-src 'self' data:",
+        // Allow remote https images so Store catalogue/app icons load.
+        "img-src 'self' data: https:",
         "style-src 'self' 'unsafe-inline'",
         "script-src 'self'",
         "connect-src 'self'",

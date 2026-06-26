@@ -169,7 +169,12 @@ export interface StoreCatalogApp {
   version: string;
   type: StoreAppType;
   tile?: { url: string; widget?: Record<string, unknown> };
-  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
+  deploy?: {
+    docker_compose: string;
+    required_env: StoreEnvVar[];
+    volumes?: { name: string; mountPath: string }[];
+    default_port: number;
+  };
   static?: { source_url?: string; upload?: string; entrypoint: string };
   source: string;
   installed: boolean;
@@ -200,7 +205,12 @@ export interface ManifestInput {
   type: StoreAppType;
   tile?: { url: string };
   static?: { source_url?: string; upload?: string; entrypoint: string };
-  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
+  deploy?: {
+    docker_compose: string;
+    required_env: StoreEnvVar[];
+    volumes?: { name: string; mountPath: string }[];
+    default_port: number;
+  };
 }
 
 export interface StoreInstalled {

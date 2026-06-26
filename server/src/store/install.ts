@@ -244,7 +244,8 @@ export async function installDeploy(
 
   const slug = await uniqueStoreSlug(manifest.id);
   const compose = opts.compose?.trim() || manifest.deploy.docker_compose;
-  const volumes = opts.volumes ?? [];
+  // Use install-time volumes if given, otherwise fall back to the manifest's.
+  const volumes = opts.volumes?.length ? opts.volumes : (manifest.deploy.volumes ?? []);
   const result = await driver.deploy({
     slug,
     compose,

@@ -14,6 +14,15 @@ const envVarSchema = z.object({
   secret: z.boolean().optional().default(false),
 });
 
+const volumeMountSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'volume name must be [a-zA-Z0-9._-]'),
+  mountPath: z.string().min(1).max(255),
+});
+
 export const manifestSchema = z
   .object({
     id: slug,
@@ -33,6 +42,7 @@ export const manifestSchema = z
       .object({
         docker_compose: z.string().min(1).max(100_000),
         required_env: z.array(envVarSchema).optional().default([]),
+        volumes: z.array(volumeMountSchema).optional().default([]),
         default_port: z.number().int().positive().max(65535).optional().default(8080),
       })
       .optional(),
