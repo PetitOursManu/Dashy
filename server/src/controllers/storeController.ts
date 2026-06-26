@@ -18,6 +18,14 @@ import {
   updateStatic,
   uninstall,
 } from '../store/install.js';
+import {
+  createCatalogFile,
+  deleteCatalogFile,
+  addApp,
+  updateApp,
+  removeApp,
+} from '../store/managedCatalog.js';
+import { slugify, withRandomSuffix } from '../utils/slug.js';
 
 // ----------------------------- validation schemas -----------------------------
 
@@ -37,6 +45,10 @@ export const updateSourceSchema = z
     ttlMinutes: z.number().int().min(0).max(7 * 24 * 60).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
+export const createManagedSchema = z.object({
+  name: z.string().min(1).max(80).trim(),
+});
 
 export const updateConfigSchema = z.object({
   coolifyEnabled: z.boolean().optional(),
@@ -126,6 +138,74 @@ export async function deleteSource(req: Request, res: Response): Promise<void> {
   if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Source not found');
   const source = await StoreCatalogSource.findByIdAndDelete(req.params.id);
   if (!source) throw new ApiError(404, 'Source not found');
+  if (source.managed) await deleteCatalogFile(source);
+  res.json({ ok: true });
+}
+
+// ----------------------------- managed catalogues -----------------------------
+
+/** Find a managed source by id, or throw 404/400 as appropriate. */
+async function getManagedSource(id: string) {
+  if (!mongoose.isValidObjectId(id)) throw new ApiError(404, 'Source not found');
+  const source = await StoreCatalogSource.findById(id);
+  if (!source) throw new ApiError(404, 'Source not found');
+  if (!source.managed) throw new ApiError(400, 'This catalogue is read-only');
+  return source;
+}
+
+export async function createManagedSource(req: Request, res: Response): Promise<void> {
+  const { name } = req.body as z.infer<typeof createManagedSchema>;
+  if (await StoreCatalogSource.findOne({ name })) {
+    throw new ApiError(409, 'A source with this name already exists');
+  }
+  // Allocate a free catalogue file slug derived from the name.
+  let slug = slugify(name);
+  let file: string;
+  for (let i = 0; ; i++) {
+    try {
+      file = await createCatalogFile(slug);
+      break;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && i < 6) {
+        slug = withRandomSuffix(slugify(name));
+        continue;
+      }
+      throw err;
+    }
+  }
+  const source = await StoreCatalogSource.create({
+    name,
+    type: 'local',
+    managed: true,
+    location: file,
+    ttlMinutes: 0, // managed files are read on demand; no staleness window
+  });
+  res.status(201).json({ source: source.toJSON() });
+}
+
+/** Force the source's cache to refresh on the next catalog read. */
+async function bumpSource(id: string): Promise<void> {
+  await StoreCatalogSource.findByIdAndUpdate(id, { lastFetchedAt: null });
+}
+
+export async function addCatalogApp(req: Request, res: Response): Promise<void> {
+  const source = await getManagedSource(req.params.id);
+  const manifest = await addApp(source, req.body);
+  await bumpSource(source.id);
+  res.status(201).json({ app: manifest });
+}
+
+export async function updateCatalogApp(req: Request, res: Response): Promise<void> {
+  const source = await getManagedSource(req.params.id);
+  const manifest = await updateApp(source, req.params.appId, req.body);
+  await bumpSource(source.id);
+  res.json({ app: manifest });
+}
+
+export async function deleteCatalogApp(req: Request, res: Response): Promise<void> {
+  const source = await getManagedSource(req.params.id);
+  await removeApp(source, req.params.appId);
+  await bumpSource(source.id);
   res.json({ ok: true });
 }
 

@@ -989,6 +989,86 @@ test('store: uninstall removes the card; config hides tokens', async () => {
   await api('DELETE', `/api/store/sources/${storeSourceId}`);
 });
 
+let managedId = '';
+let managedLocation = '';
+
+test('store: a managed catalogue can be created and edited from the API', async () => {
+  // Create a Dashy-owned catalogue (admin gives just a name).
+  const create = await api('POST', '/api/store/sources/managed', { name: 'My Catalogue' });
+  assert.equal(create.status, 201);
+  const src = (await create.json()).source as { id: string; managed: boolean; type: string; location: string };
+  assert.equal(src.managed, true);
+  assert.equal(src.type, 'local');
+  managedId = src.id;
+  managedLocation = src.location;
+  // The backing file was created under DATA_DIR/catalogs.
+  assert.ok(managedLocation.includes('catalogs'));
+  assert.equal(fs.existsSync(managedLocation), true);
+
+  // Add a valid tile app; it shows up in the merged catalogue.
+  const add = await api('POST', `/api/store/sources/${managedId}/apps`, {
+    id: 'welcome-demo',
+    name: 'Welcome Demo',
+    type: 'tile',
+    version: '1.0.0',
+    tile: { url: 'https://example.com/' },
+  });
+  assert.equal(add.status, 201);
+  let cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; source: string; version: string;
+  }[];
+  assert.ok(cat.some((a) => a.id === 'welcome-demo' && a.source === 'My Catalogue'));
+
+  // An invalid manifest is rejected with 422.
+  const bad = await api('POST', `/api/store/sources/${managedId}/apps`, {
+    id: 'BAD ID',
+    name: 'Nope',
+    type: 'tile',
+    tile: { url: 'not-a-url' },
+  });
+  assert.equal(bad.status, 422);
+
+  // Editing the app bumps its version in the catalogue.
+  const edit = await api('PATCH', `/api/store/sources/${managedId}/apps/welcome-demo`, {
+    id: 'welcome-demo',
+    name: 'Welcome Demo',
+    type: 'tile',
+    version: '2.0.0',
+    tile: { url: 'https://example.com/' },
+  });
+  assert.equal(edit.status, 200);
+  cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; version: string;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'welcome-demo')?.version, '2.0.0');
+
+  // Removing the app drops it from the catalogue.
+  const del = await api('DELETE', `/api/store/sources/${managedId}/apps/welcome-demo`);
+  assert.equal(del.status, 200);
+  cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as { id: string }[];
+  assert.equal(cat.some((a) => a.id === 'welcome-demo'), false);
+});
+
+test('store: app editing is rejected on read-only sources; managed delete cleans the file', async () => {
+  // A remote (non-managed) source cannot be edited via the app endpoints.
+  const remote = await api('POST', '/api/store/sources', {
+    name: 'Remote Guard',
+    type: 'remote',
+    location: 'https://example.com/catalog.json',
+  });
+  const remoteId = (await remote.json()).source.id;
+  const guard = await api('POST', `/api/store/sources/${remoteId}/apps`, {
+    id: 'x', name: 'X', type: 'tile', version: '1.0.0', tile: { url: 'https://example.com/' },
+  });
+  assert.equal(guard.status, 400);
+  await api('DELETE', `/api/store/sources/${remoteId}`);
+
+  // Deleting the managed source removes its backing file too.
+  const del = await api('DELETE', `/api/store/sources/${managedId}`);
+  assert.equal(del.status, 200);
+  assert.equal(fs.existsSync(managedLocation), false);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

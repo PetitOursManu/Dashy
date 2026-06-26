@@ -1,6 +1,7 @@
 import { http } from './client';
 import type {
   HostedApp,
+  ManifestInput,
   StoreCatalogApp,
   StoreConfig,
   StoreDriver,
@@ -33,9 +34,21 @@ export const storeApi = {
   sources: () => http.get<{ sources: StoreSource[] }>('/api/store/sources'),
   createSource: (payload: CreateSourcePayload) =>
     http.post<{ source: StoreSource }>('/api/store/sources', payload),
+  createManagedSource: (name: string) =>
+    http.post<{ source: StoreSource }>('/api/store/sources/managed', { name }),
   updateSource: (id: string, payload: Partial<CreateSourcePayload>) =>
     http.patch<{ source: StoreSource }>(`/api/store/sources/${id}`, payload),
   deleteSource: (id: string) => http.del<{ ok: true }>(`/api/store/sources/${id}`),
+
+  addApp: (sourceId: string, manifest: ManifestInput) =>
+    http.post<{ app: ManifestInput }>(`/api/store/sources/${sourceId}/apps`, manifest),
+  updateApp: (sourceId: string, appId: string, manifest: ManifestInput) =>
+    http.patch<{ app: ManifestInput }>(
+      `/api/store/sources/${sourceId}/apps/${appId}`,
+      manifest,
+    ),
+  deleteApp: (sourceId: string, appId: string) =>
+    http.del<{ ok: true }>(`/api/store/sources/${sourceId}/apps/${appId}`),
 
   getConfig: () =>
     http.get<{ config: StoreConfig; drivers: StoreDriver[] }>('/api/store/config'),

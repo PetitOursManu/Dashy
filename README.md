@@ -25,7 +25,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
-- 🛍️ **Store** (admin) — a one-click app catalogue. Add decentralised catalogue **sources** (a local JSON file or a remote URL like raw GitHub); apps are described by a standalone JSON **manifest** validated on ingestion. Three install types: **`tile`** (a card linking to a URL), **`static`** (downloads a zip/file, served at `/store-apps/<id>/` or on a dedicated subdomain) and **`deploy`** (shows the `docker-compose` preview, then deploys via a runtime-detected driver — **Coolify**, **Portainer**, direct **Docker**, or a universal **manual** copy/paste — and generates a tile). Driver tokens are encrypted backend-only and never read from a manifest.
+- 🛍️ **Store** (admin) — a one-click app catalogue. Add decentralised catalogue **sources** (a local JSON file, a remote URL like raw GitHub, or a **Dashy-managed catalogue you edit from the UI** — add/edit/remove apps with no JSON to hand-write); apps are described by a standalone JSON **manifest** validated on ingestion. Three install types: **`tile`** (a card linking to a URL), **`static`** (downloads a zip/file, served at `/store-apps/<id>/` or on a dedicated subdomain) and **`deploy`** (shows the `docker-compose` preview, then deploys via a runtime-detected driver — **Coolify**, **Portainer**, direct **Docker**, or a universal **manual** copy/paste — and generates a tile). Driver tokens are encrypted backend-only and never read from a manifest.
 - 🤖 **AI assistant ("Dashy" bot)** — an optional in-app chatbot that explains how Dashy works and recommends the right app for a user's needs, with one-click links to open them, step-by-step "how do I…" guidance, and replies in the user's own language. Admins choose the provider (**OpenRouter, OpenAI, Deepseek, or Claude**), the model, and enter their API key (encrypted at rest), and enable the assistant per user (on by default for new users). Through the assistant, users can also **request a project** (a shared file/site or just an idea) — admins review them on a dedicated **Requests** page (and at a glance in the Notifications tile) and can **reply back** to the requester's dashboard; users track their own request history.
 - 📝 **Personal notes** — a per-user note tile with **bold / italic / underline**, auto-saved server-side so it survives logout and refresh.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
@@ -190,6 +190,10 @@ installing an app drops a card onto the dashboard like any other hosted app.
 1. **Add a source** — in *Settings → Store* add one or more catalogue sources:
    - `local` — a JSON file or folder on the server.
    - `remote` — a URL (e.g. a raw JSON file on GitHub).
+   - **managed** — click *Create* under **Managed catalogue**: you give it a
+     name, Dashy creates and owns a catalogue file (under the data volume) and
+     lets you **add / edit / remove apps from the UI** — no JSON to write by
+     hand. Use *Manage apps* on the source to open the editor.
 
    Each source has a refresh TTL (cached in the DB, 60 min by default) and an
    on/off switch. The `/store` page merges every enabled source and tags each

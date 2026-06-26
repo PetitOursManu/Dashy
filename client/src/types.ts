@@ -171,11 +171,26 @@ export interface StoreSource {
   name: string;
   type: 'local' | 'remote';
   location: string;
+  managed: boolean;
   enabled: boolean;
   ttlMinutes: number;
   appCount: number;
   lastFetchedAt: string | null;
   lastError: string | null;
+}
+
+/** A manifest as authored in the in-app catalogue editor. */
+export interface ManifestInput {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  author: string;
+  version: string;
+  type: StoreAppType;
+  tile?: { url: string };
+  static?: { source_url: string; entrypoint: string };
+  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
 }
 
 export interface StoreInstalled {

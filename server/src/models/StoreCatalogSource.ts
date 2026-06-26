@@ -11,6 +11,8 @@ export interface IStoreCatalogSource {
   name: string;
   type: CatalogSourceType;
   location: string;
+  /** Dashy owns this catalogue file and may edit it from the UI. */
+  managed: boolean;
   enabled: boolean;
   ttlMinutes: number;
   // Last successfully fetched + validated manifests (raw objects).
@@ -26,6 +28,7 @@ const storeCatalogSourceSchema = new Schema<IStoreCatalogSource>(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     type: { type: String, enum: ['local', 'remote'], required: true },
     location: { type: String, required: true, trim: true, maxlength: 2000 },
+    managed: { type: Boolean, default: false },
     enabled: { type: Boolean, default: true },
     ttlMinutes: { type: Number, default: 60, min: 0, max: 7 * 24 * 60 },
     cachedApps: { type: [Schema.Types.Mixed], default: [] },

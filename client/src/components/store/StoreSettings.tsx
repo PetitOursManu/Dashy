@@ -5,6 +5,7 @@ import { useI18n } from '../../context/LanguageContext';
 import type { StoreConfig, StoreSource } from '../../types';
 import { Spinner } from '../Spinner';
 import { PlusIcon, StoreIcon, TrashIcon } from '../Icons';
+import { CatalogManagerModal } from './CatalogManagerModal';
 
 export function StoreSettings() {
   const { t } = useI18n();
@@ -20,6 +21,10 @@ export function StoreSettings() {
   const [sName, setSName] = useState('');
   const [sType, setSType] = useState<'local' | 'remote'>('remote');
   const [sLocation, setSLocation] = useState('');
+
+  // Managed catalogue (Dashy-owned, editable from the UI)
+  const [mName, setMName] = useState('');
+  const [manageSource, setManageSource] = useState<StoreSource | null>(null);
 
   const load = async () => {
     try {
@@ -45,6 +50,18 @@ export function StoreSettings() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add the source.');
+    }
+  };
+
+  const addManaged = async () => {
+    if (!mName.trim()) return;
+    setError(null);
+    try {
+      await storeApi.createManagedSource(mName.trim());
+      setMName('');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not create the catalogue.');
     }
   };
 
@@ -128,6 +145,11 @@ export function StoreSettings() {
                     <span className="text-xs font-normal text-sand-400">
                       ({s.type}) · {s.appCount} {t('storecfg.apps')}
                     </span>
+                    {s.managed && (
+                      <span className="ml-1 rounded-full bg-ember-500/15 px-1.5 py-0.5 text-[10px] font-medium text-ember-600 dark:text-ember-300">
+                        {t('storecfg.managedBadge')}
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-xs text-sand-400" title={s.location}>
                     {s.location}
@@ -137,6 +159,15 @@ export function StoreSettings() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
+                  {s.managed && (
+                    <button
+                      type="button"
+                      onClick={() => setManageSource(s)}
+                      className="btn-ghost !px-2 !py-1 text-xs"
+                    >
+                      {t('storecfg.manageApps')}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => void toggleSource(s)}
@@ -186,6 +217,24 @@ export function StoreSettings() {
             <PlusIcon className="h-4 w-4" />
             {t('storecfg.addSource')}
           </button>
+        </div>
+
+        {/* Managed catalogue — edited from the UI, no JSON file to maintain */}
+        <div className="mt-4 rounded-xl border border-dashed border-sand-300 p-3 dark:border-sand-700">
+          <p className="text-sm font-medium">{t('storecfg.managedTitle')}</p>
+          <p className="text-xs text-sand-400">{t('storecfg.managedHint')}</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <input
+              className="input"
+              value={mName}
+              onChange={(e) => setMName(e.target.value)}
+              placeholder={t('storecfg.catalogName')}
+            />
+            <button type="button" className="btn-secondary" onClick={() => void addManaged()}>
+              <PlusIcon className="h-4 w-4" />
+              {t('storecfg.createCatalog')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -287,6 +336,13 @@ export function StoreSettings() {
           </button>
         </>
       )}
+
+      <CatalogManagerModal
+        open={manageSource !== null}
+        source={manageSource}
+        onClose={() => setManageSource(null)}
+        onChanged={() => void load()}
+      />
     </section>
   );
 }

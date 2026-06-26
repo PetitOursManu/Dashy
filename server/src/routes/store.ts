@@ -16,8 +16,15 @@ router.post('/catalog/refresh', asyncHandler(store.refreshCatalog));
 // Sources
 router.get('/sources', asyncHandler(store.listSources));
 router.post('/sources', validateBody(store.createSourceSchema), asyncHandler(store.createSource));
+router.post('/sources/managed', validateBody(store.createManagedSchema), asyncHandler(store.createManagedSource));
 router.patch('/sources/:id', validateBody(store.updateSourceSchema), asyncHandler(store.updateSource));
 router.delete('/sources/:id', asyncHandler(store.deleteSource));
+
+// Apps inside a Dashy-managed catalogue. The manifest body is validated in the
+// controller (via parseManifest) so authors get field-level 422 messages.
+router.post('/sources/:id/apps', asyncHandler(store.addCatalogApp));
+router.patch('/sources/:id/apps/:appId', asyncHandler(store.updateCatalogApp));
+router.delete('/sources/:id/apps/:appId', asyncHandler(store.deleteCatalogApp));
 
 // Config (deploy drivers + wildcard DNS)
 router.get('/config', asyncHandler(store.getConfig));
