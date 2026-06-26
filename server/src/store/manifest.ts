@@ -38,7 +38,12 @@ export const manifestSchema = z
       .optional(),
     static: z
       .object({
-        source_url: z.string().url().max(2000),
+        source_url: z.string().url().max(2000).optional(),
+        // Reference to an admin-uploaded bundle stored by Dashy (local-only).
+        upload: z
+          .string()
+          .regex(/^store-upload:[a-f0-9]{8,}$/)
+          .optional(),
         entrypoint: z.string().max(255).optional().default('index.html'),
       })
       .optional(),
@@ -48,8 +53,21 @@ export const manifestSchema = z
       ctx.addIssue({ code: 'custom', message: 'tile config is required for type "tile"' });
     if (m.type === 'deploy' && !m.deploy)
       ctx.addIssue({ code: 'custom', message: 'deploy config is required for type "deploy"' });
-    if (m.type === 'static' && !m.static)
-      ctx.addIssue({ code: 'custom', message: 'static config is required for type "static"' });
+    if (m.type === 'static') {
+      if (!m.static) {
+        ctx.addIssue({ code: 'custom', message: 'static config is required for type "static"' });
+      } else {
+        const hasUrl = Boolean(m.static.source_url);
+        const hasUpload = Boolean(m.static.upload);
+        if (hasUrl === hasUpload) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['static'],
+            message: 'static needs exactly one of "source_url" or "upload"',
+          });
+        }
+      }
+    }
   });
 
 export type Manifest = z.infer<typeof manifestSchema>;

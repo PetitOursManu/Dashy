@@ -230,7 +230,9 @@ folder source may also hold **one `.json` file per app** — Dashy reads every
 
   // exactly one block, matching "type":
   "tile":   { "url": "https://example.com" },
+  // static: a remote URL, or an uploaded bundle ref (managed catalogues only)
   "static": { "source_url": "https://…/site.zip", "entrypoint": "index.html" },
+  // "static": { "upload": "store-upload:<token>", "entrypoint": "index.html" },
   "deploy": {
     "docker_compose": "services:\n  app:\n    image: …",
     "required_env": [{ "key": "API_KEY", "label": "API key", "secret": true }],
@@ -242,11 +244,13 @@ folder source may also hold **one `.json` file per app** — Dashy reads every
 ### Install types
 
 - **`tile`** — just a card linking to an external `url`. Nothing is downloaded.
-- **`static`** — downloads `source_url` (a `.zip` is safely extracted, a single
-  file is stored as the entrypoint) into the `apps_data` volume under
-  `store-apps/<slug>/`, then serves it either at a **path**
-  (`/store-apps/<slug>/`) or, if you've enabled **wildcard DNS**, on a dedicated
-  **subdomain** (`<slug>.<your-domain>`). Can be updated in place (re-download).
+- **`static`** — the content comes from either a `source_url` Dashy downloads
+  **or**, in a managed catalogue, a `.html`/`.zip` you **upload straight from
+  your computer** (no hosting needed). A `.zip` is safely extracted, a single
+  file is stored as the entrypoint, into the `apps_data` volume under
+  `store-apps/<slug>/`, then served either at a **path** (`/store-apps/<slug>/`)
+  or, if you've enabled **wildcard DNS**, on a dedicated **subdomain**
+  (`<slug>.<your-domain>`). Can be updated in place.
 - **`deploy`** — shows the `docker-compose` **preview** and any required env
   vars, you pick a **driver**, it deploys the stack, and you give the resulting
   **URL** that the card will point to.

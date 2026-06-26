@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
 import { storeApi } from '../../api/store';
@@ -50,14 +50,12 @@ function toPayload(m: ManifestInput): ManifestInput {
     type: m.type,
   };
   if (m.type === 'tile') return { ...base, tile: { url: m.tile?.url.trim() ?? '' } };
-  if (m.type === 'static')
-    return {
-      ...base,
-      static: {
-        source_url: m.static?.source_url.trim() ?? '',
-        entrypoint: m.static?.entrypoint.trim() || 'index.html',
-      },
-    };
+  if (m.type === 'static') {
+    const entrypoint = m.static?.entrypoint.trim() || 'index.html';
+    // Send exactly one of upload / source_url (whichever the author chose).
+    if (m.static?.upload) return { ...base, static: { upload: m.static.upload, entrypoint } };
+    return { ...base, static: { source_url: m.static?.source_url?.trim() ?? '', entrypoint } };
+  }
   return {
     ...base,
     deploy: {
@@ -75,6 +73,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
   const [form, setForm] = useState<ManifestInput | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null); // original id when editing
   const [idTouched, setIdTouched] = useState(false);
+  const [staticKind, setStaticKind] = useState<'url' | 'upload'>('url');
+  const [uploadName, setUploadName] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,6 +108,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setForm(emptyManifest());
     setEditingId(null);
     setIdTouched(false);
+    setStaticKind('url');
+    setUploadName('');
     setError(null);
   };
 
@@ -121,7 +124,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       type: a.type,
       tile: a.tile ? { url: a.tile.url } : { url: '' },
       static: a.static
-        ? { source_url: a.static.source_url, entrypoint: a.static.entrypoint }
+        ? { source_url: a.static.source_url ?? '', upload: a.static.upload, entrypoint: a.static.entrypoint }
         : { source_url: '', entrypoint: 'index.html' },
       deploy: a.deploy
         ? {
@@ -133,6 +136,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     });
     setEditingId(a.id);
     setIdTouched(true);
+    setStaticKind(a.static?.upload ? 'upload' : 'url');
+    setUploadName(a.static?.upload ? t('manifest.uploaded') : '');
     setError(null);
   };
 
@@ -149,9 +154,53 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
 
   const patch = (p: Partial<ManifestInput>) => setForm((f) => (f ? { ...f, ...p } : f));
 
+  const chooseType = (ty: StoreAppType) => {
+    if (ty === 'static') {
+      setStaticKind(form?.static?.upload ? 'upload' : 'url');
+      patch({ type: ty, static: form?.static ?? { source_url: '', entrypoint: 'index.html' } });
+    } else {
+      patch({ type: ty });
+    }
+  };
+
+  const useUrlSource = () => {
+    setStaticKind('url');
+    setUploadName('');
+    patch({
+      static: { source_url: form?.static?.source_url ?? '', entrypoint: form?.static?.entrypoint || 'index.html' },
+    });
+  };
+
+  const useUploadSource = () => {
+    setStaticKind('upload');
+    patch({
+      static: { upload: form?.static?.upload, entrypoint: form?.static?.entrypoint || 'index.html' },
+    });
+  };
+
+  const onPickFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const { ref, filename } = await storeApi.uploadStatic(file);
+      setUploadName(filename);
+      patch({ static: { upload: ref, entrypoint: form?.static?.entrypoint || 'index.html' } });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('manifest.uploadError'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form) return;
+    if (form.type === 'static' && staticKind === 'upload' && !form.static?.upload) {
+      setError(t('manifest.uploadFile'));
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
@@ -325,7 +374,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                 <button
                   key={ty}
                   type="button"
-                  onClick={() => patch({ type: ty })}
+                  onClick={() => chooseType(ty)}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize ${
                     form.type === ty ? 'bg-ember-500 text-white' : ''
                   }`}
@@ -354,37 +403,81 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
 
           {/* static */}
           {form.type === 'static' && (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
               <div>
-                <label className="label">{t('manifest.sourceUrl')}</label>
-                <input
-                  className="input"
-                  type="url"
-                  value={form.static?.source_url ?? ''}
-                  onChange={(e) =>
-                    patch({
-                      static: {
-                        source_url: e.target.value,
-                        entrypoint: form.static?.entrypoint ?? 'index.html',
-                      },
-                    })
-                  }
-                  placeholder="https://…/site.zip"
-                  required
-                />
+                <span className="label">{t('manifest.sourceKind')}</span>
+                <div className="inline-flex rounded-xl border border-sand-200 p-1 dark:border-sand-700">
+                  <button
+                    type="button"
+                    onClick={useUrlSource}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      staticKind === 'url' ? 'bg-ember-500 text-white' : ''
+                    }`}
+                  >
+                    {t('manifest.fromUrl')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={useUploadSource}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      staticKind === 'upload' ? 'bg-ember-500 text-white' : ''
+                    }`}
+                  >
+                    {t('manifest.fromComputer')}
+                  </button>
+                </div>
               </div>
-              <div>
+
+              {staticKind === 'url' ? (
+                <div>
+                  <label className="label">{t('manifest.sourceUrl')}</label>
+                  <input
+                    className="input"
+                    type="url"
+                    value={form.static?.source_url ?? ''}
+                    onChange={(e) =>
+                      patch({
+                        static: {
+                          source_url: e.target.value,
+                          entrypoint: form.static?.entrypoint ?? 'index.html',
+                        },
+                      })
+                    }
+                    placeholder="https://…/site.zip"
+                    required
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="label">{t('manifest.uploadFile')}</label>
+                  <input
+                    type="file"
+                    accept=".html,.htm,.zip"
+                    onChange={(e) => void onPickFile(e)}
+                    className="block w-full text-sm text-sand-600 file:mr-3 file:rounded-lg file:border-0 file:bg-ember-500 file:px-3 file:py-1.5 file:text-white dark:text-sand-300"
+                  />
+                  {uploading && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-sand-400">
+                      <Spinner className="h-3 w-3" />
+                      {t('manifest.uploading')}
+                    </p>
+                  )}
+                  {!uploading && form.static?.upload && (
+                    <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                      {t('manifest.uploaded')}
+                      {uploadName ? `: ${uploadName}` : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="w-56">
                 <label className="label">{t('manifest.entrypoint')}</label>
                 <input
                   className="input"
                   value={form.static?.entrypoint ?? 'index.html'}
                   onChange={(e) =>
-                    patch({
-                      static: {
-                        source_url: form.static?.source_url ?? '',
-                        entrypoint: e.target.value,
-                      },
-                    })
+                    patch({ static: { ...(form.static ?? {}), entrypoint: e.target.value } })
                   }
                   placeholder="index.html"
                 />

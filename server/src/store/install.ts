@@ -14,7 +14,7 @@ import type { StoreConfigDoc } from '../models/StoreConfig.js';
 import { ApiError } from '../middleware/error.js';
 import { slugify, withRandomSuffix } from '../utils/slug.js';
 import { safeExtractZip, findEntryFile } from '../utils/zip.js';
-import { STORE_APPS_DIR, STORE_DEPLOY_DIR, TMP_DIR } from '../config/paths.js';
+import { STORE_APPS_DIR, STORE_DEPLOY_DIR, STORE_UPLOADS_DIR, TMP_DIR } from '../config/paths.js';
 import { getDriver } from './drivers/index.js';
 import type { Manifest } from './manifest.js';
 
@@ -85,20 +85,60 @@ export async function installTile(
 
 // -------------------------------- static -------------------------------------
 
-/** Download the static source into `STORE_APPS_DIR/<slug>/` and return the entry file. */
-async function fetchStatic(sourceUrl: string, slug: string, entrypoint: string): Promise<string> {
+const UPLOAD_TOKEN = /^store-upload:([a-f0-9]{8,})$/;
+
+/** Read an uploaded bundle (zip or single file) from its token directory. */
+async function readUploadedBundle(ref: string): Promise<{ buf: Buffer; name: string }> {
+  const m = UPLOAD_TOKEN.exec(ref);
+  if (!m) throw new ApiError(400, 'Invalid upload reference');
+  const dir = path.resolve(STORE_UPLOADS_DIR, m[1]);
+  const within = path.relative(path.resolve(STORE_UPLOADS_DIR), dir);
+  if (within.startsWith('..') || path.isAbsolute(within)) {
+    throw new ApiError(400, 'Invalid upload reference');
+  }
+  let files: string[];
+  try {
+    files = (await fsp.readdir(dir)).filter((f) => !f.startsWith('.'));
+  } catch {
+    throw new ApiError(404, 'Uploaded file is no longer available');
+  }
+  if (files.length === 0) throw new ApiError(404, 'Uploaded file is no longer available');
+  const name = files[0];
+  return { buf: await fsp.readFile(path.join(dir, name)), name };
+}
+
+/**
+ * Materialise a static app's content into `STORE_APPS_DIR/<slug>/` and return the
+ * entry file. The source is either a remote URL or an admin-uploaded bundle.
+ */
+async function fetchStatic(
+  source: { source_url?: string; upload?: string },
+  slug: string,
+  entrypoint: string,
+): Promise<string> {
   assertSafeSlug(slug);
   const dir = path.join(STORE_APPS_DIR, slug);
   await fsp.rm(dir, { recursive: true, force: true });
   await fsp.mkdir(dir, { recursive: true });
 
-  const res = await fetch(sourceUrl, { signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new ApiError(502, `Could not download app (HTTP ${res.status})`);
-  const buf = Buffer.from(await res.arrayBuffer());
+  let buf: Buffer;
+  let name: string; // file name / URL, for the .zip extension heuristic
+  let contentType = '';
+  if (source.upload) {
+    const bundle = await readUploadedBundle(source.upload);
+    buf = bundle.buf;
+    name = bundle.name;
+  } else {
+    name = source.source_url ?? '';
+    const res = await fetch(name, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) throw new ApiError(502, `Could not download app (HTTP ${res.status})`);
+    contentType = res.headers.get('content-type') ?? '';
+    buf = Buffer.from(await res.arrayBuffer());
+  }
 
   const isZip =
-    sourceUrl.toLowerCase().endsWith('.zip') ||
-    (res.headers.get('content-type') ?? '').includes('zip') ||
+    name.toLowerCase().endsWith('.zip') ||
+    contentType.includes('zip') ||
     (buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b);
 
   if (isZip) {
@@ -134,7 +174,7 @@ export async function installStatic(
       : 'path';
 
   const slug = await uniqueStoreSlug(manifest.id);
-  await fetchStatic(manifest.static.source_url, slug, manifest.static.entrypoint);
+  await fetchStatic(manifest.static, slug, manifest.static.entrypoint);
 
   const externalUrl =
     mode === 'subdomain'
@@ -169,7 +209,7 @@ export async function updateStatic(
   if (installed.type !== 'static' || !installed.slug || !manifest.static) {
     throw new ApiError(400, 'Not a static install');
   }
-  await fetchStatic(manifest.static.source_url, installed.slug, manifest.static.entrypoint);
+  await fetchStatic(manifest.static, installed.slug, manifest.static.entrypoint);
   installed.installedVersion = manifest.version;
   await installed.save();
 }

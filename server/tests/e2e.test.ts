@@ -1069,6 +1069,72 @@ test('store: app editing is rejected on read-only sources; managed delete cleans
   assert.equal(fs.existsSync(managedLocation), false);
 });
 
+test('store: admin can upload a static bundle from disk and install it', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Upload Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+
+  // Upload a single .html bundle from the admin's machine.
+  const form = new FormData();
+  form.set(
+    'content',
+    new Blob(['<!doctype html><title>U</title><h1>Uploaded App</h1>'], { type: 'text/html' }),
+    'page.html',
+  );
+  const up = await fetch(baseUrl + '/api/store/uploads', {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  applySetCookie(up);
+  assert.equal(up.status, 201);
+  const { ref } = (await up.json()) as { ref: string };
+  assert.match(ref, /^store-upload:[a-f0-9]+$/);
+
+  // Add a static app referencing the uploaded bundle.
+  const add = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'uploaded-app',
+    name: 'Uploaded App',
+    type: 'static',
+    version: '1.0.0',
+    static: { upload: ref, entrypoint: 'index.html' },
+  });
+  assert.equal(add.status, 201);
+
+  // It appears in the catalogue and installs into a Dashy-served card.
+  const cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; source: string;
+  }[];
+  assert.ok(cat.some((a) => a.id === 'uploaded-app' && a.source === 'Upload Cat'));
+
+  const inst = await api('POST', '/api/store/install', { source: 'Upload Cat', manifestId: 'uploaded-app' });
+  assert.equal(inst.status, 201);
+  const { app } = await inst.json();
+  assert.match(app.url, /^\/store-apps\//);
+  const served = await fetch(baseUrl + app.url, { headers: { Cookie: cookieHeader() } });
+  assert.equal(served.status, 200);
+  assert.match(await served.text(), /Uploaded App/);
+
+  // A static manifest needs exactly one of source_url / upload.
+  const none = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'bad-none', name: 'B', type: 'static', version: '1.0.0', static: { entrypoint: 'index.html' },
+  });
+  assert.equal(none.status, 422);
+  const both = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'bad-both', name: 'B', type: 'static', version: '1.0.0',
+    static: { source_url: 'https://example.com/s.zip', upload: ref, entrypoint: 'index.html' },
+  });
+  assert.equal(both.status, 422);
+
+  // Clean up: uninstall the card and drop the managed catalogue.
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string;
+  }[];
+  const mine = installed.find((i) => i.manifestId === 'uploaded-app');
+  if (mine) await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

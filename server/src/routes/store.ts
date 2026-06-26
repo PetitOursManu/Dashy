@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { storeContentUpload } from '../middleware/upload.js';
 import * as store from '../controllers/storeController.js';
 
 const router = Router();
@@ -19,6 +20,9 @@ router.post('/sources', validateBody(store.createSourceSchema), asyncHandler(sto
 router.post('/sources/managed', validateBody(store.createManagedSchema), asyncHandler(store.createManagedSource));
 router.patch('/sources/:id', validateBody(store.updateSourceSchema), asyncHandler(store.updateSource));
 router.delete('/sources/:id', asyncHandler(store.deleteSource));
+
+// Import a static bundle from the admin's machine → returns an upload reference.
+router.post('/uploads', storeContentUpload, asyncHandler(store.uploadStaticBundle));
 
 // Apps inside a Dashy-managed catalogue. The manifest body is validated in the
 // controller (via parseManifest) so authors get field-level 422 messages.

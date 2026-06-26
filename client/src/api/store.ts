@@ -40,6 +40,12 @@ export const storeApi = {
     http.patch<{ source: StoreSource }>(`/api/store/sources/${id}`, payload),
   deleteSource: (id: string) => http.del<{ ok: true }>(`/api/store/sources/${id}`),
 
+  uploadStatic: (file: File) => {
+    const form = new FormData();
+    form.set('content', file);
+    return http.postForm<{ ref: string; filename: string }>('/api/store/uploads', form);
+  },
+
   addApp: (sourceId: string, manifest: ManifestInput) =>
     http.post<{ app: ManifestInput }>(`/api/store/sources/${sourceId}/apps`, manifest),
   updateApp: (sourceId: string, appId: string, manifest: ManifestInput) =>

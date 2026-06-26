@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { ApiError } from '../middleware/error.js';
+import { storeUploadDir } from '../config/paths.js';
 import { encrypt } from '../utils/crypto.js';
 import { HostedApp } from '../models/HostedApp.js';
 import { StoreCatalogSource } from '../models/StoreCatalogSource.js';
@@ -207,6 +211,22 @@ export async function deleteCatalogApp(req: Request, res: Response): Promise<voi
   await removeApp(source, req.params.appId);
   await bumpSource(source.id);
   res.json({ ok: true });
+}
+
+/**
+ * Store an admin-uploaded static bundle (.html/.zip) and return a reference the
+ * author can drop into a `static` manifest's `upload` field.
+ */
+export async function uploadStaticBundle(req: Request, res: Response): Promise<void> {
+  const file = req.file;
+  if (!file) throw new ApiError(400, 'No file uploaded');
+  const token = crypto.randomBytes(16).toString('hex');
+  const dir = storeUploadDir(token);
+  await fsp.mkdir(dir, { recursive: true });
+  const isZip = path.extname(file.originalname).toLowerCase() === '.zip';
+  // The stored name only drives the zip/single-file heuristic at install time.
+  await fsp.rename(file.path, path.join(dir, isZip ? 'bundle.zip' : 'index.html'));
+  res.status(201).json({ ref: `store-upload:${token}`, filename: file.originalname });
 }
 
 // ---------------------------------- config -----------------------------------

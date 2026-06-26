@@ -3,12 +3,28 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { ApiError } from '../middleware/error.js';
-import { CATALOGS_DIR, catalogFile } from '../config/paths.js';
+import { CATALOGS_DIR, STORE_UPLOADS_DIR, catalogFile, storeUploadDir } from '../config/paths.js';
 import { parseManifest, type Manifest } from './manifest.js';
 import type { StoreCatalogSourceDoc } from '../models/StoreCatalogSource.js';
 
 /** A managed catalogue file slug — also the file name, so it must be safe. */
 const SAFE_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+const UPLOAD_TOKEN = /^store-upload:([a-f0-9]{8,})$/;
+
+/** The upload token referenced by a static manifest, if any. */
+function uploadTokenOf(m: Manifest): string | null {
+  if (m.type !== 'static' || !m.static?.upload) return null;
+  return UPLOAD_TOKEN.exec(m.static.upload)?.[1] ?? null;
+}
+
+/** Delete an admin-uploaded bundle directory (best-effort, path-guarded). */
+async function removeUpload(token: string | null): Promise<void> {
+  if (!token || !/^[a-f0-9]{8,}$/.test(token)) return;
+  const dir = path.resolve(storeUploadDir(token));
+  const within = path.relative(path.resolve(STORE_UPLOADS_DIR), dir);
+  if (within.startsWith('..') || path.isAbsolute(within)) return;
+  await fsp.rm(dir, { recursive: true, force: true }).catch(() => {});
+}
 
 /** Resolve a managed source's file, asserting it stays inside CATALOGS_DIR. */
 function managedPath(source: StoreCatalogSourceDoc): string {
@@ -33,7 +49,7 @@ export async function createCatalogFile(slug: string): Promise<string> {
   return file;
 }
 
-/** Remove a managed catalogue's file (best-effort). */
+/** Remove a managed catalogue's file plus any bundles it uploaded (best-effort). */
 export async function deleteCatalogFile(source: StoreCatalogSourceDoc): Promise<void> {
   let file: string;
   try {
@@ -41,6 +57,8 @@ export async function deleteCatalogFile(source: StoreCatalogSourceDoc): Promise<
   } catch {
     return; // not a managed file we own — nothing to delete
   }
+  const apps = await readApps(file).catch(() => [] as Manifest[]);
+  for (const app of apps) await removeUpload(uploadTokenOf(app));
   await fsp.rm(file, { force: true }).catch(() => {});
 }
 
@@ -105,15 +123,21 @@ export async function updateApp(
   if (manifest.id !== appId && apps.some((a) => a.id === manifest.id)) {
     throw new ApiError(409, `An app with id "${manifest.id}" already exists in this catalogue`);
   }
+  const oldToken = uploadTokenOf(apps[idx]);
+  const newToken = uploadTokenOf(manifest);
   apps[idx] = manifest;
   await writeApps(file, apps);
+  // Drop the previous upload if it was replaced or removed.
+  if (oldToken && oldToken !== newToken) await removeUpload(oldToken);
   return manifest;
 }
 
 export async function removeApp(source: StoreCatalogSourceDoc, appId: string): Promise<void> {
   const file = managedPath(source);
   const apps = await readApps(file);
+  const removed = apps.find((a) => a.id === appId);
   const next = apps.filter((a) => a.id !== appId);
   if (next.length === apps.length) throw new ApiError(404, 'App not found in this catalogue');
   await writeApps(file, next);
+  if (removed) await removeUpload(uploadTokenOf(removed));
 }

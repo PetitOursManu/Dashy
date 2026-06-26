@@ -36,6 +36,9 @@ export const STORE_DEPLOY_DIR = path.join(DATA_DIR, 'store-deploy');
 /** Where Dashy-managed catalogue files live: `<DATA_DIR>/catalogs/<slug>.json`. */
 export const CATALOGS_DIR = path.join(DATA_DIR, 'catalogs');
 
+/** Where admin-uploaded Store static bundles live: `<DATA_DIR>/store-uploads/<token>/`. */
+export const STORE_UPLOADS_DIR = path.join(DATA_DIR, 'store-uploads');
+
 /** Temp dir for in-flight uploads before they are validated/moved. */
 export const TMP_DIR = path.join(DATA_DIR, 'tmp');
 
@@ -53,6 +56,7 @@ export function ensureDataDirs(): void {
     STORE_APPS_DIR,
     STORE_DEPLOY_DIR,
     CATALOGS_DIR,
+    STORE_UPLOADS_DIR,
     TMP_DIR,
   ]) {
     fs.mkdirSync(dir, { recursive: true });
@@ -62,6 +66,11 @@ export function ensureDataDirs(): void {
 /** Absolute path to a Dashy-managed catalogue file. */
 export function catalogFile(slug: string): string {
   return path.join(CATALOGS_DIR, `${slug}.json`);
+}
+
+/** Absolute path to an uploaded Store static bundle directory. */
+export function storeUploadDir(token: string): string {
+  return path.join(STORE_UPLOADS_DIR, token);
 }
 
 /** Absolute path to a hosted app's directory. */
