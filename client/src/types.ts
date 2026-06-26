@@ -89,6 +89,16 @@ export interface ChatMessage {
   content: string;
 }
 
+/** A Store action the assistant proposes; the admin confirms it before it runs. */
+export type ChatProposal =
+  | { type: 'add_catalogue'; name: string }
+  | { type: 'add_source'; name: string; sourceType: 'local' | 'remote'; location: string }
+  | {
+      type: 'add_app';
+      source: string;
+      manifest: { id: string; name: string; type: string; [k: string]: unknown };
+    };
+
 export interface ChatAlert {
   id: string;
   userEmail: string;
@@ -137,6 +147,109 @@ export interface ProjectRequest {
   status: ProjectRequestStatus;
   archived: boolean;
   createdAt: string;
+}
+
+// ------------------------------- Store module --------------------------------
+
+export type StoreAppType = 'tile' | 'deploy' | 'static';
+
+export interface StoreEnvVar {
+  key: string;
+  label: string;
+  default: string | null;
+  secret: boolean;
+}
+
+export interface StoreCatalogApp {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  author: string;
+  version: string;
+  type: StoreAppType;
+  tile?: { url: string; widget?: Record<string, unknown> };
+  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
+  static?: { source_url?: string; upload?: string; entrypoint: string };
+  source: string;
+  installed: boolean;
+  updateAvailable: boolean;
+}
+
+export interface StoreSource {
+  id: string;
+  name: string;
+  type: 'local' | 'remote';
+  location: string;
+  managed: boolean;
+  enabled: boolean;
+  ttlMinutes: number;
+  appCount: number;
+  lastFetchedAt: string | null;
+  lastError: string | null;
+}
+
+/** A manifest as authored in the in-app catalogue editor. */
+export interface ManifestInput {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  author: string;
+  version: string;
+  type: StoreAppType;
+  tile?: { url: string };
+  static?: { source_url?: string; upload?: string; entrypoint: string };
+  deploy?: { docker_compose: string; required_env: StoreEnvVar[]; default_port: number };
+}
+
+export interface StoreInstalled {
+  id: string;
+  manifestId: string;
+  name: string;
+  type: StoreAppType;
+  sourceName: string;
+  installedVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  servingMode: 'path' | 'subdomain' | null;
+  deployDriver: string | null;
+  compose?: string;
+  deployEnv?: Record<string, string>;
+  volumes?: { name: string; mountPath: string }[];
+  serviceName?: string;
+  managedSource: boolean;
+  sourceId: string | null;
+  createdAt: string;
+}
+
+export interface StoreConfig {
+  coolifyEnabled: boolean;
+  coolifyBaseUrl: string;
+  hasCoolifyToken: boolean;
+  coolifyProjectUuid: string;
+  coolifyServerUuid: string;
+  coolifyDestinationUuid: string;
+  coolifyEnvUuid: string;
+  portainerEnabled: boolean;
+  portainerUrl: string;
+  hasPortainerKey: boolean;
+  portainerEndpointId: string;
+  dockerEnabled: boolean;
+  defaultDriver: string;
+  wildcardEnabled: boolean;
+  baseDomain: string;
+}
+
+export interface StoreDriver {
+  id: string;
+  label: string;
+}
+
+export interface DockerDiagnostics {
+  inContainer: boolean;
+  socketPresent: boolean;
+  cliPresent: boolean;
 }
 
 export interface TwoFactorSetup {

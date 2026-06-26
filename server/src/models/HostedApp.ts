@@ -20,6 +20,9 @@ export interface IHostedApp {
   entryFile: string;
   previewImage: string | null;
   category: string | null;
+  // When set, the card links to this URL instead of the locally hosted files
+  // (used by Store installs: tile / deploy result / static app).
+  externalUrl: string | null;
   owner: Types.ObjectId;
   openCount: number;
   lastOpenedAt: Date | null;
@@ -57,6 +60,9 @@ const hostedAppSchema = new Schema<IHostedApp>(
 
     // Optional free-text category used for grouping/filtering on the dashboard.
     category: { type: String, default: null, trim: true, maxlength: 40 },
+
+    // External / Store-served URL (null for normally hosted apps).
+    externalUrl: { type: String, default: null },
 
     // Owner (the admin who imported the app).
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },

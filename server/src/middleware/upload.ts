@@ -135,6 +135,22 @@ export const contentUpload = multer({
   },
 }).single('content');
 
+/** Upload handler for a Store static bundle (.html/.zip), imported from the admin's machine. */
+export const storeContentUpload = multer({
+  storage,
+  limits: { fileSize: env.MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
+  fileFilter(_req, file, cb) {
+    if (file.fieldname !== 'content') {
+      return cb(new Error(`Unexpected field: ${file.fieldname}`));
+    }
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!CONTENT_EXTS.has(ext)) {
+      return cb(new Error('Only .html or .zip files are allowed'));
+    }
+    return cb(null, true);
+  },
+}).single('content');
+
 /** Upload handler for restoring a backup archive (.zip only). */
 export const backupUpload = multer({
   storage,

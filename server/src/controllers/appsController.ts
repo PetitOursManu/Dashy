@@ -73,7 +73,7 @@ export function serializeApp(app: InstanceType<typeof HostedApp>, favorites?: Se
     : null;
   return {
     ...json,
-    url: `/hosted/${app.slug}/`,
+    url: app.externalUrl || `/hosted/${app.slug}/`,
     previewUrl: `/api/apps/${app.id}/preview`,
     isFavorite: favorites?.has(app.id) ?? false,
     share,

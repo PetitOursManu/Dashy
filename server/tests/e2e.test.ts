@@ -890,6 +890,378 @@ test('admin can reply to a request, notifying the requester', async () => {
   assert.ok(back.requests.some((r: { id: string }) => r.id === id));
 });
 
+// ---------------------------------- Store ------------------------------------
+
+test('store endpoints are admin-only', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal((await api('GET', '/api/store/catalog')).status, 403);
+  assert.equal((await api('GET', '/api/store/config')).status, 403);
+  assert.equal((await api('POST', '/api/store/sources', {})).status, 403);
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+});
+
+let storeSourceId = '';
+
+test('store: a local source validates manifests and lists valid ones', async () => {
+  const catalog = {
+    apps: [
+      { id: 'demo-tile', name: 'Demo Tile', type: 'tile', version: '1.0.0', author: 'Tester', tile: { url: 'https://example.com/' } },
+      { id: 'BAD ID', name: 'Invalid', type: 'tile' },
+    ],
+  };
+  const file = path.join(TMP_DATA, 'catalog.json');
+  fs.writeFileSync(file, JSON.stringify(catalog));
+
+  const create = await api('POST', '/api/store/sources', {
+    name: 'Local Test',
+    type: 'local',
+    location: file,
+  });
+  assert.equal(create.status, 201);
+  storeSourceId = (await create.json()).source.id;
+
+  const res = await api('GET', '/api/store/catalog?refresh=1');
+  assert.equal(res.status, 200);
+  const apps = (await res.json()).apps as { id: string; source: string }[];
+  // The valid tile is listed; the malformed one is silently dropped.
+  assert.ok(apps.some((a) => a.id === 'demo-tile' && a.source === 'Local Test'));
+  assert.equal(apps.some((a) => a.id === 'BAD ID'), false);
+});
+
+let installedId = '';
+
+test('store: installing a tile creates a card and tracks it', async () => {
+  const res = await api('POST', '/api/store/install', { source: 'Local Test', manifestId: 'demo-tile' });
+  assert.equal(res.status, 201);
+  const { app } = await res.json();
+  assert.equal(app.url, 'https://example.com/');
+
+  // The card now shows in the dashboard app list.
+  const apps = (await (await api('GET', '/api/apps')).json()).apps as { id: string; url: string }[];
+  assert.ok(apps.some((a) => a.id === app.id && a.url === 'https://example.com/'));
+
+  // …and in the installed list, which the catalog marks as installed.
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string;
+    manifestId: string;
+  }[];
+  const mine = installed.find((i) => i.manifestId === 'demo-tile');
+  assert.ok(mine);
+  installedId = mine.id;
+
+  const cat = (await (await api('GET', '/api/store/catalog')).json()).apps as {
+    id: string;
+    installed: boolean;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'demo-tile')?.installed, true);
+});
+
+test('store: uninstall removes the card; config hides tokens', async () => {
+  const del = await api('DELETE', `/api/store/installed/${installedId}`);
+  assert.equal(del.status, 200);
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as unknown[];
+  assert.equal(installed.length, 0);
+
+  // Config: drivers always include manual; tokens are never echoed back.
+  const cfgRes = await api('PUT', '/api/store/config', {
+    coolifyEnabled: true,
+    coolifyBaseUrl: 'https://coolify.test',
+    coolifyToken: 'super-secret',
+    coolifyProjectUuid: 'p',
+    coolifyServerUuid: 's',
+    coolifyDestinationUuid: 'd',
+    wildcardEnabled: true,
+    baseDomain: 'apps.test',
+  });
+  assert.equal(cfgRes.status, 200);
+  const { config, drivers } = await cfgRes.json();
+  assert.equal(config.coolifyToken, undefined);
+  assert.equal(config.hasCoolifyToken, true);
+  assert.equal(config.wildcardEnabled, true);
+  assert.ok((drivers as { id: string }[]).some((d) => d.id === 'manual'));
+
+  // Clean up the test source.
+  await api('DELETE', `/api/store/sources/${storeSourceId}`);
+});
+
+let managedId = '';
+let managedLocation = '';
+
+test('store: a managed catalogue can be created and edited from the API', async () => {
+  // Create a Dashy-owned catalogue (admin gives just a name).
+  const create = await api('POST', '/api/store/sources/managed', { name: 'My Catalogue' });
+  assert.equal(create.status, 201);
+  const src = (await create.json()).source as { id: string; managed: boolean; type: string; location: string };
+  assert.equal(src.managed, true);
+  assert.equal(src.type, 'local');
+  managedId = src.id;
+  managedLocation = src.location;
+  // The backing file was created under DATA_DIR/catalogs.
+  assert.ok(managedLocation.includes('catalogs'));
+  assert.equal(fs.existsSync(managedLocation), true);
+
+  // Add a valid tile app; it shows up in the merged catalogue.
+  const add = await api('POST', `/api/store/sources/${managedId}/apps`, {
+    id: 'welcome-demo',
+    name: 'Welcome Demo',
+    type: 'tile',
+    version: '1.0.0',
+    tile: { url: 'https://example.com/' },
+  });
+  assert.equal(add.status, 201);
+  let cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; source: string; version: string;
+  }[];
+  assert.ok(cat.some((a) => a.id === 'welcome-demo' && a.source === 'My Catalogue'));
+
+  // An invalid manifest is rejected with 422.
+  const bad = await api('POST', `/api/store/sources/${managedId}/apps`, {
+    id: 'BAD ID',
+    name: 'Nope',
+    type: 'tile',
+    tile: { url: 'not-a-url' },
+  });
+  assert.equal(bad.status, 422);
+
+  // Editing the app bumps its version in the catalogue.
+  const edit = await api('PATCH', `/api/store/sources/${managedId}/apps/welcome-demo`, {
+    id: 'welcome-demo',
+    name: 'Welcome Demo',
+    type: 'tile',
+    version: '2.0.0',
+    tile: { url: 'https://example.com/' },
+  });
+  assert.equal(edit.status, 200);
+  cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; version: string;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'welcome-demo')?.version, '2.0.0');
+
+  // Removing the app drops it from the catalogue.
+  const del = await api('DELETE', `/api/store/sources/${managedId}/apps/welcome-demo`);
+  assert.equal(del.status, 200);
+  cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as { id: string }[];
+  assert.equal(cat.some((a) => a.id === 'welcome-demo'), false);
+});
+
+test('store: app editing is rejected on read-only sources; managed delete cleans the file', async () => {
+  // A remote (non-managed) source cannot be edited via the app endpoints.
+  const remote = await api('POST', '/api/store/sources', {
+    name: 'Remote Guard',
+    type: 'remote',
+    location: 'https://example.com/catalog.json',
+  });
+  const remoteId = (await remote.json()).source.id;
+  const guard = await api('POST', `/api/store/sources/${remoteId}/apps`, {
+    id: 'x', name: 'X', type: 'tile', version: '1.0.0', tile: { url: 'https://example.com/' },
+  });
+  assert.equal(guard.status, 400);
+  await api('DELETE', `/api/store/sources/${remoteId}`);
+
+  // Deleting the managed source removes its backing file too.
+  const del = await api('DELETE', `/api/store/sources/${managedId}`);
+  assert.equal(del.status, 200);
+  assert.equal(fs.existsSync(managedLocation), false);
+});
+
+test('store: admin can upload a static bundle from disk and install it', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Upload Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+
+  // Upload a single .html bundle from the admin's machine.
+  const form = new FormData();
+  form.set(
+    'content',
+    new Blob(['<!doctype html><title>U</title><h1>Uploaded App</h1>'], { type: 'text/html' }),
+    'page.html',
+  );
+  const up = await fetch(baseUrl + '/api/store/uploads', {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: form,
+  });
+  applySetCookie(up);
+  assert.equal(up.status, 201);
+  const { ref } = (await up.json()) as { ref: string };
+  assert.match(ref, /^store-upload:[a-f0-9]+$/);
+
+  // Add a static app referencing the uploaded bundle.
+  const add = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'uploaded-app',
+    name: 'Uploaded App',
+    type: 'static',
+    version: '1.0.0',
+    static: { upload: ref, entrypoint: 'index.html' },
+  });
+  assert.equal(add.status, 201);
+
+  // It appears in the catalogue and installs into a Dashy-served card.
+  const cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; source: string;
+  }[];
+  assert.ok(cat.some((a) => a.id === 'uploaded-app' && a.source === 'Upload Cat'));
+
+  const inst = await api('POST', '/api/store/install', { source: 'Upload Cat', manifestId: 'uploaded-app' });
+  assert.equal(inst.status, 201);
+  const { app } = await inst.json();
+  assert.match(app.url, /^\/store-apps\//);
+  const served = await fetch(baseUrl + app.url, { headers: { Cookie: cookieHeader() } });
+  assert.equal(served.status, 200);
+  assert.match(await served.text(), /Uploaded App/);
+
+  // A static manifest needs exactly one of source_url / upload.
+  const none = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'bad-none', name: 'B', type: 'static', version: '1.0.0', static: { entrypoint: 'index.html' },
+  });
+  assert.equal(none.status, 422);
+  const both = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'bad-both', name: 'B', type: 'static', version: '1.0.0',
+    static: { source_url: 'https://example.com/s.zip', upload: ref, entrypoint: 'index.html' },
+  });
+  assert.equal(both.status, 422);
+
+  // Clean up: uninstall the card and drop the managed catalogue.
+  const installed = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string;
+  }[];
+  const mine = installed.find((i) => i.manifestId === 'uploaded-app');
+  if (mine) await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
+test('store: updating a managed static app content bumps catalogue + serves new content', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Content Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+
+  const f1 = new FormData();
+  f1.set('content', new Blob(['<h1>V1</h1>'], { type: 'text/html' }), 'a.html');
+  const ref1 = (
+    await (
+      await fetch(baseUrl + '/api/store/uploads', {
+        method: 'POST',
+        headers: { Cookie: cookieHeader() },
+        body: f1,
+      })
+    ).json()
+  ).ref as string;
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'edit-app', name: 'Edit App', type: 'static', version: '1.0.0',
+    static: { upload: ref1, entrypoint: 'index.html' },
+  });
+  const { app } = await (await api('POST', '/api/store/install', { source: 'Content Cat', manifestId: 'edit-app' })).json();
+
+  const list = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string; managedSource: boolean;
+  }[];
+  const mine = list.find((i) => i.manifestId === 'edit-app')!;
+  assert.equal(mine.managedSource, true);
+
+  // Update content to v2 from a new upload.
+  const f2 = new FormData();
+  f2.set('content', new Blob(['<h1>V2 content</h1>'], { type: 'text/html' }), 'b.html');
+  f2.set('version', '2.0.0');
+  const upd = await fetch(baseUrl + `/api/store/installed/${mine.id}/content`, {
+    method: 'POST',
+    headers: { Cookie: cookieHeader() },
+    body: f2,
+  });
+  assert.equal(upd.status, 200);
+
+  // The catalogue version is bumped and the served files reflect the new content.
+  const cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; version: string;
+  }[];
+  assert.equal(cat.find((a) => a.id === 'edit-app')?.version, '2.0.0');
+  const served = await fetch(baseUrl + app.url, { headers: { Cookie: cookieHeader() } });
+  assert.match(await served.text(), /V2 content/);
+
+  await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
+test('store: deploy install persists compose/volumes; redeploy/restart guarded by driver', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Deploy Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'deploy-app',
+    name: 'Deploy App',
+    type: 'deploy',
+    version: '1.0.0',
+    deploy: { docker_compose: 'services:\n  web:\n    image: nginx\n', required_env: [], default_port: 8080 },
+  });
+
+  const inst = await api('POST', '/api/store/install', {
+    source: 'Deploy Cat',
+    manifestId: 'deploy-app',
+    driver: 'manual',
+    env: { FOO: 'bar' },
+    finalUrl: 'https://deploy.example.com/',
+    compose: 'services:\n  web:\n    image: nginx:alpine\n',
+    volumes: [{ name: 'data', mountPath: '/data' }],
+    serviceName: 'web',
+  });
+  assert.equal(inst.status, 201);
+
+  const list = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string; type: string; compose: string;
+    volumes: { name: string; mountPath: string }[]; serviceName: string;
+  }[];
+  const mine = list.find((i) => i.manifestId === 'deploy-app')!;
+  assert.equal(mine.type, 'deploy');
+  assert.match(mine.compose, /nginx:alpine/);
+  assert.equal(mine.volumes.length, 1);
+  assert.equal(mine.serviceName, 'web');
+
+  // The manual driver cannot redeploy/restart from Dashy → 400.
+  assert.equal((await api('POST', `/api/store/installed/${mine.id}/redeploy`, { env: { FOO: 'baz' } })).status, 400);
+  assert.equal((await api('POST', `/api/store/installed/${mine.id}/restart`)).status, 400);
+
+  await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
+test('chat: admin can execute a proposed Store action; regular users cannot', async () => {
+  // A regular user cannot run Store actions.
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: BOB_EMAIL, password: BOB_PASSWORD });
+  assert.equal(
+    (await api('POST', '/api/chat/action', { type: 'add_catalogue', name: 'Nope' })).status,
+    403,
+  );
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  // Admin: a malformed action is rejected.
+  assert.equal((await api('POST', '/api/chat/action', { type: 'bogus' })).status, 400);
+
+  // Admin: a confirmed add_catalogue action creates the managed catalogue.
+  const res = await api('POST', '/api/chat/action', { type: 'add_catalogue', name: 'Bot Cat' });
+  assert.equal(res.status, 201);
+  const sources = (await (await api('GET', '/api/store/sources')).json()).sources as {
+    id: string; name: string; managed: boolean;
+  }[];
+  const created = sources.find((s) => s.name === 'Bot Cat');
+  assert.ok(created && created.managed);
+  await api('DELETE', `/api/store/sources/${created!.id}`);
+});
+
+test('store config reports a Docker diagnostic for the admin', async () => {
+  const { docker } = await (await api('GET', '/api/store/config')).json();
+  assert.equal(typeof docker.inContainer, 'boolean');
+  assert.equal(typeof docker.socketPresent, 'boolean');
+  assert.equal(typeof docker.cliPresent, 'boolean');
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

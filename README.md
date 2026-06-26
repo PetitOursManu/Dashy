@@ -25,7 +25,8 @@ No SaaS, no paid services — everything runs on a single machine.
 - 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
-- 🤖 **AI assistant ("Dashy" bot)** — an optional in-app chatbot that explains how Dashy works and recommends the right app for a user's needs, with one-click links to open them, step-by-step "how do I…" guidance, and replies in the user's own language. Admins choose the provider (**OpenRouter, OpenAI, Deepseek, or Claude**), the model, and enter their API key (encrypted at rest), and enable the assistant per user (on by default for new users). Through the assistant, users can also **request a project** (a shared file/site or just an idea) — admins review them on a dedicated **Requests** page (and at a glance in the Notifications tile) and can **reply back** to the requester's dashboard; users track their own request history.
+- 🛍️ **Store** (admin) — a one-click app catalogue. Add decentralised catalogue **sources** (a local JSON file, a remote URL like raw GitHub, or a **Dashy-managed catalogue you edit from the UI** — add/edit/remove apps with no JSON to hand-write); apps are described by a standalone JSON **manifest** validated on ingestion. Three install types: **`tile`** (a card linking to a URL), **`static`** (downloads a zip/file, served at `/store-apps/<id>/` or on a dedicated subdomain) and **`deploy`** (shows the `docker-compose` preview, then deploys via a runtime-detected driver — **Coolify**, **Portainer**, direct **Docker**, or a universal **manual** copy/paste — and generates a tile). Driver tokens are encrypted backend-only and never read from a manifest.
+- 🤖 **AI assistant ("Dashy" bot)** — an optional in-app chatbot that explains how Dashy works and recommends the right app for a user's needs, with one-click links to open them, step-by-step "how do I…" guidance, and replies in the user's own language. Admins choose the provider (**OpenRouter, OpenAI, Deepseek, or Claude**), the model, and enter their API key (encrypted at rest), and enable the assistant per user (on by default for new users). Through the assistant, users can also **request a project** (a shared file/site or just an idea) — admins review them on a dedicated **Requests** page (and at a glance in the Notifications tile) and can **reply back** to the requester's dashboard; users track their own request history. Admins get **more technical answers** than regular users and can ask the assistant to **create a Store catalogue, source or app** — it proposes the action and nothing happens until the admin clicks **Confirm**.
 - 📝 **Personal notes** — a per-user note tile with **bold / italic / underline**, auto-saved server-side so it survives logout and refresh.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
 - 🌍 **7 languages** — the whole interface is translated: English (default), Français, Español, Deutsch, Italiano, 简体中文, Русский.
@@ -175,6 +176,112 @@ Dashy is built to redeploy on `git push`:
 4. Make sure the `apps_data` and `mongo_data` volumes are persistent.
 5. Point your domain at the service; Coolify's proxy terminates TLS. Keep
    `NODE_ENV=production` so cookies are `Secure`.
+
+---
+
+## The Store (app catalogue)
+
+The **Store** (admin-only) turns Dashy into a one-click app catalogue. You add
+decentralised **sources**, Dashy reads app **manifests** from them, and
+installing an app drops a card onto the dashboard like any other hosted app.
+
+### How it works
+
+1. **Add a source** — in *Settings → Store* add one or more catalogue sources:
+   - `local` — a JSON file or folder on the server.
+   - `remote` — a URL (e.g. a raw JSON file on GitHub).
+   - **managed** — click *Create* under **Managed catalogue**: you give it a
+     name, Dashy creates and owns a catalogue file (under the data volume) and
+     lets you **add / edit / remove apps from the UI** — no JSON to write by
+     hand. Use *Manage apps* on the source to open the editor.
+
+   Each source has a refresh TTL (cached in the DB, 60 min by default) and an
+   on/off switch. The `/store` page merges every enabled source and tags each
+   app with where it came from. Hit **Refresh** to re-fetch immediately.
+
+2. **Browse & install** — open **Store** in the menu, search the catalogue, and
+   click an app to open the install modal. What happens next depends on the
+   app's **type** (see below).
+
+3. **It becomes a card** — every install creates a normal dashboard card
+   (category `Store`) plus a tracked record so you can **Update** or
+   **Uninstall** it later from the *Installed* list. Uninstalling removes the
+   card, deletes any on-disk files, and cleans up favorites/assignments.
+
+### Manifest format
+
+Each app is described by a standalone JSON **manifest**, validated on ingestion
+(invalid manifests are skipped, valid ones still load). A source is either a
+bare array of manifests or an index object `{ "apps": [ … ] }`. A `local`
+folder source may also hold **one `.json` file per app** — Dashy reads every
+`*.json` in the folder and merges them. A ready-to-use sample catalogue (a
+**Welcome Demo** card plus `static`/`deploy` templates) ships at
+[`docs/store-catalog.example.json`](docs/store-catalog.example.json) — point a
+`local` source at it, or host it somewhere and add it as a `remote` source.
+
+```jsonc
+{
+  "id": "my-app",            // lowercase slug [a-z0-9-]
+  "name": "My App",
+  "description": "What it does",
+  "icon": "https://…/icon.png",
+  "version": "1.0.0",
+  "type": "tile",            // "tile" | "static" | "deploy"
+
+  // exactly one block, matching "type":
+  "tile":   { "url": "https://example.com" },
+  // static: a remote URL, or an uploaded bundle ref (managed catalogues only)
+  "static": { "source_url": "https://…/site.zip", "entrypoint": "index.html" },
+  // "static": { "upload": "store-upload:<token>", "entrypoint": "index.html" },
+  "deploy": {
+    "docker_compose": "services:\n  app:\n    image: …",
+    "required_env": [{ "key": "API_KEY", "label": "API key", "secret": true }],
+    "default_port": 8080
+  }
+}
+```
+
+### Install types
+
+- **`tile`** — just a card linking to an external `url`. Nothing is downloaded.
+- **`static`** — the content comes from either a `source_url` Dashy downloads
+  **or**, in a managed catalogue, a `.html`/`.zip` you **upload straight from
+  your computer** (no hosting needed). A `.zip` is safely extracted, a single
+  file is stored as the entrypoint, into the `apps_data` volume under
+  `store-apps/<slug>/`, then served either at a **path** (`/store-apps/<slug>/`)
+  or, if you've enabled **wildcard DNS**, on a dedicated **subdomain**
+  (`<slug>.<your-domain>`). Can be updated in place.
+- **`deploy`** — shows the `docker-compose` **preview** and any required env
+  vars, you pick a **driver**, it deploys the stack, and you give the resulting
+  **URL** that the card will point to.
+
+### Deploy drivers
+
+Drivers are capability-detected — only the ones usable on your host are offered:
+
+| Driver        | When it's available            | What it does                                   |
+| ------------- | ------------------------------ | ---------------------------------------------- |
+| **Docker**    | Docker socket reachable        | runs `docker compose up` for the stack         |
+| **Coolify**   | configured in Store settings   | `POST /api/applications/dockercompose`         |
+| **Portainer** | configured in Store settings   | `POST /api/stacks`                             |
+| **Manual**    | always                         | gives you the compose to run yourself          |
+
+Driver credentials (Coolify token, Portainer key) are configured in
+*Settings → Store*, **encrypted at rest (AES-256-GCM)**, never returned to the
+browser, and never read from a manifest. A deploy always shows the compose
+preview first and always asks for the final app URL before creating the card.
+
+For the **direct Docker** driver, Dashy must reach the host's Docker engine: it
+runs `docker compose`, so the container needs both the Docker **socket mounted
+in** and the **docker CLI** (the image ships it). `docker-compose.yml` mounts
+`/var/run/docker.sock` for this, and the container's entrypoint auto-joins the
+socket's group (so it works on Docker Desktop and typical Linux hosts without
+extra config) — comment that line out to disable direct Docker deploys (it
+grants the container near-root control of the host's Docker, so keep it only on a
+trusted, single-admin host). *Settings → Store* shows
+a diagnostic telling the admin whether Dashy is containerized and whether the
+socket and CLI are present. Docker deploys can declare **persistent named
+volumes** and be **redeployed** or **restarted** from the installed list.
 
 ---
 
