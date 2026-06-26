@@ -1,0 +1,51 @@
+{
+  "$schema": "Dashy Store catalogue — a list of app manifests. See README → \"The Store\".",
+  "apps": [
+    {
+      "id": "welcome-demo",
+      "name": "Welcome Demo",
+      "description": "A demo entry that shows how the Dashy Store works. Installing it adds a card to your dashboard that links to the Dashy project. Use it as a template for your own catalogue apps.",
+      "icon": "https://raw.githubusercontent.com/PetitOursManu/Dashy/main/docs/screenshot.webp",
+      "author": "Dashy",
+      "version": "1.0.0",
+      "type": "tile",
+      "tile": {
+        "url": "https://github.com/PetitOursManu/Dashy"
+      }
+    },
+
+    {
+      "id": "static-site-demo",
+      "name": "Static Site Demo",
+      "description": "Example of a 'static' app: Dashy downloads the zip/file from source_url and re-hosts it on this server at /store-apps/<id>/ (or on a subdomain if wildcard DNS is on). Replace source_url with your own .zip or single .html.",
+      "author": "Dashy",
+      "version": "1.0.0",
+      "type": "static",
+      "static": {
+        "source_url": "https://example.com/my-static-site.zip",
+        "entrypoint": "index.html"
+      }
+    },
+
+    {
+      "id": "deploy-demo",
+      "name": "Deploy Demo",
+      "description": "Example of a 'deploy' app: Dashy shows this docker-compose, collects the required env vars, deploys the stack through a driver (Docker / Coolify / Portainer / Manual), then you give the resulting URL the card points to.",
+      "author": "Dashy",
+      "version": "1.0.0",
+      "type": "deploy",
+      "deploy": {
+        "docker_compose": "services:\n  app:\n    image: nginxdemos/hello:plain-text\n    restart: unless-stopped\n    ports:\n      - \"8080:80\"\n",
+        "required_env": [
+          {
+            "key": "GREETING",
+            "label": "Greeting shown by the app",
+            "default": "Hello from Dashy",
+            "secret": false
+          }
+        ],
+        "default_port": 8080
+      }
+    }
+  ]
+}

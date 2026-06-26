@@ -179,6 +179,92 @@ Dashy is built to redeploy on `git push`:
 
 ---
 
+## The Store (app catalogue)
+
+The **Store** (admin-only) turns Dashy into a one-click app catalogue. You add
+decentralised **sources**, Dashy reads app **manifests** from them, and
+installing an app drops a card onto the dashboard like any other hosted app.
+
+### How it works
+
+1. **Add a source** — in *Settings → Store* add one or more catalogue sources:
+   - `local` — a JSON file or folder on the server.
+   - `remote` — a URL (e.g. a raw JSON file on GitHub).
+
+   Each source has a refresh TTL (cached in the DB, 60 min by default) and an
+   on/off switch. The `/store` page merges every enabled source and tags each
+   app with where it came from. Hit **Refresh** to re-fetch immediately.
+
+2. **Browse & install** — open **Store** in the menu, search the catalogue, and
+   click an app to open the install modal. What happens next depends on the
+   app's **type** (see below).
+
+3. **It becomes a card** — every install creates a normal dashboard card
+   (category `Store`) plus a tracked record so you can **Update** or
+   **Uninstall** it later from the *Installed* list. Uninstalling removes the
+   card, deletes any on-disk files, and cleans up favorites/assignments.
+
+### Manifest format
+
+Each app is described by a standalone JSON **manifest**, validated on ingestion
+(invalid manifests are skipped, valid ones still load). A source is either a
+bare array of manifests or an index object `{ "apps": [ … ] }`. A `local`
+folder source may also hold **one `.json` file per app** — Dashy reads every
+`*.json` in the folder and merges them. A ready-to-use sample catalogue (a
+**Welcome Demo** card plus `static`/`deploy` templates) ships at
+[`docs/store-catalog.example.json`](docs/store-catalog.example.json) — point a
+`local` source at it, or host it somewhere and add it as a `remote` source.
+
+```jsonc
+{
+  "id": "my-app",            // lowercase slug [a-z0-9-]
+  "name": "My App",
+  "description": "What it does",
+  "icon": "https://…/icon.png",
+  "version": "1.0.0",
+  "type": "tile",            // "tile" | "static" | "deploy"
+
+  // exactly one block, matching "type":
+  "tile":   { "url": "https://example.com" },
+  "static": { "source_url": "https://…/site.zip", "entrypoint": "index.html" },
+  "deploy": {
+    "docker_compose": "services:\n  app:\n    image: …",
+    "required_env": [{ "key": "API_KEY", "label": "API key", "secret": true }],
+    "default_port": 8080
+  }
+}
+```
+
+### Install types
+
+- **`tile`** — just a card linking to an external `url`. Nothing is downloaded.
+- **`static`** — downloads `source_url` (a `.zip` is safely extracted, a single
+  file is stored as the entrypoint) into the `apps_data` volume under
+  `store-apps/<slug>/`, then serves it either at a **path**
+  (`/store-apps/<slug>/`) or, if you've enabled **wildcard DNS**, on a dedicated
+  **subdomain** (`<slug>.<your-domain>`). Can be updated in place (re-download).
+- **`deploy`** — shows the `docker-compose` **preview** and any required env
+  vars, you pick a **driver**, it deploys the stack, and you give the resulting
+  **URL** that the card will point to.
+
+### Deploy drivers
+
+Drivers are capability-detected — only the ones usable on your host are offered:
+
+| Driver        | When it's available            | What it does                                   |
+| ------------- | ------------------------------ | ---------------------------------------------- |
+| **Docker**    | Docker socket reachable        | runs `docker compose up` for the stack         |
+| **Coolify**   | configured in Store settings   | `POST /api/applications/dockercompose`         |
+| **Portainer** | configured in Store settings   | `POST /api/stacks`                             |
+| **Manual**    | always                         | gives you the compose to run yourself          |
+
+Driver credentials (Coolify token, Portainer key) are configured in
+*Settings → Store*, **encrypted at rest (AES-256-GCM)**, never returned to the
+browser, and never read from a manifest. A deploy always shows the compose
+preview first and always asks for the final app URL before creating the card.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.
