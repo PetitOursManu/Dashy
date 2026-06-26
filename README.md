@@ -176,6 +176,10 @@ Dashy is built to redeploy on `git push`:
 4. Make sure the `apps_data` and `mongo_data` volumes are persistent.
 5. Point your domain at the service; Coolify's proxy terminates TLS. Keep
    `NODE_ENV=production` so cookies are `Secure`.
+6. *(Optional)* To use the Store's **direct Docker** deploy driver, share the
+   host's Docker socket into the container — source `/var/run/docker.sock`,
+   destination `/var/run/docker.sock` (see [The Store → Deploy drivers](#deploy-drivers)).
+   Skip this if you only use tile/static apps or the Coolify/Portainer/manual drivers.
 
 ---
 
@@ -272,16 +276,39 @@ browser, and never read from a manifest. A deploy always shows the compose
 preview first and always asks for the final app URL before creating the card.
 
 For the **direct Docker** driver, Dashy must reach the host's Docker engine: it
-runs `docker compose`, so the container needs both the Docker **socket mounted
-in** and the **docker CLI** (the image ships it). `docker-compose.yml` mounts
-`/var/run/docker.sock` for this, and the container's entrypoint auto-joins the
-socket's group (so it works on Docker Desktop and typical Linux hosts without
-extra config) — comment that line out to disable direct Docker deploys (it
-grants the container near-root control of the host's Docker, so keep it only on a
-trusted, single-admin host). *Settings → Store* shows
-a diagnostic telling the admin whether Dashy is containerized and whether the
-socket and CLI are present. Docker deploys can declare **persistent named
-volumes** and be **redeployed** or **restarted** from the installed list.
+runs `docker compose`, so it needs both the Docker **socket** and the **docker
+CLI** (the image already ships the CLI + compose plugin). It only ever talks to
+the **local** Docker engine of the host Dashy runs on (a Unix socket, not a
+network connection) — apps you deploy this way run on that same host.
+
+#### Enabling it when Dashy itself runs in a container
+
+If Dashy runs **inside a container** (the normal Docker / Coolify deployment) it
+**cannot see the host's Docker by default** — you must share the host's Docker
+socket into the container as a volume, mapping it to the **same path inside
+Dashy**:
+
+| Source (on the host)   | Destination (inside the Dashy container) |
+| ---------------------- | ---------------------------------------- |
+| `/var/run/docker.sock` | `/var/run/docker.sock`                   |
+
+- With **docker-compose**, it's already wired up: the provided
+  `docker-compose.yml` mounts `- /var/run/docker.sock:/var/run/docker.sock`.
+  Comment that line out to disable Docker deploys.
+- With **Coolify** (or any UI that asks for a volume / bind mount), add one with
+  **source** `/var/run/docker.sock` and **destination / mount path**
+  `/var/run/docker.sock`.
+
+Dashy's entrypoint then auto-joins the socket's group at startup (its GID differs
+per host — `0` on Docker Desktop, the `docker` group on a typical Linux host), so
+no manual permission tweak is needed.
+
+⚠️ Mounting the socket gives the container **near-root control of the host's
+Docker**, so enable it only on a trusted, single-admin host. *Settings → Store*
+shows a live diagnostic — whether Dashy is containerized and whether the socket
+and CLI are present — and warns you, with the exact line to add, when Docker
+deploys can't work. Docker deploys can declare **persistent named volumes** and
+be **redeployed** or **restarted** from the installed list.
 
 ---
 
