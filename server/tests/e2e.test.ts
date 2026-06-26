@@ -1262,6 +1262,13 @@ test('store config reports a Docker diagnostic for the admin', async () => {
   assert.equal(typeof docker.cliPresent, 'boolean');
 });
 
+test('store: compose-from-repo only accepts GitHub URLs', async () => {
+  assert.equal(
+    (await api('POST', '/api/store/compose-from-repo', { repo: 'https://evil.example.com/x' })).status,
+    400,
+  );
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

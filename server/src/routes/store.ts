@@ -24,6 +24,13 @@ router.delete('/sources/:id', asyncHandler(store.deleteSource));
 // Import a static bundle from the admin's machine → returns an upload reference.
 router.post('/uploads', storeContentUpload, asyncHandler(store.uploadStaticBundle));
 
+// Resolve a GitHub repo URL to its docker-compose content (deploy authoring).
+router.post(
+  '/compose-from-repo',
+  validateBody(store.composeFromRepoSchema),
+  asyncHandler(store.composeFromRepo),
+);
+
 // Apps inside a Dashy-managed catalogue. The manifest body is validated in the
 // controller (via parseManifest) so authors get field-level 422 messages.
 router.post('/sources/:id/apps', asyncHandler(store.addCatalogApp));

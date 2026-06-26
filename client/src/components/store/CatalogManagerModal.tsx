@@ -76,6 +76,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
   const [staticKind, setStaticKind] = useState<'url' | 'upload'>('url');
   const [uploadName, setUploadName] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [composeSource, setComposeSource] = useState<'paste' | 'repo'>('paste');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [repoLoading, setRepoLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +113,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setIdTouched(false);
     setStaticKind('url');
     setUploadName('');
+    setComposeSource('paste');
+    setRepoUrl('');
     setError(null);
   };
 
@@ -138,6 +143,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setIdTouched(true);
     setStaticKind(a.static?.upload ? 'upload' : 'url');
     setUploadName(a.static?.upload ? t('manifest.uploaded') : '');
+    setComposeSource('paste');
+    setRepoUrl('');
     setError(null);
   };
 
@@ -191,6 +198,26 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       setError(err instanceof ApiError ? err.message : t('manifest.uploadError'));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const loadFromRepo = async () => {
+    if (!repoUrl.trim() || repoLoading) return;
+    setRepoLoading(true);
+    setError(null);
+    try {
+      const { compose } = await storeApi.composeFromRepo(repoUrl.trim());
+      patch({
+        deploy: {
+          docker_compose: compose,
+          required_env: form?.deploy?.required_env ?? [],
+          default_port: form?.deploy?.default_port ?? 8080,
+        },
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('manifest.repoError'));
+    } finally {
+      setRepoLoading(false);
     }
   };
 
@@ -489,7 +516,58 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
           {form.type === 'deploy' && (
             <div className="space-y-3">
               <div>
-                <label className="label">{t('manifest.compose')}</label>
+                <span className="label">{t('manifest.composeSource')}</span>
+                <div className="inline-flex rounded-xl border border-sand-200 p-1 dark:border-sand-700">
+                  <button
+                    type="button"
+                    onClick={() => setComposeSource('paste')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      composeSource === 'paste' ? 'bg-ember-500 text-white' : ''
+                    }`}
+                  >
+                    {t('manifest.composePaste')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setComposeSource('repo')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      composeSource === 'repo' ? 'bg-ember-500 text-white' : ''
+                    }`}
+                  >
+                    {t('manifest.composeRepo')}
+                  </button>
+                </div>
+              </div>
+
+              {composeSource === 'repo' && (
+                <div>
+                  <label className="label">{t('manifest.repoUrl')}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="input flex-1"
+                      type="url"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      placeholder="https://github.com/owner/repo"
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary shrink-0"
+                      onClick={() => void loadFromRepo()}
+                      disabled={repoLoading || !repoUrl.trim()}
+                    >
+                      {repoLoading && <Spinner className="h-4 w-4" />}
+                      {t('manifest.repoLoad')}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-sand-400">{t('manifest.repoHint')}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="label">
+                  {composeSource === 'repo' ? t('manifest.composeLoaded') : t('manifest.compose')}
+                </label>
                 <textarea
                   className="input h-40 resize-none font-mono text-xs"
                   value={form.deploy?.docker_compose ?? ''}

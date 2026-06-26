@@ -62,6 +62,12 @@ export const storeApi = {
     return http.postForm<{ ref: string; filename: string }>('/api/store/uploads', form);
   },
 
+  composeFromRepo: (repo: string, path?: string) =>
+    http.post<{ compose: string; resolvedFrom: string }>('/api/store/compose-from-repo', {
+      repo,
+      ...(path ? { path } : {}),
+    }),
+
   addApp: (sourceId: string, manifest: ManifestInput) =>
     http.post<{ app: ManifestInput }>(`/api/store/sources/${sourceId}/apps`, manifest),
   updateApp: (sourceId: string, appId: string, manifest: ManifestInput) =>

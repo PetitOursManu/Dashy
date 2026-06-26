@@ -94,6 +94,11 @@ export const redeploySchema = z.object({
   serviceName: z.string().max(64).optional(),
 });
 
+export const composeFromRepoSchema = z.object({
+  repo: z.string().min(1).max(2000).trim(),
+  path: z.string().max(255).optional(),
+});
+
 // --------------------------------- catalog -----------------------------------
 
 async function installedIndex(): Promise<Map<string, string>> {
@@ -211,6 +216,56 @@ async function storeBundle(file: Express.Multer.File): Promise<string> {
   // The stored name only drives the zip/single-file heuristic at install time.
   await fsp.rename(file.path, path.join(dir, isZip ? 'bundle.zip' : 'index.html'));
   return `store-upload:${token}`;
+}
+
+// Where Dashy looks for a compose file in a GitHub repo, in priority order.
+const COMPOSE_FILENAMES = ['docker-compose.yml', 'compose.yaml', 'docker-compose.yaml', 'compose.yml'];
+const GITHUB_REPO_RE = /^https?:\/\/github\.com\/([^/\s]+)\/([^/\s#?]+?)(?:\.git)?(?:\/tree\/([^/\s#?]+))?\/?$/i;
+
+/** Build the candidate raw URLs to try for a repo's compose file. */
+function composeCandidates(repo: string, pathOverride?: string): string[] {
+  if (/^https?:\/\/raw\.githubusercontent\.com\//i.test(repo)) return [repo];
+  const m = GITHUB_REPO_RE.exec(repo);
+  if (!m) return [];
+  const [, owner, name, branch] = m;
+  const branches = branch ? [branch] : ['main', 'master'];
+  const files = pathOverride ? [pathOverride.replace(/^\/+/, '')] : COMPOSE_FILENAMES;
+  const urls: string[] = [];
+  for (const b of branches) for (const f of files) {
+    urls.push(`https://raw.githubusercontent.com/${owner}/${name}/${b}/${encodeURI(f)}`);
+  }
+  return urls;
+}
+
+/**
+ * Resolve a GitHub repo URL to its docker-compose file content, so a deploy app
+ * can be authored by pasting just a repo link. Only github.com / raw URLs are
+ * fetched (admin-only + host allow-list).
+ */
+export async function composeFromRepo(req: Request, res: Response): Promise<void> {
+  const { repo, path: filePath } = req.body as z.infer<typeof composeFromRepoSchema>;
+  const candidates = composeCandidates(repo, filePath);
+  if (candidates.length === 0) {
+    throw new ApiError(400, 'Provide a GitHub repository URL like https://github.com/owner/repo');
+  }
+  for (const url of candidates) {
+    let text: string;
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (!r.ok) continue;
+      text = await r.text();
+    } catch {
+      continue; // network error on this candidate → try the next
+    }
+    if (text.length > 100_000) throw new ApiError(422, 'The compose file is too large');
+    if (!/^\s*(services|version)\s*:/m.test(text)) continue; // not a compose file
+    res.json({ compose: text, resolvedFrom: url });
+    return;
+  }
+  throw new ApiError(
+    404,
+    'No docker-compose file found in that repo (looked for docker-compose.yml / compose.yaml at the repo root).',
+  );
 }
 
 /**
