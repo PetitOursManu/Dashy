@@ -1255,6 +1255,13 @@ test('chat: admin can execute a proposed Store action; regular users cannot', as
   await api('DELETE', `/api/store/sources/${created!.id}`);
 });
 
+test('store config reports a Docker diagnostic for the admin', async () => {
+  const { docker } = await (await api('GET', '/api/store/config')).json();
+  assert.equal(typeof docker.inContainer, 'boolean');
+  assert.equal(typeof docker.socketPresent, 'boolean');
+  assert.equal(typeof docker.cliPresent, 'boolean');
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

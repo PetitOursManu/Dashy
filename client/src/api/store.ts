@@ -1,5 +1,6 @@
 import { http } from './client';
 import type {
+  DockerDiagnostics,
   HostedApp,
   ManifestInput,
   StoreCatalogApp,
@@ -72,9 +73,14 @@ export const storeApi = {
     http.del<{ ok: true }>(`/api/store/sources/${sourceId}/apps/${appId}`),
 
   getConfig: () =>
-    http.get<{ config: StoreConfig; drivers: StoreDriver[] }>('/api/store/config'),
+    http.get<{ config: StoreConfig; drivers: StoreDriver[]; docker: DockerDiagnostics }>(
+      '/api/store/config',
+    ),
   updateConfig: (payload: Record<string, unknown>) =>
-    http.put<{ config: StoreConfig; drivers: StoreDriver[] }>('/api/store/config', payload),
+    http.put<{ config: StoreConfig; drivers: StoreDriver[]; docker: DockerDiagnostics }>(
+      '/api/store/config',
+      payload,
+    ),
 
   installed: () => http.get<{ installed: StoreInstalled[] }>('/api/store/installed'),
   install: (payload: InstallPayload) =>

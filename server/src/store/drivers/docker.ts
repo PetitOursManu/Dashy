@@ -11,6 +11,39 @@ const SOCKET = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 
 const SAFE_NAME = /^[a-zA-Z0-9._-]+$/;
 
+/** Is a `docker` CLI binary resolvable on PATH (needed to run `docker compose`)? */
+function hasDockerCli(): boolean {
+  const candidates = ['/usr/bin/docker', '/usr/local/bin/docker'];
+  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+    if (dir) candidates.push(path.join(dir, 'docker'));
+  }
+  return candidates.some((p) => {
+    try {
+      return fs.existsSync(p);
+    } catch {
+      return false;
+    }
+  });
+}
+
+export interface DockerDiagnostics {
+  /** Whether Dashy itself appears to run inside a container. */
+  inContainer: boolean;
+  /** Whether the Docker daemon socket is visible from here. */
+  socketPresent: boolean;
+  /** Whether the `docker` CLI is installed in this image. */
+  cliPresent: boolean;
+}
+
+/** Report what's missing for the direct-Docker driver to work, for admin UX. */
+export function dockerDiagnostics(): DockerDiagnostics {
+  return {
+    inContainer: fs.existsSync('/.dockerenv'),
+    socketPresent: fs.existsSync(SOCKET),
+    cliPresent: hasDockerCli(),
+  };
+}
+
 /** Best-effort: the name of the first service declared in a compose file. */
 function firstService(compose: string): string {
   const lines = compose.split(/\r?\n/);
@@ -58,7 +91,8 @@ export const dockerDriver: Driver = {
   id: 'docker',
   label: 'Docker (direct)',
   manage: true,
-  isAvailable: (cfg) => cfg.dockerEnabled && fs.existsSync(SOCKET),
+  // Needs the daemon socket AND a docker CLI to actually run `docker compose`.
+  isAvailable: (cfg) => cfg.dockerEnabled && fs.existsSync(SOCKET) && hasDockerCli(),
   async deploy(ctx) {
     const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
     try {

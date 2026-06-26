@@ -246,6 +246,12 @@ export interface StoreDriver {
   label: string;
 }
 
+export interface DockerDiagnostics {
+  inContainer: boolean;
+  socketPresent: boolean;
+  cliPresent: boolean;
+}
+
 export interface TwoFactorSetup {
   secret: string;
   otpauth: string;

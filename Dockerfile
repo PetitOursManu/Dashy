@@ -31,6 +31,21 @@ ENV NODE_ENV=production \
     DATA_DIR=/data
 WORKDIR /app/server
 
+# Docker CLI + compose plugin, so the Store's "direct Docker" deploy driver can
+# run `docker compose` WHEN the host's Docker socket is mounted into this
+# container (see docker-compose.yml). Harmless if the socket is never mounted —
+# the driver simply reports itself unavailable.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+  && install -m 0755 -d /etc/apt/keyrings \
+  && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+  && chmod a+r /etc/apt/keyrings/docker.asc \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+     > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
+  && rm -rf /var/lib/apt/lists/*
+
 # Production node_modules + compiled server + built client.
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/dist ./dist

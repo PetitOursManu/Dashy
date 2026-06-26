@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { storeApi } from '../../api/store';
 import { ApiError } from '../../api/client';
 import { useI18n } from '../../context/LanguageContext';
-import type { StoreConfig, StoreSource } from '../../types';
+import type { DockerDiagnostics, StoreConfig, StoreSource } from '../../types';
 import { Spinner } from '../Spinner';
 import { PlusIcon, StoreIcon, TrashIcon } from '../Icons';
 import { CatalogManagerModal } from './CatalogManagerModal';
@@ -11,6 +11,7 @@ export function StoreSettings() {
   const { t } = useI18n();
   const [sources, setSources] = useState<StoreSource[]>([]);
   const [cfg, setCfg] = useState<StoreConfig | null>(null);
+  const [docker, setDocker] = useState<DockerDiagnostics | null>(null);
   const [coolifyToken, setCoolifyToken] = useState('');
   const [portainerKey, setPortainerKey] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,6 +32,7 @@ export function StoreSettings() {
       const [s, c] = await Promise.all([storeApi.sources(), storeApi.getConfig()]);
       setSources(s.sources);
       setCfg(c.config);
+      setDocker(c.docker);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load store settings.');
     }
@@ -111,6 +113,7 @@ export function StoreSettings() {
       if (portainerKey) payload.portainerKey = portainerKey;
       const res = await storeApi.updateConfig(payload);
       setCfg(res.config);
+      setDocker(res.docker);
       setCoolifyToken('');
       setPortainerKey('');
       setSaved(true);
@@ -253,6 +256,19 @@ export function StoreSettings() {
               />
               {t('storecfg.dockerEnabled')}
             </label>
+
+            {docker && (!docker.socketPresent || !docker.cliPresent) && (
+              <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <p className="font-medium">{t('storecfg.dockerDiagTitle')}</p>
+                <p className="mt-1">
+                  {!docker.socketPresent
+                    ? docker.inContainer
+                      ? t('storecfg.dockerNoSocketContainer')
+                      : t('storecfg.dockerNoSocket')
+                    : t('storecfg.dockerNoCli')}
+                </p>
+              </div>
+            )}
 
             {/* Coolify */}
             <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm font-medium">

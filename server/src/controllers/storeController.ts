@@ -15,6 +15,7 @@ import { serializeApp } from './appsController.js';
 import { logActivity, emailOf } from '../services/activity.js';
 import { getCatalog, findManifest } from '../store/catalog.js';
 import { availableDrivers } from '../store/drivers/index.js';
+import { dockerDiagnostics } from '../store/drivers/docker.js';
 import {
   installTile,
   installStatic,
@@ -274,7 +275,15 @@ export async function updateInstalledContent(req: Request, res: Response): Promi
 
 export async function getConfig(_req: Request, res: Response): Promise<void> {
   const cfg = await getStoreConfig();
-  res.json({ config: cfg.toJSON(), drivers: await availableDrivers(cfg) });
+  res.json({
+    config: cfg.toJSON(),
+    drivers: await availableDrivers(cfg),
+    docker: dockerDiagnostics(),
+  });
+}
+
+export async function updateConfigResponse(cfg: Awaited<ReturnType<typeof getStoreConfig>>) {
+  return { config: cfg.toJSON(), drivers: await availableDrivers(cfg), docker: dockerDiagnostics() };
 }
 
 export async function updateConfig(req: Request, res: Response): Promise<void> {
@@ -300,7 +309,7 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
   if (u.baseDomain !== undefined) cfg.baseDomain = u.baseDomain;
 
   await cfg.save();
-  res.json({ config: cfg.toJSON(), drivers: await availableDrivers(cfg) });
+  res.json(await updateConfigResponse(cfg));
 }
 
 // -------------------------------- installed ----------------------------------

@@ -271,6 +271,17 @@ Driver credentials (Coolify token, Portainer key) are configured in
 browser, and never read from a manifest. A deploy always shows the compose
 preview first and always asks for the final app URL before creating the card.
 
+For the **direct Docker** driver, Dashy must reach the host's Docker engine: it
+runs `docker compose`, so the container needs both the Docker **socket mounted
+in** and the **docker CLI** (the image ships it). `docker-compose.yml` mounts
+`/var/run/docker.sock` for this — comment that line out to disable direct Docker
+deploys (it grants the container near-root control of the host's Docker, so keep
+it only on a trusted, single-admin host; on some Linux hosts the container user
+also needs a `group_add` with the host's docker group). *Settings → Store* shows
+a diagnostic telling the admin whether Dashy is containerized and whether the
+socket and CLI are present. Docker deploys can declare **persistent named
+volumes** and be **redeployed** or **restarted** from the installed list.
+
 ---
 
 ## Security notes
