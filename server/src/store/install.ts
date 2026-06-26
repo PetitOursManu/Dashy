@@ -222,6 +222,10 @@ export interface DeployInstallOptions {
   finalUrl: string;
   ownerId: string;
   config: StoreConfigDoc;
+  /** Optional admin-edited compose (defaults to the manifest's). */
+  compose?: string;
+  volumes?: { name: string; mountPath: string }[];
+  serviceName?: string;
 }
 
 export async function installDeploy(
@@ -239,12 +243,16 @@ export async function installDeploy(
   if (!opts.finalUrl) throw new ApiError(400, 'A resulting app URL is required to create the tile');
 
   const slug = await uniqueStoreSlug(manifest.id);
+  const compose = opts.compose?.trim() || manifest.deploy.docker_compose;
+  const volumes = opts.volumes ?? [];
   const result = await driver.deploy({
     slug,
-    compose: manifest.deploy.docker_compose,
+    compose,
     env: opts.env,
     defaultPort: manifest.deploy.default_port,
     config: opts.config,
+    volumes,
+    serviceName: opts.serviceName,
   });
   if (!result.ok) throw new ApiError(502, `Deploy failed: ${result.message}`);
 
@@ -265,8 +273,49 @@ export async function installDeploy(
     installedVersion: manifest.version,
     slug,
     deployDriver: opts.driverId,
+    compose,
+    deployEnv: opts.env,
+    volumes,
+    serviceName: opts.serviceName || '',
   });
   return { installed, driverMessage: result.message };
+}
+
+/** Re-apply an existing deploy install's stack with (optionally edited) settings. */
+export async function redeployInstall(
+  installed: StoreInstalledAppDoc,
+  config: StoreConfigDoc,
+): Promise<string> {
+  if (installed.type !== 'deploy' || !installed.slug) throw new ApiError(400, 'Not a deploy install');
+  const driver = getDriver(installed.deployDriver || 'manual');
+  if (!driver?.redeploy) throw new ApiError(400, 'This deploy driver cannot be redeployed from Dashy');
+  if (!(await driver.isAvailable(config))) throw new ApiError(400, 'This deploy driver is not available');
+
+  const result = await driver.redeploy({
+    slug: installed.slug,
+    compose: installed.compose,
+    env: Object.fromEntries(installed.deployEnv ?? new Map()),
+    defaultPort: 8080,
+    config,
+    volumes: installed.volumes ?? [],
+    serviceName: installed.serviceName || undefined,
+  });
+  if (!result.ok) throw new ApiError(502, `Redeploy failed: ${result.message}`);
+  return result.message;
+}
+
+/** Restart an existing deploy install's stack without changing it. */
+export async function restartInstall(
+  installed: StoreInstalledAppDoc,
+  config: StoreConfigDoc,
+): Promise<string> {
+  if (installed.type !== 'deploy' || !installed.slug) throw new ApiError(400, 'Not a deploy install');
+  const driver = getDriver(installed.deployDriver || 'manual');
+  if (!driver?.restart) throw new ApiError(400, 'This deploy driver cannot be restarted from Dashy');
+  if (!(await driver.isAvailable(config))) throw new ApiError(400, 'This deploy driver is not available');
+  const result = await driver.restart(installed.slug);
+  if (!result.ok) throw new ApiError(502, `Restart failed: ${result.message}`);
+  return result.message;
 }
 
 // ------------------------------- uninstall -----------------------------------

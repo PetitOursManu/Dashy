@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
-import { storeApi } from '../../api/store';
+import { VolumesEditor } from './VolumesEditor';
+import { storeApi, type VolumeMount } from '../../api/store';
 import { ApiError } from '../../api/client';
 import { useI18n } from '../../context/LanguageContext';
 import type { StoreCatalogApp, StoreConfig, StoreDriver } from '../../types';
@@ -21,6 +22,9 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
   const [driver, setDriver] = useState('manual');
   const [env, setEnv] = useState<Record<string, string>>({});
   const [finalUrl, setFinalUrl] = useState('');
+  const [compose, setCompose] = useState('');
+  const [volumes, setVolumes] = useState<VolumeMount[]>([]);
+  const [serviceName, setServiceName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,14 +36,15 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     setServingMode('path');
     setDriver(config?.defaultDriver || drivers[0]?.id || 'manual');
     setFinalUrl('');
+    setCompose(app.deploy?.docker_compose ?? '');
+    setVolumes([]);
+    setServiceName('');
     setError(null);
     setMessage(null);
     const initial: Record<string, string> = {};
     for (const e of app.deploy?.required_env ?? []) initial[e.key] = e.default ?? '';
     setEnv(initial);
   }, [open, app, config, drivers]);
-
-  const composePreview = useMemo(() => app?.deploy?.docker_compose ?? '', [app]);
 
   if (!app) return null;
 
@@ -53,7 +58,20 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
         source: app.source,
         manifestId: app.id,
         ...(app.type === 'static' ? { servingMode } : {}),
-        ...(app.type === 'deploy' ? { driver, env, finalUrl } : {}),
+        ...(app.type === 'deploy'
+          ? {
+              driver,
+              env,
+              finalUrl,
+              compose,
+              ...(driver === 'docker'
+                ? {
+                    volumes: volumes.filter((v) => v.name.trim() && v.mountPath.trim()),
+                    serviceName: serviceName.trim(),
+                  }
+                : {}),
+            }
+          : {}),
       });
       if (res.driverMessage) setMessage(res.driverMessage);
       onInstalled();
@@ -102,8 +120,8 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
             <div>
               <span className="label">{t('store.composePreview')}</span>
               <textarea
-                readOnly
-                value={composePreview}
+                value={compose}
+                onChange={(e) => setCompose(e.target.value)}
                 className="input h-40 resize-none font-mono text-xs"
               />
             </div>
@@ -143,6 +161,24 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
                 ))}
               </select>
             </div>
+
+            {driver === 'docker' && (
+              <>
+                <VolumesEditor volumes={volumes} onChange={setVolumes} />
+                <div className="w-56">
+                  <label className="label" htmlFor="store-service">
+                    {t('store.serviceName')}
+                  </label>
+                  <input
+                    id="store-service"
+                    className="input"
+                    value={serviceName}
+                    onChange={(e) => setServiceName(e.target.value)}
+                    placeholder={t('store.serviceNameHint')}
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label className="label" htmlFor="store-url">

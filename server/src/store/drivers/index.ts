@@ -4,12 +4,19 @@ import { dockerDriver } from './docker.js';
 import { coolifyDriver } from './coolify.js';
 import { portainerDriver } from './portainer.js';
 
+export interface VolumeMount {
+  name: string;
+  mountPath: string;
+}
+
 export interface DeployContext {
   slug: string;
   compose: string;
   env: Record<string, string>;
   defaultPort: number;
   config: StoreConfigDoc;
+  volumes?: VolumeMount[];
+  serviceName?: string;
 }
 
 export interface DeployResult {
@@ -22,6 +29,12 @@ export interface Driver {
   label: string;
   isAvailable(config: StoreConfigDoc): boolean | Promise<boolean>;
   deploy(ctx: DeployContext): Promise<DeployResult>;
+  /** Whether the driver supports redeploy/restart of an existing install. */
+  manage?: boolean;
+  /** Re-apply the (possibly edited) stack. */
+  redeploy?(ctx: DeployContext): Promise<DeployResult>;
+  /** Restart the running stack without changing it. */
+  restart?(slug: string): Promise<DeployResult>;
 }
 
 // Manual is last (universal fallback); the others are capability-gated.

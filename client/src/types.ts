@@ -204,6 +204,10 @@ export interface StoreInstalled {
   updateAvailable: boolean;
   servingMode: 'path' | 'subdomain' | null;
   deployDriver: string | null;
+  compose?: string;
+  deployEnv?: Record<string, string>;
+  volumes?: { name: string; mountPath: string }[];
+  serviceName?: string;
   managedSource: boolean;
   sourceId: string | null;
   createdAt: string;

@@ -1186,6 +1186,48 @@ test('store: updating a managed static app content bumps catalogue + serves new 
   await api('DELETE', `/api/store/sources/${sid}`);
 });
 
+test('store: deploy install persists compose/volumes; redeploy/restart guarded by driver', async () => {
+  const src = (await (await api('POST', '/api/store/sources/managed', { name: 'Deploy Cat' })).json())
+    .source as { id: string };
+  const sid = src.id;
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'deploy-app',
+    name: 'Deploy App',
+    type: 'deploy',
+    version: '1.0.0',
+    deploy: { docker_compose: 'services:\n  web:\n    image: nginx\n', required_env: [], default_port: 8080 },
+  });
+
+  const inst = await api('POST', '/api/store/install', {
+    source: 'Deploy Cat',
+    manifestId: 'deploy-app',
+    driver: 'manual',
+    env: { FOO: 'bar' },
+    finalUrl: 'https://deploy.example.com/',
+    compose: 'services:\n  web:\n    image: nginx:alpine\n',
+    volumes: [{ name: 'data', mountPath: '/data' }],
+    serviceName: 'web',
+  });
+  assert.equal(inst.status, 201);
+
+  const list = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string; type: string; compose: string;
+    volumes: { name: string; mountPath: string }[]; serviceName: string;
+  }[];
+  const mine = list.find((i) => i.manifestId === 'deploy-app')!;
+  assert.equal(mine.type, 'deploy');
+  assert.match(mine.compose, /nginx:alpine/);
+  assert.equal(mine.volumes.length, 1);
+  assert.equal(mine.serviceName, 'web');
+
+  // The manual driver cannot redeploy/restart from Dashy → 400.
+  assert.equal((await api('POST', `/api/store/installed/${mine.id}/redeploy`, { env: { FOO: 'baz' } })).status, 400);
+  assert.equal((await api('POST', `/api/store/installed/${mine.id}/restart`)).status, 400);
+
+  await api('DELETE', `/api/store/installed/${mine.id}`);
+  await api('DELETE', `/api/store/sources/${sid}`);
+});
+
 test('assistant config is cleaned up + bob re-enabled', async () => {
   await api('POST', '/api/auth/logout');
   cookies.clear();

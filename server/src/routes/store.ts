@@ -39,6 +39,8 @@ router.get('/installed', asyncHandler(store.listInstalled));
 router.post('/install', validateBody(store.installSchema), asyncHandler(store.install));
 router.post('/installed/:id/update', asyncHandler(store.updateInstalled));
 router.post('/installed/:id/content', storeContentUpload, asyncHandler(store.updateInstalledContent));
+router.post('/installed/:id/redeploy', validateBody(store.redeploySchema), asyncHandler(store.redeployApp));
+router.post('/installed/:id/restart', asyncHandler(store.restartApp));
 router.delete('/installed/:id', asyncHandler(store.uninstallApp));
 
 export default router;

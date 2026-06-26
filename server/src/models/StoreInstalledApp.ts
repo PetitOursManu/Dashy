@@ -20,6 +20,10 @@ export interface IStoreInstalledApp {
   servingMode: ServingMode | null;
   // deploy only:
   deployDriver: string | null;
+  compose: string;
+  deployEnv: Map<string, string>;
+  volumes: { name: string; mountPath: string }[];
+  serviceName: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +39,14 @@ const storeInstalledAppSchema = new Schema<IStoreInstalledApp>(
     slug: { type: String, default: null },
     servingMode: { type: String, enum: ['path', 'subdomain'], default: null },
     deployDriver: { type: String, default: null },
+    // deploy: kept so the stack can be redeployed/restarted with edits.
+    compose: { type: String, default: '' },
+    deployEnv: { type: Map, of: String, default: () => ({}) },
+    volumes: {
+      type: [new Schema({ name: String, mountPath: String }, { _id: false })],
+      default: [],
+    },
+    serviceName: { type: String, default: '' },
   },
   { timestamps: true },
 );

@@ -9,6 +9,11 @@ import type {
   StoreSource,
 } from '../types';
 
+export interface VolumeMount {
+  name: string;
+  mountPath: string;
+}
+
 export interface InstallPayload {
   source: string;
   manifestId: string;
@@ -16,6 +21,16 @@ export interface InstallPayload {
   driver?: string;
   env?: Record<string, string>;
   finalUrl?: string;
+  compose?: string;
+  volumes?: VolumeMount[];
+  serviceName?: string;
+}
+
+export interface RedeployPayload {
+  compose?: string;
+  env?: Record<string, string>;
+  volumes?: VolumeMount[];
+  serviceName?: string;
 }
 
 export interface CreateSourcePayload {
@@ -78,5 +93,12 @@ export const storeApi = {
       form,
     );
   },
+  redeploy: (id: string, payload: RedeployPayload) =>
+    http.post<{ ok: true; message: string; installed: StoreInstalled }>(
+      `/api/store/installed/${id}/redeploy`,
+      payload,
+    ),
+  restart: (id: string) =>
+    http.post<{ ok: true; message: string }>(`/api/store/installed/${id}/restart`),
   uninstall: (id: string) => http.del<{ ok: true }>(`/api/store/installed/${id}`),
 };

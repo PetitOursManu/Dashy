@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { InstallModal } from '../components/store/InstallModal';
 import { UpdateContentModal } from '../components/store/UpdateContentModal';
+import { DeployManageModal } from '../components/store/DeployManageModal';
 import { Spinner } from '../components/Spinner';
 import { DownloadIcon, SearchIcon } from '../components/Icons';
 
@@ -43,6 +44,7 @@ export function StorePage() {
   const [search, setSearch] = useState('');
   const [installApp, setInstallApp] = useState<StoreCatalogApp | null>(null);
   const [contentApp, setContentApp] = useState<StoreInstalled | null>(null);
+  const [manageApp, setManageApp] = useState<StoreInstalled | null>(null);
 
   const load = async () => {
     try {
@@ -102,6 +104,15 @@ export function StorePage() {
       await load();
     } catch {
       /* ignore */
+    }
+  };
+
+  const onRestart = async (id: string) => {
+    setError(null);
+    try {
+      await storeApi.restart(id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('store.restartError'));
     }
   };
 
@@ -233,6 +244,24 @@ export function StorePage() {
                       {t('store.updateContent')}
                     </button>
                   )}
+                  {i.type === 'deploy' && i.deployDriver === 'docker' && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-secondary !py-1.5 !text-xs"
+                        onClick={() => setManageApp(i)}
+                      >
+                        {t('store.redeploy')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost !py-1.5 !text-xs"
+                        onClick={() => void onRestart(i.id)}
+                      >
+                        {t('store.restart')}
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
                     className="btn-ghost !py-1.5 !text-xs text-red-500"
@@ -262,6 +291,15 @@ export function StorePage() {
         open={contentApp !== null}
         app={contentApp}
         onClose={() => setContentApp(null)}
+        onDone={() => {
+          void load();
+        }}
+      />
+
+      <DeployManageModal
+        open={manageApp !== null}
+        app={manageApp}
+        onClose={() => setManageApp(null)}
         onDone={() => {
           void load();
         }}

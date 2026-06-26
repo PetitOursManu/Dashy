@@ -21,6 +21,8 @@ import {
   installDeploy,
   updateStatic,
   uninstall,
+  redeployInstall,
+  restartInstall,
 } from '../store/install.js';
 import {
   createCatalogFile,
@@ -72,6 +74,11 @@ export const updateConfigSchema = z.object({
   baseDomain: z.string().max(255).optional(),
 });
 
+const volumeSchema = z.object({
+  name: z.string().regex(/^[a-zA-Z0-9._-]+$/, 'invalid volume name').max(64),
+  mountPath: z.string().min(1).max(255),
+});
+
 export const installSchema = z.object({
   source: z.string().min(1),
   manifestId: z.string().min(1),
@@ -79,6 +86,17 @@ export const installSchema = z.object({
   driver: z.string().max(40).optional(),
   env: z.record(z.string()).optional().default({}),
   finalUrl: z.string().url().max(2000).optional(),
+  // deploy-only: optional admin overrides applied before deploying.
+  compose: z.string().max(100_000).optional(),
+  volumes: z.array(volumeSchema).optional().default([]),
+  serviceName: z.string().max(64).optional(),
+});
+
+export const redeploySchema = z.object({
+  compose: z.string().max(100_000).optional(),
+  env: z.record(z.string()).optional(),
+  volumes: z.array(volumeSchema).optional(),
+  serviceName: z.string().max(64).optional(),
 });
 
 // --------------------------------- catalog -----------------------------------
@@ -368,6 +386,9 @@ export async function install(req: Request, res: Response): Promise<void> {
       finalUrl: body.finalUrl ?? '',
       ownerId,
       config: cfg,
+      compose: body.compose,
+      volumes: body.volumes,
+      serviceName: body.serviceName,
     });
     cardId = installed.hostedApp;
     driverMessage = msg;
@@ -393,6 +414,32 @@ export async function updateInstalled(req: Request, res: Response): Promise<void
   if (!manifest) throw new ApiError(404, 'App no longer in the catalogue');
   await updateStatic(installed, manifest);
   res.json({ ok: true, installed: installed.toJSON() });
+}
+
+export async function redeployApp(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Install not found');
+  const installed = await StoreInstalledApp.findById(req.params.id);
+  if (!installed) throw new ApiError(404, 'Install not found');
+  if (installed.type !== 'deploy') throw new ApiError(400, 'Only deploy apps can be redeployed');
+
+  const u = req.body as z.infer<typeof redeploySchema>;
+  if (u.compose !== undefined) installed.compose = u.compose;
+  if (u.env !== undefined) installed.deployEnv = new Map(Object.entries(u.env));
+  if (u.volumes !== undefined) installed.volumes = u.volumes;
+  if (u.serviceName !== undefined) installed.serviceName = u.serviceName;
+  await installed.save();
+
+  const message = await redeployInstall(installed, await getStoreConfig());
+  res.json({ ok: true, message, installed: installed.toJSON() });
+}
+
+export async function restartApp(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Install not found');
+  const installed = await StoreInstalledApp.findById(req.params.id);
+  if (!installed) throw new ApiError(404, 'Install not found');
+  if (installed.type !== 'deploy') throw new ApiError(400, 'Only deploy apps can be restarted');
+  const message = await restartInstall(installed, await getStoreConfig());
+  res.json({ ok: true, message });
 }
 
 export async function uninstallApp(req: Request, res: Response): Promise<void> {
