@@ -37,11 +37,12 @@ services:
     volumes:
       - apps_data:/data
       # Lets the Store's "direct Docker" deploy driver run `docker compose` on the
-      # host. Mounting the socket gives this container near-root control of the
-      # host's Docker — keep it only on a trusted, single-admin machine. Comment
-      # this line out to disable direct Docker deploys (Coolify/Portainer/manual
-      # drivers do not need it). On some Linux hosts the container user also needs
-      # access to the socket — add e.g. `group_add: ["<host docker GID>"]`.
+      # host. The container's entrypoint auto-joins the socket's group, so this
+      # works on Docker Desktop and typical Linux hosts without extra config.
+      # Mounting the socket gives this container near-root control of the host's
+      # Docker — keep it only on a trusted, single-admin machine. Comment this
+      # line out to disable direct Docker deploys (Coolify/Portainer/manual
+      # drivers do not need it).
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${HOST_PORT:-3000}:3000"
