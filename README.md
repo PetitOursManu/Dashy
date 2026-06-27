@@ -204,20 +204,81 @@ cp .env.example .env
 
 ## Deploying on Coolify
 
-Dashy is built to redeploy on `git push`:
+Dashy ships with a `docker-compose.yml` that runs **two containers together** —
+the app and its MongoDB database — and redeploys on every `git push`. Follow
+these steps exactly; the most common mistake is picking the wrong resource type.
 
-1. Push this repo to GitHub.
-2. In Coolify, create a resource from the repo using **Docker Compose**
-   (`docker-compose.yml`).
-3. Set the environment variables (`APP_ORIGIN`, `JWT_SECRET`, `ENCRYPTION_KEY`,
-   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, …) in the Coolify UI.
-4. Make sure the `apps_data` and `mongo_data` volumes are persistent.
-5. Point your domain at the service; Coolify's proxy terminates TLS. Keep
-   `NODE_ENV=production` so cookies are `Secure`.
-6. *(Optional)* To use the Store's **direct Docker** deploy driver, share the
-   host's Docker socket into the container — source `/var/run/docker.sock`,
-   destination `/var/run/docker.sock` (see [The Store → Deploy drivers](#deploy-drivers)).
-   Skip this if you only use tile/static apps or the Coolify/Portainer/manual drivers.
+### Step 1 — Create the resource from your **Git repo** (not from a pasted compose)
+
+In Coolify: **+ New Resource**. Scroll to the **Git Based** section at the top of
+the page and choose **Public Repository**.
+
+> ⚠️ Do **not** use the *Docker Compose Empty* option under "Docker Based". That
+> one only has the compose file, so it can't build Dashy's `app` image and fails
+> with `failed to read dockerfile: open Dockerfile: no such file or directory`.
+> Dashy must be built from the repo so Coolify has the `Dockerfile` + source.
+
+- **Repository:** `https://github.com/<you>/Dashy`
+- **Branch:** `main`
+
+### Step 2 — Set the Build Pack to **Docker Compose**
+
+After entering the repo, find the **Build Pack** selector and switch it from
+**Nixpacks** (the default) to **Docker Compose**. Then set:
+
+- **Docker Compose Location:** `/docker-compose.yml`
+- **Base Directory:** `/`
+
+This is the setting that makes everything work — Nixpacks ignores the compose
+file and tries to guess how to build, which is not what you want.
+
+### Step 3 — Environment variables
+
+In the **Environment Variables** tab, set at least:
+
+```
+APP_ORIGIN=https://dashy.example.com   # your real domain
+JWT_SECRET=...                          # openssl rand -base64 48
+ENCRYPTION_KEY=...                      # openssl rand -hex 32  (64 hex chars)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=ChangeMeNow!2026
+NODE_ENV=production                     # so session cookies are Secure (HTTPS)
+```
+
+`MONGO_URI` is already wired in the compose (`mongodb://mongo:27017/dashy`) — you
+don't need to set it. See the [Environment variables](#environment-variables)
+table for the full list.
+
+### Step 4 — Persistent storage
+
+The app stores everything (users, uploaded apps, catalogs, avatars…) under
+`/data` inside the container. Make sure the volume's **Destination Path is
+`/data`** so it survives redeploys — that's the path the image writes to by
+default, so you do **not** need a `DATA_DIR` variable. The `mongo_data` volume
+keeps your database. Both must be persistent.
+
+### Step 5 — Comment out the Docker socket line
+
+Open `docker-compose.yml` and **comment the socket line** before deploying:
+
+```yaml
+    volumes:
+      - apps_data:/data
+      # - /var/run/docker.sock:/var/run/docker.sock   # ← comment out on Coolify
+```
+
+On a shared Coolify host this socket would give Dashy near-root control over the
+**whole machine** (every app you host there), so leave it off. To deploy
+docker-compose apps from the Store, use the **Coolify** deploy driver instead —
+it deploys through Coolify's API and needs no socket (see
+[The Store → Deploy drivers](#deploy-drivers)).
+
+### Step 6 — Domain & deploy
+
+Point your domain at the service; Coolify's proxy terminates TLS. Click
+**Deploy**. Coolify clones the repo, builds the `app` image, pulls `mongo:7`, and
+starts both. Then open your domain and log in with `ADMIN_EMAIL` /
+`ADMIN_PASSWORD`. Every later `git push` to `main` redeploys automatically.
 
 ---
 
