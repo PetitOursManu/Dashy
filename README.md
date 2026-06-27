@@ -320,8 +320,11 @@ deploys can't work. Docker deploys can declare **persistent named volumes** and
 be **redeployed** or **restarted** from the installed list. The install dialog
 prefills the resulting URL with the published host port from the compose.
 **Uninstalling** a deploy app stops and removes its container (named volumes are
-kept); **removing** a deploy app from a managed catalogue also drops its Docker
-image (best-effort, skipped while the image is still in use).
+kept). For an app that came from a **managed catalogue**, uninstalling also
+removes it from that catalogue — and drops its Docker image (best-effort, skipped
+while the image is still in use) — so its name is free to reuse for a fresh
+install. (Apps from read-only `local`/`remote` catalogues stay in the catalogue
+after uninstall, so you can simply re-install them.)
 
 ---
 

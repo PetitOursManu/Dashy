@@ -1047,6 +1047,13 @@ test('store: a managed catalogue can be created and edited from the API', async 
   assert.equal(del.status, 200);
   cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as { id: string }[];
   assert.equal(cat.some((a) => a.id === 'welcome-demo'), false);
+
+  // The id is free again after removal, so it can be re-added.
+  const readd = await api('POST', `/api/store/sources/${managedId}/apps`, {
+    id: 'welcome-demo', name: 'Welcome Demo', type: 'tile', version: '3.0.0',
+    tile: { url: 'https://example.com/' },
+  });
+  assert.equal(readd.status, 201);
 });
 
 test('store: app editing is rejected on read-only sources; managed delete cleans the file', async () => {
@@ -1294,6 +1301,33 @@ test('store: compose-from-repo only accepts GitHub URLs', async () => {
     (await api('POST', '/api/store/compose-from-repo', { repo: 'https://evil.example.com/x' })).status,
     400,
   );
+});
+
+test('store: uninstalling a managed-catalogue app frees its name', async () => {
+  const sid = (await (await api('POST', '/api/store/sources/managed', { name: 'Free Cat' })).json())
+    .source.id as string;
+  await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'reusable', name: 'Reusable', type: 'tile', version: '1.0.0', tile: { url: 'https://example.com/' },
+  });
+  await api('POST', '/api/store/install', { source: 'Free Cat', manifestId: 'reusable' });
+  const inst = (await (await api('GET', '/api/store/installed')).json()).installed as {
+    id: string; manifestId: string;
+  }[];
+  const mine = inst.find((i) => i.manifestId === 'reusable')!;
+
+  // Uninstalling removes the app from its managed catalogue too.
+  assert.equal((await api('DELETE', `/api/store/installed/${mine.id}`)).status, 200);
+  const cat = (await (await api('GET', '/api/store/catalog?refresh=1')).json()).apps as {
+    id: string; source: string;
+  }[];
+  assert.equal(cat.some((a) => a.id === 'reusable' && a.source === 'Free Cat'), false);
+
+  // …so the same id/name can be used again.
+  const readd = await api('POST', `/api/store/sources/${sid}/apps`, {
+    id: 'reusable', name: 'Reusable', type: 'tile', version: '2.0.0', tile: { url: 'https://example.com/' },
+  });
+  assert.equal(readd.status, 201);
+  await api('DELETE', `/api/store/sources/${sid}`);
 });
 
 test('assistant config is cleaned up + bob re-enabled', async () => {

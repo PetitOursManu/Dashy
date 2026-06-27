@@ -626,7 +626,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                     </div>
                     <button
                       type="button"
-                      className="btn-secondary shrink-0"
+                      className="btn-primary shrink-0"
                       onClick={generateFromImage}
                       disabled={!image.trim()}
                     >

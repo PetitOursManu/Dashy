@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
+import { CheckCircleIcon } from '../Icons';
 import { VolumesEditor } from './VolumesEditor';
 import { storeApi, type VolumeMount } from '../../api/store';
 import { ApiError } from '../../api/client';
@@ -41,6 +42,7 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const canSubdomain = Boolean(config?.wildcardEnabled && config?.baseDomain);
 
@@ -54,6 +56,7 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     setServiceName('');
     setError(null);
     setMessage(null);
+    setSuccess(false);
     const initial: Record<string, string> = {};
     for (const e of app.deploy?.required_env ?? []) initial[e.key] = e.default ?? '';
     setEnv(initial);
@@ -88,13 +91,27 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
       });
       if (res.driverMessage) setMessage(res.driverMessage);
       onInstalled();
-      if (!res.driverMessage) onClose();
+      // Briefly show a success check, then close the dialog automatically.
+      setSuccess(true);
+      window.setTimeout(onClose, 1400);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('store.installError'));
     } finally {
       setBusy(false);
     }
   };
+
+  if (success) {
+    return (
+      <Modal open={open} title={t('store.installTitle', { name: app.name })} onClose={onClose}>
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <CheckCircleIcon className="h-14 w-14 animate-pop-in text-green-500" />
+          <p className="text-lg font-semibold">{t('store.installSuccess')}</p>
+          {message && <p className="text-sm text-sand-500 dark:text-sand-400">{message}</p>}
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={open} title={t('store.installTitle', { name: app.name })} onClose={onClose}>

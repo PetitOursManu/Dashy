@@ -238,6 +238,13 @@ export const SendIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const CheckCircleIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <path d="m22 4-10 10.01-3-3" />
+  </svg>
+);
+
 /** Brand mark: warm hexagon with a centered dot, matching the favicon. */
 export const Logo = ({ className = 'h-9 w-9' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">

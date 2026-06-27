@@ -484,6 +484,18 @@ export async function uninstallApp(req: Request, res: Response): Promise<void> {
   if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Install not found');
   const installed = await StoreInstalledApp.findById(req.params.id);
   if (!installed) throw new ApiError(404, 'Install not found');
+
+  const source = await StoreCatalogSource.findOne({ name: installed.sourceName });
   await uninstall(installed);
+
+  // For an app that came from a managed catalogue, also drop its definition so
+  // the name frees up for a fresh install later (and remove a deploy's image).
+  if (source?.managed) {
+    const removed = await removeApp(source, installed.manifestId).catch(() => null);
+    await bumpSource(source.id);
+    if (removed?.type === 'deploy' && removed.deploy?.docker_compose) {
+      await removeComposeImages(removed.deploy.docker_compose);
+    }
+  }
   res.json({ ok: true });
 }
