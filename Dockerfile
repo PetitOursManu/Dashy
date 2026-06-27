@@ -11,9 +11,12 @@ WORKDIR /app
 ENV MONGOMS_DISABLE_POSTINSTALL=1
 
 # Install dependencies first (better layer caching).
+# `--include=dev` forces devDependencies (vite, tsc, …) to install even when the
+# build environment injects NODE_ENV=production (e.g. Coolify build args) — they
+# are required to build the client and compile the server, and are pruned later.
 COPY server/package*.json ./server/
 COPY client/package*.json ./client/
-RUN npm ci --prefix server && npm ci --prefix client
+RUN npm ci --include=dev --prefix server && npm ci --include=dev --prefix client
 
 # Copy sources and build.
 COPY server ./server
