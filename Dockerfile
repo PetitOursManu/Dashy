@@ -53,6 +53,7 @@ RUN apt-get update \
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/dist ./dist
 COPY --from=builder /app/server/public ./public
+COPY --from=builder /app/server/config ./config
 COPY --from=builder /app/server/package.json ./package.json
 
 # Persistent data directory (hosted apps + previews), owned by the runtime user.
