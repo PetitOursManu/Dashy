@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireStaff } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import * as requests from '../controllers/requestsController.js';
 
@@ -12,25 +12,27 @@ router.use(requireAuth);
 router.get('/', asyncHandler(requests.listMyRequests));
 router.post('/', validateBody(requests.createRequestSchema), asyncHandler(requests.createRequest));
 
-// --- Admin: review + resolve requests ---
-router.get('/admin', requireAdmin, asyncHandler(requests.listAdminRequests));
+// --- Staff (admin + semi-admin): review + resolve requests ---
+router.get('/admin', requireStaff, asyncHandler(requests.listAdminRequests));
 router.post(
   '/:id/status',
-  requireAdmin,
+  requireStaff,
   validateBody(requests.requestStatusSchema),
   asyncHandler(requests.setRequestStatus),
 );
 router.post(
   '/:id/reply',
-  requireAdmin,
+  requireStaff,
   validateBody(requests.replyRequestSchema),
   asyncHandler(requests.replyToRequest),
 );
 router.post(
   '/:id/archive',
-  requireAdmin,
+  requireStaff,
   validateBody(requests.archiveRequestSchema),
   asyncHandler(requests.archiveRequest),
 );
+// Semi-admin (or admin) escalates a request to the administrators.
+router.post('/:id/relay', requireStaff, asyncHandler(requests.relayRequest));
 
 export default router;

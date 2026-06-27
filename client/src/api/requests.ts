@@ -18,4 +18,5 @@ export const requestsApi = {
     http.post<{ request: ProjectRequest }>(`/api/requests/${id}/reply`, { message }),
   archive: (id: string, archived: boolean) =>
     http.post<{ request: ProjectRequest }>(`/api/requests/${id}/archive`, { archived }),
+  relay: (id: string) => http.post<{ ok: true; relayed: number }>(`/api/requests/${id}/relay`),
 };

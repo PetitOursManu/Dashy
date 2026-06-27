@@ -7,6 +7,7 @@ import { backgroundUrl } from './api/auth';
 import type { Lang } from './i18n/translations';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
+import { StaffRoute } from './components/StaffRoute';
 import { Layout } from './components/Layout';
 import { FullPageSpinner } from './components/Spinner';
 import { LoginPage } from './pages/LoginPage';
@@ -86,10 +87,12 @@ export default function App() {
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/security" element={<SecurityPage />} />
-                  <Route element={<AdminRoute />}>
-                    <Route path="/apps/:id/edit" element={<AppEditPage />} />
+                  <Route element={<StaffRoute />}>
                     <Route path="/users" element={<UsersPage />} />
                     <Route path="/requests" element={<RequestsPage />} />
+                  </Route>
+                  <Route element={<AdminRoute />}>
+                    <Route path="/apps/:id/edit" element={<AppEditPage />} />
                     <Route path="/store" element={<StorePage />} />
                   </Route>
                 </Route>

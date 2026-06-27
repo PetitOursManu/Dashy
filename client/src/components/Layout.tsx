@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
+import { isStaff } from '../types';
 import { ProfileMenu } from './ProfileMenu';
 import { ChatWidget } from './ChatWidget';
 import {
@@ -22,6 +23,7 @@ interface NavItem {
   icon: typeof GridIcon;
   end?: boolean;
   adminOnly?: boolean;
+  staffOnly?: boolean;
 }
 
 const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
@@ -35,8 +37,8 @@ const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
   {
     titleKey: 'nav.management',
     items: [
-      { to: '/users', labelKey: 'nav.users', icon: UsersIcon, adminOnly: true },
-      { to: '/requests', labelKey: 'nav.requests', icon: InboxIcon, adminOnly: true },
+      { to: '/users', labelKey: 'nav.users', icon: UsersIcon, staffOnly: true },
+      { to: '/requests', labelKey: 'nav.requests', icon: InboxIcon, staffOnly: true },
     ],
   },
   {
@@ -60,7 +62,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="mt-4 flex-1 space-y-0.5 overflow-y-auto">
         {NAV_GROUPS.map((group) => {
-          const items = group.items.filter((i) => !i.adminOnly || user?.role === 'admin');
+          const items = group.items.filter(
+            (i) =>
+              (!i.adminOnly || user?.role === 'admin') &&
+              (!i.staffOnly || isStaff(user?.role)),
+          );
           if (items.length === 0) return null;
           return (
             <div key={group.titleKey}>

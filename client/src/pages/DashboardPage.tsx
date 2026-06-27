@@ -4,8 +4,9 @@ import { usersApi } from '../api/users';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
-import type { HostedApp, User } from '../types';
+import { isStaff, type HostedApp, type User } from '../types';
 import { AppCard } from '../components/AppCard';
+import { TempCountdown } from '../components/TempCountdown';
 import { ImportModal } from '../components/ImportModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { StatCard } from '../components/StatCard';
@@ -52,6 +53,7 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { t } = useI18n();
   const isAdmin = user?.role === 'admin';
+  const staff = isStaff(user?.role);
 
   const [apps, setApps] = useState<HostedApp[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -178,6 +180,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       <UserNotifications />
+      {user?.role === 'temp' && <TempCountdown expiresAt={user.expiresAt} />}
       <section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((s) => (
@@ -186,12 +189,12 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {isAdmin && <ChatAlerts />}
+      {isStaff(user?.role) && <ChatAlerts />}
 
-      {/* Personal notes + (for regular users) their request history */}
-      <div className={`grid gap-5 ${isAdmin ? '' : 'lg:grid-cols-2'}`}>
+      {/* Personal notes + (for regular/temp users) their request history */}
+      <div className={`grid gap-5 ${staff ? '' : 'lg:grid-cols-2'}`}>
         <NotesTile />
-        {!isAdmin && <MyRequests />}
+        {!staff && <MyRequests />}
       </div>
 
       {isAdmin && <AdminAnalytics />}
@@ -199,7 +202,7 @@ export function DashboardPage() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">
-            {isAdmin ? t('dash.allApps') : t('dash.yourApps')}
+            {staff ? t('dash.allApps') : t('dash.yourApps')}
             <span className="ml-2 text-sm font-normal text-sand-400">{apps.length}</span>
           </h2>
           {isAdmin && (
@@ -262,7 +265,7 @@ export function DashboardPage() {
             <LayersIcon className="h-12 w-12 text-sand-300 dark:text-sand-600" />
             <h3 className="mt-4 text-lg font-medium">{t('dash.noAppsTitle')}</h3>
             <p className="mt-1 max-w-sm text-sm text-sand-500 dark:text-sand-400">
-              {isAdmin ? t('dash.noAppsAdmin') : t('dash.noAppsUser')}
+              {staff ? t('dash.noAppsAdmin') : t('dash.noAppsUser')}
             </p>
             {isAdmin && (
               <button

@@ -3,7 +3,7 @@ import { env, isProduction } from '../config/env.js';
 
 export interface JwtPayload {
   sub: string; // user id
-  role: 'admin' | 'user';
+  role: 'admin' | 'subadmin' | 'user' | 'temp';
   tv: number; // token version (for "sign out everywhere")
   jti?: string; // session id (for per-device revocation)
 }

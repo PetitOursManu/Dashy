@@ -36,6 +36,7 @@ No SaaS, no paid services — everything runs on a single machine.
 ### 👥 Users & access (admin)
 
 - **Multi-user & access control** — create users and choose, per user, which apps each can open; regular users see only their assigned apps.
+- **Account types** — **admin** (full control); **semi-admin** who can manage users (rights + passwords), moderate the assistant and handle/relay requests, but has *no* access to the Store, backups, or other staff accounts; and **temporary** accounts created with a lifetime (hours/days) — a dashboard countdown (red under 12 h), no password/2FA, blocked and auto-purged when they expire.
 - **User insights & messaging** — click a user for their Dashy history (most-used apps, 2FA status, assistant-misuse flags with a one-click **time-out**), and push a **notification to their dashboard** that they must acknowledge (you get the read receipt).
 - **Public share links** — share a hosted app via an unguessable `/share/<token>/` link, with optional password and expiry, to people without an account.
 - **Rich dashboard** — open-count tracking, an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and per-app storage usage.

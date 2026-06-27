@@ -110,11 +110,12 @@ export async function listApps(req: Request, res: Response): Promise<void> {
   const me = await User.findById(req.user!.sub).select('allowedApps favorites');
   const favorites = new Set((me?.favorites ?? []).map(String));
 
-  // Admins see every app; regular users only the ones assigned to them.
-  const apps =
-    req.user!.role === 'admin'
-      ? await HostedApp.find().sort({ createdAt: -1 })
-      : await HostedApp.find({ _id: { $in: me?.allowedApps ?? [] } }).sort({ createdAt: -1 });
+  // Staff (admin + semi-admin) see every app; regular/temporary users only the
+  // ones assigned to them.
+  const isStaff = req.user!.role === 'admin' || req.user!.role === 'subadmin';
+  const apps = isStaff
+    ? await HostedApp.find().sort({ createdAt: -1 })
+    : await HostedApp.find({ _id: { $in: me?.allowedApps ?? [] } }).sort({ createdAt: -1 });
 
   res.json({ apps: apps.map((a) => serializeApp(a, favorites)) });
 }

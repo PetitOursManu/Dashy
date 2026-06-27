@@ -124,3 +124,29 @@ export async function replyToRequest(req: Request, res: Response): Promise<void>
   await request.save();
   res.json({ request: request.toJSON() });
 }
+
+/**
+ * Staff (typically a semi-admin): escalate a request to the administrators by
+ * pushing a dashboard notification to each admin, carrying the original message.
+ */
+export async function relayRequest(req: Request, res: Response): Promise<void> {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'Request not found');
+  const request = await ProjectRequest.findById(req.params.id);
+  if (!request) throw new ApiError(404, 'Request not found');
+
+  const [admins, relayedBy] = await Promise.all([
+    User.find({ role: 'admin' }).select('_id email'),
+    emailOf(req.user!.sub),
+  ]);
+  await Notification.insertMany(
+    admins.map((a) => ({
+      user: a._id,
+      userEmail: a.email,
+      kind: 'request-relay',
+      message: `${relayedBy} relayed a ${request.kind} request from ${request.userEmail}.`,
+      requestMessage: request.message,
+      createdByEmail: relayedBy,
+    })),
+  );
+  res.json({ ok: true, relayed: admins.length });
+}

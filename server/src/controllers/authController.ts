@@ -79,7 +79,7 @@ async function setAuthCookie(req: Request, res: Response, user: UserDoc): Promis
   });
   const token = signAccessToken({
     sub: user.id,
-    role: user.role as 'admin' | 'user',
+    role: user.role,
     tv: user.tokenVersion,
     jti,
   });
@@ -127,6 +127,11 @@ export async function login(req: Request, res: Response): Promise<void> {
   const valid = user ? await argon2.verify(user.passwordHash, password) : false;
   if (!user || !valid) {
     throw new ApiError(401, 'Invalid email or password');
+  }
+
+  // A temporary account that has run out of time can no longer sign in.
+  if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
+    throw new ApiError(401, 'This temporary account has expired');
   }
 
   if (user.twoFactorEnabled) {

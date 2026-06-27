@@ -32,11 +32,16 @@ export async function requireAuth(
       throw new ApiError(401, 'Two-factor authentication not completed');
     }
 
-    const user = await User.findById(payload.sub).select('tokenVersion');
+    const user = await User.findById(payload.sub).select('tokenVersion role expiresAt');
     // Treat a missing version as 0 so tokens issued before this field existed
     // (and freshly seeded users) remain valid.
     if (!user || (payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
       throw new ApiError(401, 'Session expired, please sign in again');
+    }
+
+    // Temporary accounts stop working the moment they expire.
+    if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
+      throw new ApiError(401, 'This temporary account has expired');
     }
 
     // Tokens issued with a session id (jti) are revocable per-device: the
@@ -56,7 +61,9 @@ export async function requireAuth(
       }
     }
 
-    req.user = { sub: payload.sub, role: payload.role, tv: payload.tv, jti: payload.jti };
+    // The DB role is authoritative (so role changes take effect immediately and
+    // a stale token can't keep elevated access).
+    req.user = { sub: payload.sub, role: user.role, tv: payload.tv, jti: payload.jti };
     next();
   } catch (err) {
     next(err instanceof ApiError ? err : new ApiError(401, 'Invalid or expired session'));
@@ -67,6 +74,22 @@ export async function requireAuth(
 export function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
   if (req.user?.role !== 'admin') {
     throw new ApiError(403, 'Administrator privileges required');
+  }
+  next();
+}
+
+/** Require admin OR semi-admin (staff) — for user moderation surfaces. */
+export function requireStaff(req: Request, _res: Response, next: NextFunction): void {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'subadmin') {
+    throw new ApiError(403, 'Staff privileges required');
+  }
+  next();
+}
+
+/** Block temporary accounts (no password change / no 2FA). */
+export function blockTemp(req: Request, _res: Response, next: NextFunction): void {
+  if (req.user?.role === 'temp') {
+    throw new ApiError(403, 'Not available for temporary accounts');
   }
   next();
 }

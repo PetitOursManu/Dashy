@@ -1418,6 +1418,100 @@ test('admin can revoke access and the app disappears for the user', async () => 
   await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 });
 
+
+// ---------------------------- roles: subadmin & temp -------------------------
+
+test('roles: a semi-admin can moderate but has no admin powers', async () => {
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+  const SUB_EMAIL = 'sub@example.com';
+  const SUB_PW = 'SubPassword!2026';
+  assert.equal(
+    (await api('POST', '/api/users', { email: SUB_EMAIL, password: SUB_PW, role: 'subadmin' })).status,
+    201,
+  );
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: SUB_EMAIL, password: SUB_PW });
+
+  // Allowed moderation surfaces.
+  assert.equal((await api('GET', '/api/users')).status, 200);
+  assert.equal((await api('GET', '/api/chat/alerts')).status, 200);
+  assert.equal((await api('GET', '/api/requests/admin')).status, 200);
+
+  // Can create regular + temporary users.
+  assert.equal(
+    (await api('POST', '/api/users', { email: 'sub-user@example.com', password: 'Password!2026', role: 'user' })).status,
+    201,
+  );
+  assert.equal(
+    (await api('POST', '/api/users', {
+      email: 'sub-temp@example.com', password: 'Password!2026', role: 'temp', durationHours: 24,
+    })).status,
+    201,
+  );
+
+  // Cannot create staff accounts.
+  assert.equal(
+    (await api('POST', '/api/users', { email: 'x-admin@example.com', password: 'Password!2026', role: 'admin' })).status,
+    403,
+  );
+  assert.equal(
+    (await api('POST', '/api/users', { email: 'x-sub@example.com', password: 'Password!2026', role: 'subadmin' })).status,
+    403,
+  );
+
+  // Denied: Store, backup, stats, chat config.
+  assert.equal((await api('GET', '/api/store/config')).status, 403);
+  assert.equal((await api('GET', '/api/admin/backup')).status, 403);
+  assert.equal((await api('GET', '/api/stats/overview')).status, 403);
+  assert.equal((await api('GET', '/api/chat/config')).status, 403);
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+});
+
+test('roles: temporary account — no password/2FA, blocked + purged on expiry', async () => {
+  const TEMP_EMAIL = 'temp@example.com';
+  const TEMP_PW = 'TempPassword!2026';
+  const created = await api('POST', '/api/users', {
+    email: TEMP_EMAIL, password: TEMP_PW, role: 'temp', durationHours: 2,
+  });
+  assert.equal(created.status, 201);
+  const { user } = await created.json();
+  assert.ok(user.expiresAt, 'temp user has an expiry');
+
+  await api('POST', '/api/auth/logout');
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: TEMP_EMAIL, password: TEMP_PW });
+
+  // No password change, no 2FA — but the app dashboard works.
+  assert.equal(
+    (await api('POST', '/api/auth/password', { currentPassword: TEMP_PW, newPassword: 'NewTempPass!2026' })).status,
+    403,
+  );
+  assert.equal((await api('POST', '/api/auth/2fa/setup')).status, 403);
+  assert.equal((await api('GET', '/api/apps')).status, 200);
+
+  // Force the expiry and confirm access is blocked.
+  const { User } = await import('../src/models/User.js');
+  await User.updateOne({ email: TEMP_EMAIL }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+  assert.equal((await api('GET', '/api/apps')).status, 401);
+
+  // The periodic purge removes the expired account.
+  const { purgeExpiredTempUsers } = await import('../src/services/tempUsers.js');
+  assert.ok((await purgeExpiredTempUsers()) >= 1);
+
+  cookies.clear();
+  await api('POST', '/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const list = (await (await api('GET', '/api/users')).json()).users as { email: string }[];
+  assert.equal(list.some((u) => u.email === TEMP_EMAIL), false);
+});
+
 test('full 2FA enable + login flow', async () => {
   // Start setup.
   const setupRes = await api('POST', '/api/auth/2fa/setup');

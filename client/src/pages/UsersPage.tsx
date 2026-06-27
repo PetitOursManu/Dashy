@@ -12,6 +12,14 @@ import { UserFormModal } from '../components/UserFormModal';
 import { UserDetailModal } from '../components/UserDetailModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EditIcon, PlusIcon, TrashIcon } from '../components/Icons';
+import type { UserRole } from '../types';
+
+const ROLE_BADGE: Record<UserRole, string> = {
+  admin: 'bg-ember-500/15 text-ember-600 dark:text-ember-300',
+  subadmin: 'bg-violet-500/15 text-violet-600 dark:text-violet-300',
+  user: 'bg-sand-200 text-sand-600 dark:bg-sand-800 dark:text-sand-300',
+  temp: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+};
 
 export function UsersPage() {
   const { user: me } = useAuth();
@@ -153,14 +161,17 @@ export function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.role === 'admin'
-                          ? 'bg-ember-500/15 text-ember-600 dark:text-ember-300'
-                          : 'bg-sand-200 text-sand-600 dark:bg-sand-800 dark:text-sand-300'
-                      }`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGE[u.role]}`}
                     >
-                      {u.role === 'admin' ? t('role.admin') : t('role.user')}
+                      {t(`role.${u.role}`)}
                     </span>
+                    {u.role === 'temp' && u.expiresAt && (
+                      <span className="ml-1 block text-[11px] text-sand-400">
+                        {new Date(u.expiresAt).getTime() <= Date.now()
+                          ? t('temp.expired')
+                          : new Date(u.expiresAt).toLocaleString()}
+                      </span>
+                    )}
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
                     {u.twoFactorEnabled ? (
@@ -177,7 +188,7 @@ export function UsersPage() {
                     )}
                   </td>
                   <td className="hidden px-4 py-3 text-sand-500 dark:text-sand-400 lg:table-cell">
-                    {u.role === 'admin'
+                    {u.role === 'admin' || u.role === 'subadmin'
                       ? t('users.allApps')
                       : (u.allowedApps?.length ?? 0) === 0
                         ? '—'

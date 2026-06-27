@@ -2,12 +2,14 @@ import { env } from './config/env.js';
 import { connectDb } from './config/db.js';
 import { ensureDataDirs } from './config/paths.js';
 import { seedAdmin } from './services/seed.js';
+import { startTempUserPurge } from './services/tempUsers.js';
 import { createApp } from './app.js';
 
 async function main(): Promise<void> {
   ensureDataDirs();
   await connectDb();
   await seedAdmin();
+  startTempUserPurge();
 
   const app = createApp();
   const server = app.listen(env.PORT, () => {

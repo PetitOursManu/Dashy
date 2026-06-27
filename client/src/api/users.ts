@@ -1,19 +1,21 @@
 import { http } from './client';
-import type { User, UserHistory } from '../types';
+import type { User, UserHistory, UserRole } from '../types';
 
 export interface CreateUserPayload {
   email: string;
   password: string;
-  role: 'admin' | 'user';
+  role: UserRole;
   allowedApps: string[];
   chatEnabled?: boolean;
+  durationHours?: number;
 }
 
 export interface UpdateUserPayload {
-  role?: 'admin' | 'user';
+  role?: UserRole;
   password?: string;
   allowedApps?: string[];
   chatEnabled?: boolean;
+  durationHours?: number;
 }
 
 export const usersApi = {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { requestsApi } from '../api/requests';
 import { ApiError } from '../api/client';
 import { useI18n } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { useFormat } from '../hooks/useFormat';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
 import { Avatar } from '../components/Avatar';
@@ -20,6 +21,8 @@ const STATUS_STYLES: Record<ProjectRequestStatus, string> = {
 
 export function RequestsPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const isSubadmin = user?.role === 'subadmin';
   const { relativeTime } = useFormat();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
@@ -29,6 +32,16 @@ export function RequestsPage() {
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
+  const [relayed, setRelayed] = useState<Set<string>>(new Set());
+
+  const relay = async (id: string) => {
+    try {
+      await requestsApi.relay(id);
+      setRelayed((prev) => new Set(prev).add(id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not relay the request.');
+    }
+  };
 
   const load = useCallback(async (f: Filter) => {
     setLoading(true);
@@ -210,6 +223,16 @@ export function RequestsPage() {
                           onClick={() => void setStatus(r.id, 'resolved')}
                         >
                           {t('notif.markDone')}
+                        </button>
+                      )}
+                      {isSubadmin && (
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs"
+                          onClick={() => void relay(r.id)}
+                          disabled={relayed.has(r.id)}
+                        >
+                          {relayed.has(r.id) ? t('requests.relayed') : t('requests.relay')}
                         </button>
                       )}
                       {!r.archived && r.status !== 'dismissed' && (

@@ -4,7 +4,8 @@ import { Spinner } from './Spinner';
 import { usersApi } from '../api/users';
 import { ApiError } from '../api/client';
 import { useI18n } from '../context/LanguageContext';
-import type { HostedApp, User } from '../types';
+import { useAuth } from '../context/AuthContext';
+import type { HostedApp, User, UserRole } from '../types';
 
 interface UserFormModalProps {
   open: boolean;
@@ -17,13 +18,20 @@ interface UserFormModalProps {
 
 export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: UserFormModalProps) {
   const { t } = useI18n();
+  const { user: actor } = useAuth();
+  const isAdmin = actor?.role === 'admin';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [role, setRole] = useState<UserRole>('user');
   const [allowed, setAllowed] = useState<Set<string>>(new Set());
   const [chatEnabled, setChatEnabled] = useState(true);
+  const [durationValue, setDurationValue] = useState(1);
+  const [durationUnit, setDurationUnit] = useState<'hours' | 'days'>('days');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Per-app assignment only applies to regular & temporary users (staff see all).
+  const showAppPicker = role === 'user' || role === 'temp';
 
   // Reset the form whenever it is (re)opened.
   useEffect(() => {
@@ -33,6 +41,8 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
     setRole(user?.role ?? 'user');
     setAllowed(new Set(user?.allowedApps ?? []));
     setChatEnabled(user?.chatEnabled ?? true);
+    setDurationValue(1);
+    setDurationUnit('days');
     setError(null);
   }, [open, user]);
 
@@ -50,7 +60,9 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
     setError(null);
     setSubmitting(true);
     try {
-      const allowedApps = role === 'admin' ? [] : [...allowed];
+      const allowedApps = showAppPicker ? [...allowed] : [];
+      const durationHours =
+        role === 'temp' ? (durationUnit === 'days' ? durationValue * 24 : durationValue) : undefined;
       if (mode === 'create') {
         const { user } = await usersApi.create({
           email,
@@ -58,6 +70,7 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
           role,
           allowedApps,
           chatEnabled,
+          ...(durationHours ? { durationHours } : {}),
         });
         onSaved(user);
       } else if (user) {
@@ -66,6 +79,8 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
           allowedApps,
           chatEnabled,
           ...(password ? { password } : {}),
+          // Only resend a duration when the admin changed it (extend the temp).
+          ...(role === 'temp' && durationHours ? { durationHours } : {}),
         });
         onSaved(updated);
       }
@@ -126,16 +141,46 @@ export function UserFormModal({ open, mode, user, apps, onClose, onSaved }: User
             id="user-role"
             className="input"
             value={role}
-            onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
+            onChange={(e) => setRole(e.target.value as UserRole)}
           >
             <option value="user">{t('form.roleUserOpt')}</option>
-            <option value="admin">{t('form.roleAdminOpt')}</option>
+            <option value="temp">{t('form.roleTempOpt')}</option>
+            {isAdmin && <option value="subadmin">{t('form.roleSubadminOpt')}</option>}
+            {isAdmin && <option value="admin">{t('form.roleAdminOpt')}</option>}
           </select>
         </div>
 
+        {role === 'temp' && (
+          <div>
+            <label className="label">{t('form.duration')}</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={1}
+                className="input w-28"
+                value={durationValue}
+                onChange={(e) => setDurationValue(Math.max(1, Number(e.target.value) || 1))}
+              />
+              <select
+                className="input w-36"
+                value={durationUnit}
+                onChange={(e) => setDurationUnit(e.target.value as 'hours' | 'days')}
+              >
+                <option value="hours">{t('form.durationHours')}</option>
+                <option value="days">{t('form.durationDays')}</option>
+              </select>
+            </div>
+            {mode === 'edit' && user?.expiresAt && (
+              <p className="mt-1 text-xs text-sand-400">
+                {t('form.currentExpiry')}: {new Date(user.expiresAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
           <span className="label">{t('form.appAccess')}</span>
-          {role === 'admin' ? (
+          {!showAppPicker ? (
             <p className="rounded-lg bg-sand-100 px-3 py-2 text-sm text-sand-500 dark:bg-sand-800 dark:text-sand-400">
               {t('form.adminAll')}
             </p>

@@ -123,12 +123,14 @@ function SessionsSection() {
 export function SecurityPage() {
   const { user, refresh } = useAuth();
   const { t } = useI18n();
+  // Temporary accounts can't change their password or use 2FA.
+  const isTemp = user?.role === 'temp';
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <p className="text-sm text-sand-500 dark:text-sand-400">{t('sec.subtitle')}</p>
-      <TwoFactorSection enabled={user?.twoFactorEnabled ?? false} onChange={refresh} />
-      <PasswordSection />
+      {!isTemp && <TwoFactorSection enabled={user?.twoFactorEnabled ?? false} onChange={refresh} />}
+      {!isTemp && <PasswordSection />}
       <SessionsSection />
       <SignOutAllSection />
     </div>

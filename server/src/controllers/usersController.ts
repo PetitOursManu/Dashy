@@ -12,23 +12,48 @@ import { logActivity, emailOf } from '../services/activity.js';
 
 // ----------------------------- validation schemas -----------------------------
 
-export const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(200),
-  role: z.enum(['admin', 'user']).default('user'),
-  allowedApps: z.array(z.string()).optional().default([]),
-  // Assistant access is granted by default for new users.
-  chatEnabled: z.boolean().optional().default(true),
-});
+const ROLES = ['admin', 'subadmin', 'user', 'temp'] as const;
+// Up to a year, in hours — covers the days/hours picker on the client.
+const durationHours = z.number().int().min(1).max(24 * 365);
+
+export const createUserSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8).max(200),
+    role: z.enum(ROLES).default('user'),
+    allowedApps: z.array(z.string()).optional().default([]),
+    // Assistant access is granted by default for new users.
+    chatEnabled: z.boolean().optional().default(true),
+    // Required for `temp` accounts: lifetime in hours.
+    durationHours: durationHours.optional(),
+  })
+  .refine((v) => v.role !== 'temp' || (v.durationHours ?? 0) > 0, {
+    message: 'A duration is required for a temporary account',
+    path: ['durationHours'],
+  });
 
 export const updateUserSchema = z
   .object({
-    role: z.enum(['admin', 'user']).optional(),
+    role: z.enum(ROLES).optional(),
     password: z.string().min(8).max(200).optional(),
     allowedApps: z.array(z.string()).optional(),
     chatEnabled: z.boolean().optional(),
+    // Extend (or set) a temporary account's lifetime from now.
+    durationHours: durationHours.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
+type Role = (typeof ROLES)[number];
+
+/** A semi-admin may only ever touch regular / temporary accounts. */
+function assertCanManage(actorRole: Role, targetRole: Role): void {
+  if (actorRole === 'admin') return;
+  if (targetRole === 'admin' || targetRole === 'subadmin') {
+    throw new ApiError(403, 'You cannot manage administrator accounts');
+  }
+}
+
+const expiryFromHours = (h: number): Date => new Date(Date.now() + h * 3_600_000);
 
 export const chatTimeoutSchema = z.object({
   // Minutes to time out the assistant; 0 or null clears the time-out.
@@ -47,15 +72,18 @@ async function resolveAllowedApps(ids: string[]): Promise<Types.ObjectId[]> {
 
 // --------------------------------- handlers ----------------------------------
 
-export async function listUsers(_req: Request, res: Response): Promise<void> {
-  const users = await User.find().sort({ createdAt: 1 });
+export async function listUsers(req: Request, res: Response): Promise<void> {
+  // A semi-admin only sees the accounts they may manage (regular + temporary).
+  const filter = req.user!.role === 'admin' ? {} : { role: { $in: ['user', 'temp'] } };
+  const users = await User.find(filter).sort({ createdAt: 1 });
   res.json({ users: users.map((u) => u.toJSON()) });
 }
 
 export async function createUser(req: Request, res: Response): Promise<void> {
-  const { email, password, role, allowedApps, chatEnabled } = req.body as z.infer<
+  const { email, password, role, allowedApps, chatEnabled, durationHours } = req.body as z.infer<
     typeof createUserSchema
   >;
+  assertCanManage(req.user!.role as Role, role);
 
   if (await User.findOne({ email })) {
     throw new ApiError(409, 'An account with this email already exists');
@@ -68,9 +96,10 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     role,
     allowedApps: await resolveAllowedApps(allowedApps),
     chatEnabled,
+    expiresAt: role === 'temp' ? expiryFromHours(durationHours!) : null,
   });
 
-  logActivity('user.created', await emailOf(req.user!.sub), `created user ${user.email}`);
+  logActivity('user.created', await emailOf(req.user!.sub), `created ${role} ${user.email}`);
   res.status(201).json({ user: user.toJSON() });
 }
 
@@ -78,7 +107,11 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found');
 
+  const actorRole = req.user!.role as Role;
+  // A semi-admin can't touch a staff account, nor promote anyone to staff.
+  assertCanManage(actorRole, user.role as Role);
   const updates = req.body as z.infer<typeof updateUserSchema>;
+  if (updates.role) assertCanManage(actorRole, updates.role);
 
   // Prevent demoting the last administrator (would lock everyone out of admin).
   if (updates.role && updates.role !== user.role && user.role === 'admin') {
@@ -103,6 +136,14 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     user.chatEnabled = updates.chatEnabled;
   }
 
+  // Keep `expiresAt` consistent with the (possibly new) role: extend a temp from
+  // now when a duration is given, and clear it for any non-temp role.
+  if (user.role === 'temp') {
+    if (updates.durationHours) user.expiresAt = expiryFromHours(updates.durationHours);
+  } else {
+    user.expiresAt = null;
+  }
+
   await user.save();
   res.json({ user: user.toJSON() });
 }
@@ -116,6 +157,7 @@ export async function userHistory(req: Request, res: Response): Promise<void> {
   if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'User not found');
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found');
+  assertCanManage(req.user!.role as Role, user.role as Role);
 
   const [topAppsAgg, alertCount, recentAlerts, notifications] = await Promise.all([
     OpenEvent.aggregate<{ _id: Types.ObjectId; count: number }>([
@@ -162,6 +204,7 @@ export async function setChatTimeout(req: Request, res: Response): Promise<void>
   if (!mongoose.isValidObjectId(req.params.id)) throw new ApiError(404, 'User not found');
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found');
+  assertCanManage(req.user!.role as Role, user.role as Role);
 
   const { minutes } = req.body as z.infer<typeof chatTimeoutSchema>;
   user.chatTimeoutUntil =
@@ -177,6 +220,7 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
 
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found');
+  assertCanManage(req.user!.role as Role, user.role as Role);
 
   if (user.role === 'admin') {
     const admins = await User.countDocuments({ role: 'admin' });

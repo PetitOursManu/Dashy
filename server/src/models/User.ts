@@ -5,10 +5,14 @@ export interface BackupCode {
   used: boolean;
 }
 
+export type UserRole = 'admin' | 'subadmin' | 'user' | 'temp';
+
 export interface IUser {
   email: string;
   passwordHash: string;
-  role: 'admin' | 'user';
+  role: UserRole;
+  // For `temp` accounts: when access expires (account is then blocked + purged).
+  expiresAt: Date | null;
   // --- Profile (self-editable, visible to admins) ---
   nickname: string;
   fullName: string;
@@ -76,7 +80,10 @@ const userSchema = new Schema<IUser>(
     // argon2id hash of the password — never the plaintext.
     passwordHash: { type: String, required: true },
 
-    role: { type: String, enum: ['admin', 'user'], default: 'user' },
+    role: { type: String, enum: ['admin', 'subadmin', 'user', 'temp'], default: 'user' },
+
+    // Expiry for temporary accounts (null for everyone else).
+    expiresAt: { type: Date, default: null },
 
     // --- Profile ---
     nickname: { type: String, default: '', trim: true, maxlength: 60 },

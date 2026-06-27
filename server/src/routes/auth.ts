@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { authLimiter } from '../middleware/rateLimit.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, blockTemp } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { avatarUpload, backgroundUpload } from '../middleware/upload.js';
 import * as auth from '../controllers/authController.js';
@@ -50,30 +50,34 @@ router.post('/background', requireAuth, backgroundUpload, asyncHandler(auth.uplo
 router.delete('/background', requireAuth, asyncHandler(auth.deleteBackground));
 router.get('/background', requireAuth, asyncHandler(auth.getBackground));
 
-// --- 2FA management ---
-router.post('/2fa/setup', requireAuth, asyncHandler(auth.setupTwoFactor));
+// --- 2FA management (not available to temporary accounts) ---
+router.post('/2fa/setup', requireAuth, blockTemp, asyncHandler(auth.setupTwoFactor));
 router.post(
   '/2fa/enable',
   requireAuth,
+  blockTemp,
   validateBody(auth.twoFactorVerifySchema),
   asyncHandler(auth.enableTwoFactor),
 );
 router.post(
   '/2fa/disable',
   requireAuth,
+  blockTemp,
   validateBody(auth.disable2faSchema),
   asyncHandler(auth.disableTwoFactor),
 );
 router.post(
   '/2fa/backup-codes',
   requireAuth,
+  blockTemp,
   asyncHandler(auth.regenerateBackupCodes),
 );
 
-// --- Password ---
+// --- Password (not available to temporary accounts) ---
 router.post(
   '/password',
   requireAuth,
+  blockTemp,
   validateBody(auth.passwordChangeSchema),
   asyncHandler(auth.changePassword),
 );

@@ -1,7 +1,14 @@
+export type UserRole = 'admin' | 'subadmin' | 'user' | 'temp';
+
+/** Admin or semi-admin — the "staff" who can moderate users/requests. */
+export const isStaff = (role?: UserRole): boolean => role === 'admin' || role === 'subadmin';
+
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'user';
+  role: UserRole;
+  /** For temporary accounts: ISO expiry timestamp (null otherwise). */
+  expiresAt?: string | null;
   nickname: string;
   fullName: string;
   jobTitle: string;
