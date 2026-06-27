@@ -15,7 +15,7 @@ import { serializeApp } from './appsController.js';
 import { logActivity, emailOf } from '../services/activity.js';
 import { getCatalog, findManifest } from '../store/catalog.js';
 import { availableDrivers } from '../store/drivers/index.js';
-import { dockerDiagnostics } from '../store/drivers/docker.js';
+import { dockerDiagnostics, removeComposeImages } from '../store/drivers/docker.js';
 import {
   installTile,
   installStatic,
@@ -202,8 +202,12 @@ export async function updateCatalogApp(req: Request, res: Response): Promise<voi
 
 export async function deleteCatalogApp(req: Request, res: Response): Promise<void> {
   const source = await getManagedSource(req.params.id);
-  await removeApp(source, req.params.appId);
+  const removed = await removeApp(source, req.params.appId);
   await bumpSource(source.id);
+  // For a deploy app, also drop its Docker image(s) (best-effort, skips in-use).
+  if (removed?.type === 'deploy' && removed.deploy?.docker_compose) {
+    await removeComposeImages(removed.deploy.docker_compose);
+  }
   res.json({ ok: true });
 }
 

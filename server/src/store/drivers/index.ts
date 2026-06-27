@@ -35,6 +35,8 @@ export interface Driver {
   redeploy?(ctx: DeployContext): Promise<DeployResult>;
   /** Restart the running stack without changing it. */
   restart?(slug: string): Promise<DeployResult>;
+  /** Stop and remove the stack's containers (on uninstall). */
+  down?(slug: string): Promise<DeployResult>;
 }
 
 // Manual is last (universal fallback); the others are capability-gated.

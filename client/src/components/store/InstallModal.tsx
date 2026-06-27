@@ -16,6 +16,19 @@ interface Props {
   onInstalled: () => void;
 }
 
+/** The first published host port in a compose (the "HOST" of `ports: - HOST:CONTAINER`). */
+function firstHostPort(compose: string): string | null {
+  const m = compose.match(/-\s*["']?(\d{2,5}):\d{2,5}/);
+  return m ? m[1] : null;
+}
+
+/** A sensible default app URL: Dashy's host with the deployed port appended. */
+function defaultDeployUrl(compose: string): string {
+  const port = firstHostPort(compose);
+  if (!port) return '';
+  return `${window.location.protocol}//${window.location.hostname}:${port}/`;
+}
+
 export function InstallModal({ open, app, config, drivers, onClose, onInstalled }: Props) {
   const { t } = useI18n();
   const [servingMode, setServingMode] = useState<'path' | 'subdomain'>('path');
@@ -35,7 +48,7 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     if (!open || !app) return;
     setServingMode('path');
     setDriver(config?.defaultDriver || drivers[0]?.id || 'manual');
-    setFinalUrl('');
+    setFinalUrl(app.type === 'deploy' ? defaultDeployUrl(app.deploy?.docker_compose ?? '') : '');
     setCompose(app.deploy?.docker_compose ?? '');
     setVolumes(app.deploy?.volumes ?? []);
     setServiceName('');

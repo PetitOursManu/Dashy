@@ -2523,6 +2523,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   en: {
     'nav.store': 'Store',
     'store.subtitle': 'Install apps and widgets from your catalogues in one click.',
+    'store.available': 'Available apps',
     'store.search': 'Search the store…',
     'store.refresh': 'Refresh catalogues',
     'store.empty': 'No apps yet. Add a catalogue source in Settings → Store.',
@@ -2571,6 +2572,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   fr: {
     'nav.store': 'Store',
     'store.subtitle': 'Installez des apps et widgets depuis vos catalogues en un clic.',
+    'store.available': 'Apps disponibles',
     'store.search': 'Rechercher dans le store…',
     'store.refresh': 'Rafraîchir les catalogues',
     'store.empty': 'Aucune app. Ajoutez une source de catalogue dans Réglages → Store.',
@@ -2619,6 +2621,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   es: {
     'nav.store': 'Store',
     'store.subtitle': 'Instala apps y widgets de tus catálogos con un clic.',
+    'store.available': 'Apps disponibles',
     'store.search': 'Buscar en la tienda…',
     'store.refresh': 'Actualizar catálogos',
     'store.empty': 'Aún no hay apps. Añade una fuente en Ajustes → Store.',
@@ -2667,6 +2670,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   de: {
     'nav.store': 'Store',
     'store.subtitle': 'Installiere Apps und Widgets aus deinen Katalogen per Klick.',
+    'store.available': 'Verfügbare Apps',
     'store.search': 'Im Store suchen…',
     'store.refresh': 'Kataloge aktualisieren',
     'store.empty': 'Noch keine Apps. Füge eine Quelle unter Einstellungen → Store hinzu.',
@@ -2715,6 +2719,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   it: {
     'nav.store': 'Store',
     'store.subtitle': 'Installa app e widget dai tuoi cataloghi con un clic.',
+    'store.available': 'App disponibili',
     'store.search': 'Cerca nello store…',
     'store.refresh': 'Aggiorna cataloghi',
     'store.empty': 'Ancora nessuna app. Aggiungi una sorgente in Impostazioni → Store.',
@@ -2763,6 +2768,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   zh: {
     'nav.store': '商店',
     'store.subtitle': '一键从你的目录安装应用和组件。',
+    'store.available': '可安装的应用',
     'store.search': '搜索商店…',
     'store.refresh': '刷新目录',
     'store.empty': '暂无应用。在 设置 → 商店 中添加目录源。',
@@ -2811,6 +2817,7 @@ const storeStrings: Record<Lang, Record<string, string>> = {
   ru: {
     'nav.store': 'Магазин',
     'store.subtitle': 'Устанавливайте приложения и виджеты из ваших каталогов в один клик.',
+    'store.available': 'Доступные приложения',
     'store.search': 'Поиск в магазине…',
     'store.refresh': 'Обновить каталоги',
     'store.empty': 'Пока нет приложений. Добавьте источник в Настройки → Магазин.',

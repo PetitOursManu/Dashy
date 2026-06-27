@@ -122,4 +122,26 @@ export const dockerDriver: Driver = {
       return { ok: false, message: err instanceof Error ? err.message : 'docker compose restart failed' };
     }
   },
+  async down(slug) {
+    const dir = path.join(STORE_DEPLOY_DIR, slug);
+    try {
+      // Removes the containers + network; named volumes are kept.
+      await exec('docker', ['compose', 'down'], { cwd: dir, timeout: 120_000 });
+      return { ok: true, message: 'Stack stopped and removed.' };
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : 'docker compose down failed' };
+    }
+  },
 };
+
+/** Best-effort removal of the images referenced by a compose (skips ones in use). */
+export async function removeComposeImages(compose: string): Promise<void> {
+  if (!hasDockerCli() || !fs.existsSync(SOCKET)) return;
+  const images = new Set(
+    [...compose.matchAll(/^\s*image:\s*["']?([^\s"'#]+)/gm)].map((m) => m[1]).filter(Boolean),
+  );
+  for (const img of images) {
+    // No --force: Docker refuses if a container still uses the image (safe).
+    await exec('docker', ['image', 'rm', img], { timeout: 60_000 }).catch(() => {});
+  }
+}

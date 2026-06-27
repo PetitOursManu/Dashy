@@ -317,7 +317,11 @@ Docker**, so enable it only on a trusted, single-admin host. *Settings → Store
 shows a live diagnostic — whether Dashy is containerized and whether the socket
 and CLI are present — and warns you, with the exact line to add, when Docker
 deploys can't work. Docker deploys can declare **persistent named volumes** and
-be **redeployed** or **restarted** from the installed list.
+be **redeployed** or **restarted** from the installed list. The install dialog
+prefills the resulting URL with the published host port from the compose.
+**Uninstalling** a deploy app stops and removes its container (named volumes are
+kept); **removing** a deploy app from a managed catalogue also drops its Docker
+image (best-effort, skipped while the image is still in use).
 
 ---
 

@@ -338,6 +338,9 @@ export async function uninstall(installed: StoreInstalledAppDoc): Promise<void> 
     await fsp.rm(path.join(STORE_APPS_DIR, installed.slug), { recursive: true, force: true });
   }
   if (installed.type === 'deploy' && installed.slug && SAFE_SLUG.test(installed.slug)) {
+    // Stop and remove the running container before deleting its stack files.
+    const driver = getDriver(installed.deployDriver || 'manual');
+    if (driver?.down) await driver.down(installed.slug).catch(() => {});
     await fsp.rm(path.join(STORE_DEPLOY_DIR, installed.slug), { recursive: true, force: true }).catch(
       () => {},
     );

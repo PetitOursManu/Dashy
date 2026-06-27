@@ -132,12 +132,16 @@ export async function updateApp(
   return manifest;
 }
 
-export async function removeApp(source: StoreCatalogSourceDoc, appId: string): Promise<void> {
+export async function removeApp(
+  source: StoreCatalogSourceDoc,
+  appId: string,
+): Promise<Manifest | null> {
   const file = managedPath(source);
   const apps = await readApps(file);
-  const removed = apps.find((a) => a.id === appId);
+  const removed = apps.find((a) => a.id === appId) ?? null;
   const next = apps.filter((a) => a.id !== appId);
   if (next.length === apps.length) throw new ApiError(404, 'App not found in this catalogue');
   await writeApps(file, next);
   if (removed) await removeUpload(uploadTokenOf(removed));
+  return removed;
 }

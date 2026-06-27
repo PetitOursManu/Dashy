@@ -186,14 +186,23 @@ export function StorePage() {
         </section>
       )}
 
-      {/* Catalogue */}
-      {apps.length === 0 ? (
-        <div className="card px-6 py-16 text-center text-sm text-sand-500 dark:text-sand-400">
-          {t('store.empty')}
+      {/* Available apps from the catalogues */}
+      <section className="border-t border-sand-200 pt-6 dark:border-sand-800">
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold">{t('store.available')}</h2>
+          {apps.length > 0 && (
+            <span className="text-xs text-sand-400">
+              {visible.length} {t('storecfg.apps')}
+            </span>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((a) => (
+        {apps.length === 0 ? (
+          <div className="card px-6 py-16 text-center text-sm text-sand-500 dark:text-sand-400">
+            {t('store.empty')}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((a) => (
             <div key={`${a.source}:${a.id}`} className="card flex flex-col p-4">
               <div className="flex items-start gap-3">
                 <AppIcon icon={a.icon} name={a.name} />
@@ -231,12 +240,13 @@ export function StorePage() {
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        )}
+      </section>
 
       {/* Installed apps */}
       {installed.length > 0 && (
-        <section>
+        <section className="border-t border-sand-200 pt-6 dark:border-sand-800">
           <h2 className="mb-3 text-lg font-semibold">{t('store.installedTitle')}</h2>
           <div className="card divide-y divide-sand-100 dark:divide-sand-800">
             {installed.map((i) => (
