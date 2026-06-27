@@ -260,11 +260,13 @@ folder source may also hold **one `.json` file per app** — Dashy reads every
 - **`deploy`** — shows the `docker-compose` **preview** and any required env
   vars, you pick a **driver**, it deploys the stack, and you give the resulting
   **URL** that the card will point to. When authoring a deploy app in a managed
-  catalogue you can either paste the compose or just give a **GitHub repo URL** —
-  Dashy fetches the compose from it. The repo only needs a **`docker-compose.yml`**
-  (or `compose.yaml` / `docker-compose.yaml` / `compose.yml`) at its **root** on
-  the default branch (`main`/`master`); the loaded compose stays editable before
-  you save.
+  catalogue you can supply the compose three ways: **paste** it, give a **GitHub
+  repo URL** (Dashy fetches the compose — the repo only needs a
+  **`docker-compose.yml`**, or `compose.yaml` / `docker-compose.yaml` /
+  `compose.yml`, at its **root** on the default branch `main`/`master`), or just
+  give a **Docker Hub image** name + port and Dashy **generates** a minimal
+  compose for it. The result stays editable before you save, and the deploy block
+  can declare persistent **`volumes`**.
 
 ### Deploy drivers
 

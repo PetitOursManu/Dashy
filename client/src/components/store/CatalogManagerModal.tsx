@@ -78,9 +78,12 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
   const [staticKind, setStaticKind] = useState<'url' | 'upload'>('url');
   const [uploadName, setUploadName] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [composeSource, setComposeSource] = useState<'paste' | 'repo'>('paste');
+  const [composeSource, setComposeSource] = useState<'paste' | 'repo' | 'image'>('paste');
   const [repoUrl, setRepoUrl] = useState('');
   const [repoLoading, setRepoLoading] = useState(false);
+  const [image, setImage] = useState('');
+  const [containerPort, setContainerPort] = useState('80');
+  const [hostPort, setHostPort] = useState('8080');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,6 +120,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setUploadName('');
     setComposeSource('paste');
     setRepoUrl('');
+    setImage('');
+    setContainerPort('80');
+    setHostPort('8080');
     setError(null);
   };
 
@@ -148,6 +154,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setUploadName(a.static?.upload ? t('manifest.uploaded') : '');
     setComposeSource('paste');
     setRepoUrl('');
+    setImage('');
+    setContainerPort('80');
+    setHostPort('8080');
     setError(null);
   };
 
@@ -222,6 +231,35 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     } finally {
       setRepoLoading(false);
     }
+  };
+
+  /** Generate a minimal docker-compose for a Docker Hub image. */
+  const generateFromImage = () => {
+    const img = image.trim();
+    if (!img) {
+      setError(t('manifest.imageRequired'));
+      return;
+    }
+    const cport = Number(containerPort) || 80;
+    const hport = Number(hostPort) || cport;
+    const compose =
+      'services:\n' +
+      '  app:\n' +
+      `    image: ${img}\n` +
+      '    restart: unless-stopped\n' +
+      '    ports:\n' +
+      `      - "${hport}:${cport}"\n` +
+      '    env_file:\n' +
+      '      - .env\n';
+    setError(null);
+    patch({
+      deploy: {
+        docker_compose: compose,
+        required_env: form?.deploy?.required_env ?? [],
+        volumes: form?.deploy?.volumes ?? [],
+        default_port: hport,
+      },
+    });
   };
 
   const submit = async (e: FormEvent) => {
@@ -539,8 +577,64 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                   >
                     {t('manifest.composeRepo')}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setComposeSource('image')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      composeSource === 'image' ? 'bg-ember-500 text-white' : ''
+                    }`}
+                  >
+                    {t('manifest.composeImage')}
+                  </button>
                 </div>
               </div>
+
+              {composeSource === 'image' && (
+                <div className="space-y-2">
+                  <div>
+                    <label className="label">{t('manifest.imageName')}</label>
+                    <input
+                      className="input"
+                      value={image}
+                      onChange={(e) => setImage(e.target.value)}
+                      placeholder="nginx:latest"
+                    />
+                    <p className="mt-1 text-xs text-sand-400">{t('manifest.imageHint')}</p>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="w-32">
+                      <label className="label">{t('manifest.containerPort')}</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={containerPort}
+                        onChange={(e) => setContainerPort(e.target.value)}
+                      />
+                    </div>
+                    <div className="w-32">
+                      <label className="label">{t('manifest.hostPort')}</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={hostPort}
+                        onChange={(e) => setHostPort(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary shrink-0"
+                      onClick={generateFromImage}
+                      disabled={!image.trim()}
+                    >
+                      {t('manifest.imageGenerate')}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {composeSource === 'repo' && (
                 <div>
@@ -569,7 +663,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
 
               <div>
                 <label className="label">
-                  {composeSource === 'repo' ? t('manifest.composeLoaded') : t('manifest.compose')}
+                  {composeSource === 'paste' ? t('manifest.compose') : t('manifest.composeLoaded')}
                 </label>
                 <textarea
                   className="input h-40 resize-none font-mono text-xs"
