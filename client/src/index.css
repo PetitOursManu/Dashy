@@ -252,3 +252,69 @@ html.theme-image.glass.dark .nav-link-active {
     inset 2px 2px 0 -2px rgba(255, 255, 255, 0.7),
     inset 0 0 3px 1px rgba(255, 255, 255, 0.4);
 }
+
+/* --- Install success animation (~1s): circle draws, check draws, soft pop --- */
+.success-burst {
+  position: relative;
+  display: inline-flex;
+  animation: success-pop 0.45s cubic-bezier(0.22, 1.2, 0.4, 1) both;
+}
+/* A green halo that expands and fades out behind the check. */
+.success-burst::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgb(34 197 94 / 0.25);
+  animation: success-halo 0.9s ease-out 0.25s both;
+}
+.success-check {
+  width: 76px;
+  height: 76px;
+}
+.success-check circle {
+  fill: none;
+  stroke: rgb(34 197 94);
+  stroke-width: 3;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: success-draw 0.5s ease-out 0.05s forwards;
+}
+.success-check path {
+  fill: none;
+  stroke: rgb(34 197 94);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: success-draw 0.35s ease-out 0.5s forwards;
+}
+@keyframes success-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes success-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes success-halo {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}

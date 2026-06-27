@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
-import { CheckCircleIcon } from '../Icons';
 import { VolumesEditor } from './VolumesEditor';
 import { storeApi, type VolumeMount } from '../../api/store';
 import { ApiError } from '../../api/client';
@@ -60,7 +59,10 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     const initial: Record<string, string> = {};
     for (const e of app.deploy?.required_env ?? []) initial[e.key] = e.default ?? '';
     setEnv(initial);
-  }, [open, app, config, drivers]);
+    // Only re-init when the dialog opens or the app changes — NOT when the parent
+    // reloads config/drivers after install (that would wipe the success state).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, app]);
 
   if (!app) return null;
 
@@ -90,10 +92,10 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
           : {}),
       });
       if (res.driverMessage) setMessage(res.driverMessage);
-      onInstalled();
-      // Briefly show a success check, then close the dialog automatically.
+      // Show the success animation, then close the dialog automatically.
       setSuccess(true);
-      window.setTimeout(onClose, 1400);
+      onInstalled();
+      window.setTimeout(onClose, 1700);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('store.installError'));
     } finally {
@@ -105,9 +107,16 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
     return (
       <Modal open={open} title={t('store.installTitle', { name: app.name })} onClose={onClose}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <CheckCircleIcon className="h-14 w-14 animate-pop-in text-green-500" />
-          <p className="text-lg font-semibold">{t('store.installSuccess')}</p>
-          {message && <p className="text-sm text-sand-500 dark:text-sand-400">{message}</p>}
+          <span className="success-burst">
+            <svg className="success-check" viewBox="0 0 52 52" aria-hidden="true">
+              <circle cx="26" cy="26" r="24" />
+              <path d="M14 27l8 8 16-16" />
+            </svg>
+          </span>
+          <p className="animate-fade-in text-lg font-semibold">{t('store.installSuccess')}</p>
+          {message && (
+            <p className="animate-fade-in text-sm text-sand-500 dark:text-sand-400">{message}</p>
+          )}
         </div>
       </Modal>
     );
