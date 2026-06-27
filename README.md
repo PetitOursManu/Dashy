@@ -172,21 +172,21 @@ Open <http://localhost:5173>.
 
 ## Environment variables
 
-| Variable             | Required | Default                                  | Accepted values / example                              | Description                                                                |
-| -------------------- | :------: | ---------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `NODE_ENV`           |    no    | `development`                            | `development` · `production` · `test`                  | `production` enables `Secure` cookies (use behind HTTPS).                  |
-| `PORT`               |    no    | `3000`                                   | any positive integer — e.g. `3000`, `8080`             | Port the server listens on (inside the container).                         |
-| `APP_ORIGIN`         |    no    | `http://localhost:3000`                  | a valid URL — e.g. `https://dashy.example.com`         | Public origin used for CORS and cookie settings.                           |
-| `MONGO_URI`          |  **yes** | —                                        | `mongodb://mongo:27017/dashy`                          | MongoDB connection string (host is the compose service name `mongo`).      |
-| `JWT_SECRET`         |  **yes** | —                                        | ≥16 chars — `openssl rand -base64 48`                  | Secret for signing JWTs. Rotating it logs everyone out.                    |
-| `ENCRYPTION_KEY`     |  **yes** | —                                        | exactly 64 hex chars — `openssl rand -hex 32`          | 32-byte key (AES-256-GCM) encrypting TOTP secrets at rest.                 |
-| `ADMIN_EMAIL`        |   seed   | —                                        | a valid email — e.g. `admin@example.com`               | Seed admin email (created only on first run, empty DB).                    |
-| `ADMIN_PASSWORD`     |   seed   | —                                        | ≥8 chars — e.g. `ChangeMeNow!2026`                     | Seed admin password (created only on first run, empty DB).                 |
-| `ALLOW_REGISTRATION` |    no    | `false`                                  | `true` / `false` (also accepts `1` / `0`)              | Enable the `/api/auth/register` endpoint.                                  |
-| `MAX_UPLOAD_MB`      |    no    | `50`                                     | any positive integer — e.g. `50`, `200`                | Max size (MB) of an imported app archive/file.                            |
-| `DATA_DIR`           |    no    | `/data` (Docker) · `server/data` (local) | an absolute path — e.g. `/data`, `/srv/dashy-data`     | Root directory for all persisted files (apps, avatars, catalogs, …).       |
-| `DOCKER_SOCKET`      |    no    | `/var/run/docker.sock`                   | an absolute socket path                                | Host Docker socket used by the Store's "direct Docker" deploy driver.      |
-| `HOST_PORT`          |    no    | `3000`                                   | any free host port — e.g. `3000`, `8080`               | Host port that docker-compose publishes (maps to the container's `PORT`).  |
+| Variable | Required | Default | Accepted values / example | Description |
+| --- | :---: | --- | --- | --- |
+| `NODE_ENV` | no | `development` | `development` · `production` · `test` | `production` enables `Secure` cookies (use behind HTTPS). |
+| `PORT` | no | `3000` | positive int — e.g. `3000`, `8080` | Port the server listens on (inside the container). |
+| `APP_ORIGIN` | no | `http://localhost:3000` | a valid URL — e.g. `https://dashy.example.com` | Public origin used for CORS and cookie settings. |
+| `MONGO_URI` | **yes** | — | `mongodb://mongo:27017/dashy` | MongoDB connection string (host is the compose service name `mongo`). |
+| `JWT_SECRET` | **yes** | — | ≥16 chars — `openssl rand -base64 48` | Secret for signing JWTs. Rotating it logs everyone out. |
+| `ENCRYPTION_KEY` | **yes** | — | 64 hex chars — `openssl rand -hex 32` | 32-byte key (AES-256-GCM) encrypting TOTP secrets at rest. |
+| `ADMIN_EMAIL` | seed | — | a valid email — e.g. `admin@example.com` | Seed admin email (first run only, empty DB). |
+| `ADMIN_PASSWORD` | seed | — | ≥8 chars — e.g. `ChangeMeNow!2026` | Seed admin password (first run only, empty DB). |
+| `ALLOW_REGISTRATION` | no | `false` | `true` / `false` (also `1` / `0`) | Enable the `/api/auth/register` endpoint. |
+| `MAX_UPLOAD_MB` | no | `50` | positive int — e.g. `50`, `200` | Max size (MB) of an imported app archive/file. |
+| `DATA_DIR` | no | `/data` (Docker) · `server/data` (local) | absolute path — e.g. `/data` | Root dir for all persisted files (apps, avatars, catalogs, …). |
+| `DOCKER_SOCKET` | no | `/var/run/docker.sock` | an absolute socket path | Host Docker socket for the Store's "direct Docker" driver. |
+| `HOST_PORT` | no | `3000` | free host port — e.g. `3000`, `8080` | Host port docker-compose publishes (maps to the container's `PORT`). |
 
 The server **validates its environment on startup and refuses to boot** if a
 required value is missing or malformed (e.g. an `ENCRYPTION_KEY` that isn't 64
