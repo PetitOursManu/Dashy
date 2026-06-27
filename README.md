@@ -25,7 +25,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - 🔗 **Public share links** (admin) — share a hosted app via an unguessable `/share/<token>/` link, with an optional password and expiry, to people without a Dashy account.
 - 📊 **Rich dashboard** (admin) — usage tracking (per-app open counts), an opens-over-time chart, a "most opened" leaderboard, a recent-activity feed, and on-disk storage usage per app.
 - ⭐ **Organize** — tag apps with a category, filter by category, star favorites, and search the grid.
-- 🛍️ **Store** (admin) — a one-click app catalogue. Add decentralised catalogue **sources** (a local JSON file, a remote URL like raw GitHub, or a **Dashy-managed catalogue you edit from the UI** — add/edit/remove apps with no JSON to hand-write); apps are described by a standalone JSON **manifest** validated on ingestion. Three install types: **`tile`** (a card linking to a URL), **`static`** (downloads a zip/file, served at `/store-apps/<id>/` or on a dedicated subdomain) and **`deploy`** (shows the `docker-compose` preview, then deploys via a runtime-detected driver — **Coolify**, **Portainer**, direct **Docker**, or a universal **manual** copy/paste — and generates a tile). Driver tokens are encrypted backend-only and never read from a manifest.
+- 🛍️ **Store** (admin) — a one-click app catalogue. Add catalogue **sources** (a local JSON file, a remote URL like raw GitHub, or a **Dashy-managed catalogue you edit entirely from the UI** — add/edit/remove apps, no JSON to hand-write). Apps are standalone JSON **manifests** validated on ingestion, in three install types: **`tile`** (a card linking to a URL), **`static`** (a `.zip`/`.html` **downloaded from a URL or uploaded straight from your computer**, re-hosted at `/store-apps/<id>/` or on a dedicated subdomain, with in-place content updates that bump the catalogue version) and **`deploy`** (a `docker-compose` stack). Deploy apps can be authored by pasting the compose, giving a **GitHub repo URL**, or just a **Docker Hub image** name + port (Dashy generates the compose); they support **persistent named volumes**, editable env, and **Redeploy / Restart**, via a runtime-detected driver — direct **Docker**, **Coolify**, **Portainer**, or a universal **manual** copy/paste. Uninstalling cleans up after itself (stops/removes the container; for managed-catalogue apps it also frees the name and drops the image). Driver tokens are encrypted backend-only and never read from a manifest.
 - 🤖 **AI assistant ("Dashy" bot)** — an optional in-app chatbot that explains how Dashy works and recommends the right app for a user's needs, with one-click links to open them, step-by-step "how do I…" guidance, and replies in the user's own language. Admins choose the provider (**OpenRouter, OpenAI, Deepseek, or Claude**), the model, and enter their API key (encrypted at rest), and enable the assistant per user (on by default for new users). Through the assistant, users can also **request a project** (a shared file/site or just an idea) — admins review them on a dedicated **Requests** page (and at a glance in the Notifications tile) and can **reply back** to the requester's dashboard; users track their own request history. Admins get **more technical answers** than regular users and can ask the assistant to **create a Store catalogue, source or app** — it proposes the action and nothing happens until the admin clicks **Confirm**.
 - 📝 **Personal notes** — a per-user note tile with **bold / italic / underline**, auto-saved server-side so it survives logout and refresh.
 - ⚙️ **Per-user Settings** — profile (nickname, full name, job title, avatar), interface **language**, **theme**, and date/time preferences. Admins see members' profiles in the Users list.
@@ -59,11 +59,12 @@ Dashy/
 ├── server/                 # Express + TypeScript API
 │   ├── src/
 │   │   ├── config/         # env (zod), db, paths
-│   │   ├── models/         # User, HostedApp (Mongoose)
+│   │   ├── models/         # User, HostedApp, Store*, Chat*, … (Mongoose)
 │   │   ├── middleware/     # auth, upload, rate-limit, validation, errors
-│   │   ├── controllers/    # auth + apps logic
-│   │   ├── routes/         # /api/auth, /api/apps, /api/users, /api/stats, /api/chat, /hosted
-│   │   ├── services/       # admin seed
+│   │   ├── controllers/    # auth, apps, store, chat, … logic
+│   │   ├── routes/         # /api/{auth,apps,users,stats,chat,store,notifications,requests}, /hosted, /store-apps
+│   │   ├── store/          # Store: manifests, catalog, install, managed catalogues, deploy drivers
+│   │   ├── services/       # admin seed, app content, chat prompt/provider, activity
 │   │   ├── utils/          # crypto, slug, safe-zip, jwt
 │   │   └── index.ts        # entry point
 │   └── tests/              # smoke + e2e (mongodb-memory-server)
