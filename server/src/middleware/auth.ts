@@ -14,6 +14,23 @@ declare global {
 }
 
 /**
+ * Extract the access token from the request. The web app sends it as an
+ * httpOnly cookie; native mobile clients (which can't use cookies) send it as an
+ * `Authorization: Bearer <token>` header. The cookie takes priority so existing
+ * browser behaviour is unchanged.
+ */
+function getRequestToken(req: Request): string | undefined {
+  const cookie = req.cookies?.[COOKIE_NAME];
+  if (cookie) return cookie;
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    const token = header.slice(7).trim();
+    if (token) return token;
+  }
+  return undefined;
+}
+
+/**
  * Require a valid (fully authenticated, non-pending) access token cookie, and
  * verify the token's version still matches the user's — so "sign out of all
  * devices" (which bumps tokenVersion) invalidates previously issued tokens.
@@ -24,7 +41,7 @@ export async function requireAuth(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const token = req.cookies?.[COOKIE_NAME];
+    const token = getRequestToken(req);
     if (!token) throw new ApiError(401, 'Authentication required');
 
     const payload = verifyToken<JwtPayload & { pending2fa?: boolean }>(token);

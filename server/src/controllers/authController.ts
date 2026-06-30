@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import argon2 from 'argon2';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
@@ -15,10 +14,10 @@ import { ApiError } from '../middleware/error.js';
 import { encrypt, decrypt, generateBackupCodes } from '../utils/crypto.js';
 import { sanitizeNoteHtml } from '../utils/sanitizeHtml.js';
 import { logActivity } from '../services/activity.js';
+import { verifyCredentials, issueSession, verifyTwoFactorToken } from '../services/auth.js';
 import {
   COOKIE_NAME,
   cookieOptions,
-  signAccessToken,
   signPendingToken,
   verifyToken,
   type PendingPayload,
@@ -70,19 +69,7 @@ export const profileSchema = z
 
 /** Create a session record + set the signed access-token cookie. */
 async function setAuthCookie(req: Request, res: Response, user: UserDoc): Promise<void> {
-  const jti = crypto.randomBytes(16).toString('hex');
-  await Session.create({
-    user: user.id,
-    jti,
-    userAgent: String(req.headers['user-agent'] ?? '').slice(0, 250),
-    ip: req.ip ?? '',
-  });
-  const token = signAccessToken({
-    sub: user.id,
-    role: user.role,
-    tv: user.tokenVersion,
-    jti,
-  });
+  const { token } = await issueSession(req, user);
   res.cookie(COOKIE_NAME, token, cookieOptions(ACCESS_COOKIE_MAX_AGE));
 }
 
@@ -121,18 +108,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body as z.infer<typeof credentialsSchema>;
 
-  const user = await User.findOne({ email });
-  // Constant-ish behaviour: always verify against *some* hash to limit timing
-  // oracle, then return a generic error.
-  const valid = user ? await argon2.verify(user.passwordHash, password) : false;
-  if (!user || !valid) {
-    throw new ApiError(401, 'Invalid email or password');
-  }
-
-  // A temporary account that has run out of time can no longer sign in.
-  if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
-    throw new ApiError(401, 'This temporary account has expired');
-  }
+  const user = await verifyCredentials(email, password);
 
   if (user.twoFactorEnabled) {
     const pending = signPendingToken(user.id);
@@ -170,30 +146,6 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
   await user.save(); // persist a consumed backup code if one was used
   await setAuthCookie(req, res, user);
   res.json({ user: user.toJSON() });
-}
-
-/**
- * Verify a TOTP token or a single-use backup code. Mutates `user` (marking a
- * backup code used) but does NOT save — the caller persists.
- */
-async function verifyTwoFactorToken(user: UserDoc, token: string): Promise<boolean> {
-  if (!user.twoFactorSecret) return false;
-  const secret = decrypt(user.twoFactorSecret);
-
-  // TOTP first (6 digits).
-  if (/^\d{6}$/.test(token.trim())) {
-    if (authenticator.verify({ token: token.trim(), secret })) return true;
-  }
-
-  // Otherwise try backup codes.
-  for (const bc of user.backupCodes) {
-    if (bc.used) continue;
-    if (await argon2.verify(bc.hash, token.trim())) {
-      bc.used = true;
-      return true;
-    }
-  }
-  return false;
 }
 
 export async function me(req: Request, res: Response): Promise<void> {

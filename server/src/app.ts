@@ -21,6 +21,7 @@ import storeRoutes from './routes/store.js';
 import storeStaticRoutes, { storeSubdomain } from './routes/storeStatic.js';
 import hostedRoutes from './routes/hosted.js';
 import shareRoutes from './routes/share.js';
+import mobileRoutes from './routes/mobile.js';
 
 export function createApp(): Express {
   const app = express();
@@ -38,12 +39,16 @@ export function createApp(): Express {
     }),
   );
 
-  app.use(
-    cors({
-      origin: env.APP_ORIGIN,
-      credentials: true,
-    }),
-  );
+  // The dashboard (SPA + cookie auth) is locked to its own origin and sends
+  // credentials. The mobile API authenticates with Bearer tokens (no ambient
+  // cookies, so no CSRF surface), so it may be called from any origin without
+  // credentials — native apps and future web wrappers alike.
+  const strictCors = cors({ origin: env.APP_ORIGIN, credentials: true });
+  const mobileCors = cors({ origin: true, credentials: false });
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api/mobile/')) return mobileCors(req, res, next);
+    return strictCors(req, res, next);
+  });
 
   app.use(cookieParser());
   app.use(express.json({ limit: '1mb' }));
@@ -94,6 +99,9 @@ export function createApp(): Express {
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/requests', requestsRoutes);
   app.use('/api/store', storeRoutes);
+
+  // Versioned API for the Dashy Mobile app (Bearer-token auth).
+  app.use('/api/mobile/v1', mobileRoutes);
 
   // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);
