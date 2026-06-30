@@ -427,6 +427,53 @@ after uninstall, so you can simply re-install them.)
 
 ---
 
+## Mobile API
+
+A dedicated, versioned API under **`/api/mobile/v1`** lets a companion app (e.g.
+*Dashy Mobile*) talk to a remote Dashy instance. It is **Bearer-token** based so
+it works for native clients that can't use the dashboard's `httpOnly` cookie.
+
+### Auth flow
+
+1. `GET /api/mobile/v1/info` — public; validate a server URL and read the API
+   version + enabled features before showing a login screen.
+2. `POST /api/mobile/v1/auth/login` `{ email, password, device? }`
+   - no 2FA → `{ token, user }`
+   - 2FA on → `{ twoFactorRequired: true, pendingToken }`, then
+     `POST /api/mobile/v1/auth/2fa/verify` `{ pendingToken, token }` → `{ token, user }`
+3. Send the access token on every call: `Authorization: Bearer <token>`.
+
+The token is the same revocable, per-device JWT the web app uses, so the session
+appears under the user's active sessions (labelled with `device`) and can be
+revoked from any client. `POST /auth/logout` revokes the current device.
+
+### Endpoints
+
+| Method & path | Who | Purpose |
+| --- | --- | --- |
+| `GET /info` | public | Server name, API version, features |
+| `POST /auth/login` · `/auth/2fa/verify` · `/auth/logout` | — / token | Bearer login + 2FA + logout |
+| `GET /auth/me` · `/auth/sessions` · `DELETE /auth/sessions/:id` | user | Profile + device management |
+| `GET /sync` | user | **One-call snapshot** to hydrate the app |
+| `GET /apps` · `GET /apps/:id` · `POST /apps/:id/favorite` | user | Accessible apps + favorites |
+| `GET /notifications` · `POST /notifications/:id/read` | user | Dashboard notifications |
+| `GET /requests` · `POST /requests` | user | Project requests |
+| `PATCH /profile` · `GET/PUT /note` | user | Preferences + personal note |
+| `GET /store/installed` · `/store/catalog` · `/store/config` | admin | Store catalogues + installs |
+| `GET /stats/overview` | admin | Analytics |
+
+`GET /sync` returns `user`, `apps`, `favorites`, `note`, unread `notifications`
+and the user's `requests`; staff additionally receive an `admin` block (Store
+installs + headline stats). App previews and avatars are served by the existing
+`previewUrl` / avatar endpoints — fetch them with the same Bearer header.
+
+> CORS: `/api/mobile/*` accepts any origin without credentials (Bearer tokens
+> carry no CSRF risk); the cookie-based dashboard stays locked to `APP_ORIGIN`.
+> v1 is read + light actions — uploads, installs, deploys and the AI chat remain
+> web-only.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.
@@ -456,12 +503,13 @@ after uninstall, so you can simply re-install them.)
 
 ## Testing
 
-The backend ships with two suites (no Docker needed — they use an ephemeral
+The backend ships with three suites (no Docker needed — they use an ephemeral
 in-memory MongoDB):
 
 ```bash
-npm --prefix server test        # smoke: crypto, slug, safe-zip
-npm --prefix server run test:e2e # full flow: auth, 2FA, import, hosted serving
+npm --prefix server test           # smoke: crypto, slug, safe-zip
+npm --prefix server run test:e2e    # full flow: auth, 2FA, import, hosted serving
+npm --prefix server run test:mobile # mobile API: Bearer login, 2FA, /sync, favorites
 ```
 
 ---

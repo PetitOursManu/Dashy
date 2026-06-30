@@ -14,7 +14,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/smoke.test.ts",
-    "test:e2e": "node --import tsx --test tests/e2e.test.ts"
+    "test:e2e": "node --import tsx --test tests/e2e.test.ts",
+    "test:mobile": "node --import tsx --test tests/mobile.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
