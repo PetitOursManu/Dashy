@@ -159,7 +159,9 @@ export async function testConfig(_req: Request, res: Response): Promise<void> {
       apiKey: decrypt(cfg.apiKeyEnc),
       system: 'You are a connection test. Reply with the single word: OK.',
       messages: [{ role: 'user', content: 'ping' }],
-      maxTokens: 16,
+      // Generous enough that a reasoning model (gpt-oss, deepseek-r1…) still has
+      // room to emit a final answer after its thinking tokens.
+      maxTokens: 512,
     });
     res.json({ ok: true, reply });
   } catch (err) {

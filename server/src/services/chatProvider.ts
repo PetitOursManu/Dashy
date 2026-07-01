@@ -50,7 +50,8 @@ export const DEFAULT_MODELS: Record<ChatProvider, string> = {
  */
 export async function chatComplete(req: CompletionRequest): Promise<string> {
   const model = req.model || DEFAULT_MODELS[req.provider];
-  const maxTokens = req.maxTokens ?? 1024;
+  // Reasoning models spend part of the budget "thinking", so keep it generous.
+  const maxTokens = req.maxTokens ?? 2048;
 
   if (req.provider === 'claude') {
     return claudeComplete({ ...req, model, maxTokens });
@@ -113,11 +114,28 @@ async function openAiCompatibleComplete(
     throw await providerHttpError(res);
   }
 
-  const data = (await res.json().catch(() => null)) as
-    | { choices?: { message?: { content?: string } }[] }
-    | null;
-  const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new ProviderError('AI provider returned an empty response');
+  const data = (await res.json().catch(() => null)) as {
+    choices?: {
+      finish_reason?: string;
+      message?: { content?: string; reasoning?: string; reasoning_content?: string };
+    }[];
+  } | null;
+
+  const choice = data?.choices?.[0];
+  const message = choice?.message;
+  // Reasoning models (gpt-oss, deepseek-r1, qwen3…) may leave `content` empty and
+  // put text in a reasoning field; fall back to it so we still show something.
+  const text =
+    message?.content?.trim() ||
+    message?.reasoning?.trim() ||
+    message?.reasoning_content?.trim();
+
+  if (!text) {
+    // `finish_reason: "length"` means the token budget was exhausted (common
+    // with reasoning models on a small max_tokens) — surface it so it's fixable.
+    const suffix = choice?.finish_reason ? ` (finish_reason: ${choice.finish_reason})` : '';
+    throw new ProviderError(`AI provider returned an empty response${suffix}`);
+  }
   return text;
 }
 
