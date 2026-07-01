@@ -73,10 +73,13 @@ export function createApp(): Express {
         "default-src 'self'",
         // Allow remote https images so Store catalogue/app icons load.
         "img-src 'self' data: https:",
-        "style-src 'self' 'unsafe-inline'",
-        "script-src 'self'",
+        // Google Fonts stylesheet (index.css @imports Inter from Google).
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        // Self scripts + the inline theme-flash-prevention script in index.html.
+        "script-src 'self' 'sha256-wofaH4sXL5cH2l1Llj1NnOG+xJYK17j7g00HRdH/YBY='",
         "connect-src 'self'",
-        "font-src 'self' data:",
+        // Google Fonts webfont files.
+        "font-src 'self' data: https://fonts.gstatic.com",
         "object-src 'none'",
         "base-uri 'self'",
         "frame-ancestors 'self'",

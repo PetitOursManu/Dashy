@@ -95,8 +95,9 @@ function AssistantSection() {
     setMessage(null);
     setTesting(true);
     try {
-      await chatApi.test();
-      setMessage(t('chatcfg.testOk'));
+      const r = await chatApi.test();
+      if (r.ok) setMessage(t('chatcfg.testOk'));
+      else setError(r.error || t('chatcfg.testFail'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('chatcfg.testFail'));
     } finally {
@@ -154,23 +155,40 @@ function AssistantSection() {
             <label className="label" htmlFor="chat-model">
               {t('chatcfg.model')}
             </label>
-            <input
-              id="chat-model"
-              className="input"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder={defaults[provider] ?? ''}
-              list="chat-model-suggestions"
-            />
+            {models.length > 0 ? (
+              // Once the provider's models are loaded, pick from a dropdown — a
+              // real <select> can't be hijacked by browser autofill.
+              <select
+                id="chat-model"
+                className="input"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+              >
+                <option value="">
+                  {defaults[provider] ? `${defaults[provider]} (default)` : '(default)'}
+                </option>
+                {model && !models.includes(model) && <option value={model}>{model}</option>}
+                {models.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="chat-model"
+                className="input"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={defaults[provider] ?? ''}
+                // Prevent the browser from autofilling this with the account email.
+                autoComplete="off"
+                name="chat-model"
+                list="chat-model-suggestions"
+              />
+            )}
             <datalist id="chat-model-suggestions">
-              {(models.length > 0
-                ? models
-                : defaults[provider]
-                  ? [defaults[provider]]
-                  : []
-              ).map((m) => (
-                <option key={m} value={m} />
-              ))}
+              {defaults[provider] && <option value={defaults[provider]} />}
             </datalist>
             <div className="mt-1 flex items-center gap-2">
               <button

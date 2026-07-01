@@ -163,8 +163,11 @@ export async function testConfig(_req: Request, res: Response): Promise<void> {
     });
     res.json({ ok: true, reply });
   } catch (err) {
-    if (err instanceof ProviderError) throw new ApiError(err.status, err.message);
-    throw new ApiError(502, 'Connection test failed');
+    // Return 200 with the failure detail rather than a 5xx: a reverse proxy
+    // (Coolify/Traefik) may replace a 502 body with its own error page,
+    // hiding the real reason (bad key, unknown model…) from the admin.
+    const message = err instanceof ProviderError ? err.message : 'Connection test failed';
+    res.json({ ok: false, error: message });
   }
 }
 
