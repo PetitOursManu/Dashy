@@ -172,7 +172,7 @@ GET /api/mobile/v1/info
 {
   "apiVersion": 1,
   "server": { "name": "Dashy", "allowRegistration": false },
-  "features": { "twoFactor": true, "store": true, "notifications": true, "requests": true }
+  "features": { "twoFactor": true, "store": true, "notifications": true, "requests": true, "chat": true }
 }
 ```
 
@@ -207,6 +207,7 @@ Réponse `200` :
     { "id": "…", "message": "Bienvenue !", "requestMessage": null, "createdAt": "2026-06-30T…" }
   ],
   "requests": [ /* objets Request, §6 */ ],
+  "chat": { "available": true, "canRequest": true },   // état de l'assistant IA
 
   "admin": {                       // PRÉSENT UNIQUEMENT si role ∈ {admin, subadmin}
     "store": { "installed": [ /* objets InstalledApp, §6 */ ] },
@@ -221,6 +222,10 @@ Notes :
   **user/temp** uniquement celles qui lui sont autorisées.
 - `note` est la note personnelle (HTML assaini) — séparée de l'objet `user`.
 - `notifications` ne contient que les notifications **non lues**.
+- `chat.available` = l'assistant IA est utilisable **maintenant** (fournisseur
+  configuré côté serveur, compte autorisé, pas de time-out). `chat.canRequest` =
+  l'utilisateur peut encore envoyer une requête à un admin (§5). Utilise ces
+  drapeaux pour afficher/masquer l'onglet bot sans appel supplémentaire.
 - Le bloc `admin` est un **résumé**. Pour le détail complet (catalogue, config,
   graphiques de stats), utilise les endpoints dédiés du §5.
 
@@ -281,6 +286,32 @@ Tous requièrent `Authorization: Bearer <token>` sauf `GET /info`.
 Champs acceptés par `PATCH /profile` : `nickname`, `fullName`, `jobTitle`,
 `language` (`en\|fr\|es\|de\|it\|zh\|ru`), `theme` (`light\|dark\|violet\|image`),
 `glass` (bool), `glassDark` (bool), `timezone`, `dateFormat` (`""\|dmy\|mdy\|iso`).
+
+### Assistant IA (« Dashy bot »)
+
+Conversation **non-streaming** : tu envoies tout l'historique, le serveur renvoie
+la réponse complète en une fois.
+
+| Méthode | Chemin | Corps | Réponse |
+| --- | --- | --- | --- |
+| `GET` | `/chat/status` | — | `{ available, canRequest }` |
+| `POST` | `/chat` | `{ messages: [{ role, content }] }` | `{ reply, proposal? }` |
+
+- `messages` : tableau de 1 à 40 entrées, `role` ∈ `"user" | "assistant"`,
+  `content` 1–4000 caractères. Envoie tout l'historique de la conversation à
+  chaque appel (le serveur est sans état côté conversation).
+- `reply` : le texte de réponse de l'assistant (déjà nettoyé des marqueurs
+  internes).
+- `proposal` (optionnel, **admins uniquement**) : une action Store proposée par
+  l'assistant (`add_catalogue` / `add_source` / `add_app`). Son exécution
+  (confirmation) n'est **pas** exposée en v1 mobile — à confirmer depuis le web.
+- Codes d'erreur : `503` si l'assistant n'est pas configuré/activé côté serveur ;
+  `403` si le compte n'y a pas droit ou est en time-out ; `400` si le corps est
+  invalide ; `429` si le débit est dépassé (limite : **20 messages/minute**).
+
+> Vérifie `chat.available` (dans `/sync`) ou `GET /chat/status` avant d'ouvrir
+> l'écran de discussion ; s'il est `false` mais `canRequest` est `true`, propose
+> plutôt d'envoyer une **requête** à un admin (`POST /requests`).
 
 ### Admin — Store & statistiques (lecture seule)
 
@@ -508,6 +539,7 @@ let image = UIImage(data: data)
 - [ ] Hydrater le dashboard avec `GET /sync` ; pull-to-refresh = re-`sync`.
 - [ ] Loader d'images avec en-tête `Authorization`.
 - [ ] Actions : favoris, lire une notification, créer une requête, éditer profil/note.
+- [ ] Assistant : si `chat.available`, écran de discussion via `POST /chat` (envoie tout l'historique).
 - [ ] Écran « appareils connectés » via `/auth/sessions` (révocation possible).
 - [ ] Si admin : onglets Store (installés/catalogue) et statistiques.
 - [ ] Déconnexion via `POST /auth/logout`.
@@ -517,6 +549,8 @@ let image = UIImage(data: data)
 ## 10. Changelog d'API
 
 - **v1** (actuelle) — Auth Bearer + 2FA, `/info`, `/sync`, apps & favoris,
-  notifications, requêtes, profil & note, Store & stats (admin, lecture).
-  Hors périmètre : uploads, install/déploiement Store, gestion des users, chat IA.
+  notifications, requêtes, profil & note, **assistant IA** (`/chat`,
+  `/chat/status`), Store & stats (admin, lecture).
+  Hors périmètre : uploads, install/déploiement Store, gestion des users,
+  confirmation des actions Store proposées par l'assistant.
 ```

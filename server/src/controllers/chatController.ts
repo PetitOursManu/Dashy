@@ -79,7 +79,7 @@ function extractProposal(reply: string): z.infer<typeof actionSchema> | null {
 // --------------------------------- helpers -----------------------------------
 
 /** Whether the assistant is usable for the given user right now. */
-async function chatAvailability(userId: string): Promise<boolean> {
+export async function chatAvailability(userId: string): Promise<boolean> {
   const cfg = await getChatConfig();
   if (!cfg.enabled || !cfg.apiKeyEnc) return false;
   const user = await User.findById(userId).select('chatEnabled chatTimeoutUntil');

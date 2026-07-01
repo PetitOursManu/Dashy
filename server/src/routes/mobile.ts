@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { authLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, chatLimiter } from '../middleware/rateLimit.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import * as mobileAuth from '../controllers/mobileAuthController.js';
@@ -11,6 +11,7 @@ import * as notif from '../controllers/notificationsController.js';
 import * as requests from '../controllers/requestsController.js';
 import * as store from '../controllers/storeController.js';
 import * as stats from '../controllers/statsController.js';
+import * as chat from '../controllers/chatController.js';
 
 /**
  * Versioned API for the Dashy Mobile app. Authentication is Bearer-token based
@@ -62,6 +63,19 @@ router.post(
   requireAuth,
   validateBody(requests.createRequestSchema),
   asyncHandler(requests.createRequest),
+);
+
+// --- Dashy assistant (AI bot) ---
+// `status` tells the app whether to show the bot; `chat` sends the conversation
+// and returns the assistant's full reply (non-streaming). Both reuse the web
+// controller, including per-user access + time-out checks.
+router.get('/chat/status', requireAuth, asyncHandler(chat.status));
+router.post(
+  '/chat',
+  requireAuth,
+  chatLimiter,
+  validateBody(chat.chatSchema),
+  asyncHandler(chat.chat),
 );
 
 // --- Profile + personal note ---

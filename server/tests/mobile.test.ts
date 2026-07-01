@@ -154,6 +154,40 @@ test('/sync returns the admin snapshot with the admin block', async () => {
   assert.equal(typeof json.admin.stats.totalUsers, 'number');
 });
 
+test('/sync exposes the assistant availability block', async () => {
+  const res = await api('GET', '/api/mobile/v1/sync', { token: adminToken });
+  const json = await res.json();
+  assert.ok(json.chat, 'chat block present');
+  // No provider is configured in tests, so the AI is unavailable, but the user
+  // may still contact an admin (canRequest).
+  assert.equal(json.chat.available, false);
+  assert.equal(json.chat.canRequest, true);
+});
+
+test('/chat/status reports unavailable when no provider is configured', async () => {
+  const res = await api('GET', '/api/mobile/v1/chat/status', { token: adminToken });
+  assert.equal(res.status, 200);
+  const json = await res.json();
+  assert.equal(json.available, false);
+  assert.equal(json.canRequest, true);
+});
+
+test('POST /chat returns 503 when the assistant is not configured', async () => {
+  const res = await api('POST', '/api/mobile/v1/chat', {
+    token: adminToken,
+    body: { messages: [{ role: 'user', content: 'Bonjour' }] },
+  });
+  assert.equal(res.status, 503);
+});
+
+test('POST /chat rejects a malformed body', async () => {
+  const res = await api('POST', '/api/mobile/v1/chat', {
+    token: adminToken,
+    body: { messages: [] }, // min 1 message required
+  });
+  assert.equal(res.status, 400);
+});
+
 test('the named device shows up in active sessions', async () => {
   const res = await api('GET', '/api/mobile/v1/auth/sessions', { token: adminToken });
   assert.equal(res.status, 200);

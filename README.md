@@ -458,6 +458,7 @@ revoked from any client. `POST /auth/logout` revokes the current device.
 | `GET /apps` · `GET /apps/:id` · `POST /apps/:id/favorite` | user | Accessible apps + favorites |
 | `GET /notifications` · `POST /notifications/:id/read` | user | Dashboard notifications |
 | `GET /requests` · `POST /requests` | user | Project requests |
+| `GET /chat/status` · `POST /chat` | user | Dashy AI assistant (non-streaming) |
 | `PATCH /profile` · `GET/PUT /note` | user | Preferences + personal note |
 | `GET /store/installed` · `/store/catalog` · `/store/config` | admin | Store catalogues + installs |
 | `GET /stats/overview` | admin | Analytics |
@@ -469,8 +470,8 @@ installs + headline stats). App previews and avatars are served by the existing
 
 > CORS: `/api/mobile/*` accepts any origin without credentials (Bearer tokens
 > carry no CSRF risk); the cookie-based dashboard stays locked to `APP_ORIGIN`.
-> v1 is read + light actions — uploads, installs, deploys and the AI chat remain
-> web-only.
+> v1 is read + light actions (incl. the AI assistant) — uploads, installs and
+> deploys remain web-only.
 
 ---
 

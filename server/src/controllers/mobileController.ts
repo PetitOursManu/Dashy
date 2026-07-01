@@ -7,6 +7,7 @@ import { ProjectRequest } from '../models/ProjectRequest.js';
 import { StoreInstalledApp } from '../models/StoreInstalledApp.js';
 import { ApiError } from '../middleware/error.js';
 import { serializeApp } from './appsController.js';
+import { chatAvailability } from './chatController.js';
 
 /** Bumped when the mobile contract changes in a breaking way. */
 export const MOBILE_API_VERSION = 1;
@@ -25,7 +26,7 @@ export async function info(_req: Request, res: Response): Promise<void> {
   res.json({
     apiVersion: MOBILE_API_VERSION,
     server: serverMeta(),
-    features: { twoFactor: true, store: true, notifications: true, requests: true },
+    features: { twoFactor: true, store: true, notifications: true, requests: true, chat: true },
   });
 }
 
@@ -48,9 +49,10 @@ export async function sync(req: Request, res: Response): Promise<void> {
     ? await HostedApp.find().sort({ createdAt: -1 })
     : await HostedApp.find({ _id: { $in: me.allowedApps } }).sort({ createdAt: -1 });
 
-  const [notifications, requests] = await Promise.all([
+  const [notifications, requests, chatAvailable] = await Promise.all([
     Notification.find({ user: me._id, readAt: null }).sort({ createdAt: 1 }),
     ProjectRequest.find({ user: me._id }).sort({ createdAt: -1 }).limit(50),
+    chatAvailability(me.id),
   ]);
 
   const payload: Record<string, unknown> = {
@@ -68,6 +70,9 @@ export async function sync(req: Request, res: Response): Promise<void> {
       createdAt: n.createdAt,
     })),
     requests: requests.map((r) => r.toJSON()),
+    // Whether the AI assistant is usable right now (provider configured + user
+    // allowed + not timed out) and whether the user may still contact an admin.
+    chat: { available: chatAvailable, canRequest: me.chatEnabled !== false },
   };
 
   if (isStaff) {
