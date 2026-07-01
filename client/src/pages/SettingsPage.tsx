@@ -18,6 +18,7 @@ const PROVIDER_LABELS: Record<ChatProvider, string> = {
   openai: 'OpenAI',
   deepseek: 'Deepseek',
   claude: 'Claude (Anthropic)',
+  ollama: 'Ollama Cloud',
 };
 
 function AssistantSection() {

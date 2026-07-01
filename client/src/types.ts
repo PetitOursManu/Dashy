@@ -82,7 +82,7 @@ export interface StorageStats {
   apps: { id: string; name: string; size: number }[];
 }
 
-export type ChatProvider = 'openrouter' | 'openai' | 'deepseek' | 'claude';
+export type ChatProvider = 'openrouter' | 'openai' | 'deepseek' | 'claude' | 'ollama';
 
 export interface ChatConfig {
   enabled: boolean;

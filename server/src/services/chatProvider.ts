@@ -29,6 +29,8 @@ const OPENAI_COMPATIBLE: Record<Exclude<ChatProvider, 'claude'>, string> = {
   openai: 'https://api.openai.com/v1',
   openrouter: 'https://openrouter.ai/api/v1',
   deepseek: 'https://api.deepseek.com/v1',
+  // Ollama Cloud exposes an OpenAI-compatible endpoint (Bearer API key).
+  ollama: 'https://ollama.com/v1',
 };
 
 /** Sensible default model per provider when the admin hasn't picked one. */
@@ -37,6 +39,8 @@ export const DEFAULT_MODELS: Record<ChatProvider, string> = {
   openai: 'gpt-4o-mini',
   deepseek: 'deepseek-chat',
   claude: 'claude-opus-4-8',
+  // A widely-available Ollama Cloud model; the admin can override it.
+  ollama: 'gpt-oss:120b',
 };
 
 /**
@@ -106,7 +110,26 @@ async function openAiCompatibleComplete(
   }
 
   if (!res.ok) {
-    throw new ProviderError(`AI provider request failed (${res.status})`);
+    // Surface the upstream reason (bad key, no credits, unknown model…) instead
+    // of a bare 502, so the admin's "Test" button is actually diagnostic. We
+    // keep our own HTTP status at 502 (Bad Gateway) so a provider 401 can't be
+    // mistaken by the client for an expired Dashy session.
+    const body = await res.text().catch(() => '');
+    let detail = body.slice(0, 300);
+    try {
+      const parsed = JSON.parse(body) as {
+        error?: { message?: string } | string;
+        message?: string;
+      };
+      const fromError =
+        typeof parsed.error === 'string' ? parsed.error : parsed.error?.message;
+      detail = (fromError ?? parsed.message ?? detail).toString().slice(0, 300);
+    } catch {
+      /* not JSON — keep the raw snippet */
+    }
+    throw new ProviderError(
+      `AI provider request failed (${res.status})${detail ? `: ${detail}` : ''}`,
+    );
   }
 
   const data = (await res.json().catch(() => null)) as

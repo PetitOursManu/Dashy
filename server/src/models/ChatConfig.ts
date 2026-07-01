@@ -1,8 +1,14 @@
 import mongoose, { Schema, type HydratedDocument } from 'mongoose';
 
-export type ChatProvider = 'openrouter' | 'openai' | 'deepseek' | 'claude';
+export type ChatProvider = 'openrouter' | 'openai' | 'deepseek' | 'claude' | 'ollama';
 
-export const CHAT_PROVIDERS: ChatProvider[] = ['openrouter', 'openai', 'deepseek', 'claude'];
+export const CHAT_PROVIDERS: ChatProvider[] = [
+  'openrouter',
+  'openai',
+  'deepseek',
+  'claude',
+  'ollama',
+];
 
 /**
  * Singleton configuration for the Dashy AI assistant. Exactly one document

@@ -43,7 +43,7 @@ No SaaS, no paid services — everything runs on a single machine.
 
 ### 🤖 AI assistant ("Dashy" bot)
 
-- **In-app chatbot** — explains how Dashy works, recommends the right app (with one-click links), gives step-by-step guidance, and replies in the user's language. Admins pick the provider (**OpenRouter, OpenAI, Deepseek, or an Anthropic model**), model and API key (encrypted at rest), and enable it per user.
+- **In-app chatbot** — explains how Dashy works, recommends the right app (with one-click links), gives step-by-step guidance, and replies in the user's language. Admins pick the provider (**OpenRouter, OpenAI, Deepseek, Ollama Cloud, or an Anthropic model**), model and API key (encrypted at rest), and enable it per user.
 - **Project requests** — through the bot, users can request a shared file/site or an idea; admins review them on a **Requests** page and can **reply back** to the requester's dashboard.
 - **Admin power-ups** — admins get more technical answers and can ask the assistant to **create a Store catalogue, source or app** — it proposes the action and nothing happens until the admin clicks **Confirm**.
 
