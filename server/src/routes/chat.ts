@@ -18,6 +18,7 @@ router.post('/action', requireAdmin, validateBody(chat.actionSchema), asyncHandl
 
 // --- Admin configuration ---
 router.get('/config', requireAdmin, asyncHandler(chat.getConfig));
+router.get('/config/models', requireAdmin, asyncHandler(chat.listModels));
 router.put(
   '/config',
   requireAdmin,

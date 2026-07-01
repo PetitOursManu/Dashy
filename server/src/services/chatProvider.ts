@@ -110,26 +110,7 @@ async function openAiCompatibleComplete(
   }
 
   if (!res.ok) {
-    // Surface the upstream reason (bad key, no credits, unknown model…) instead
-    // of a bare 502, so the admin's "Test" button is actually diagnostic. We
-    // keep our own HTTP status at 502 (Bad Gateway) so a provider 401 can't be
-    // mistaken by the client for an expired Dashy session.
-    const body = await res.text().catch(() => '');
-    let detail = body.slice(0, 300);
-    try {
-      const parsed = JSON.parse(body) as {
-        error?: { message?: string } | string;
-        message?: string;
-      };
-      const fromError =
-        typeof parsed.error === 'string' ? parsed.error : parsed.error?.message;
-      detail = (fromError ?? parsed.message ?? detail).toString().slice(0, 300);
-    } catch {
-      /* not JSON — keep the raw snippet */
-    }
-    throw new ProviderError(
-      `AI provider request failed (${res.status})${detail ? `: ${detail}` : ''}`,
-    );
+    throw await providerHttpError(res);
   }
 
   const data = (await res.json().catch(() => null)) as
@@ -138,4 +119,67 @@ async function openAiCompatibleComplete(
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new ProviderError('AI provider returned an empty response');
   return text;
+}
+
+/**
+ * Build a diagnostic ProviderError from a failed upstream response: surface the
+ * provider's real status + error text (bad key, no credits, unknown model…)
+ * instead of a bare 502. Our own HTTP status stays 502 (Bad Gateway) so a
+ * provider 401 can't be mistaken by the client for an expired Dashy session.
+ */
+async function providerHttpError(res: Response): Promise<ProviderError> {
+  const body = await res.text().catch(() => '');
+  let detail = body.slice(0, 300);
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string } | string;
+      message?: string;
+    };
+    const fromError = typeof parsed.error === 'string' ? parsed.error : parsed.error?.message;
+    detail = (fromError ?? parsed.message ?? detail).toString().slice(0, 300);
+  } catch {
+    /* not JSON — keep the raw snippet */
+  }
+  return new ProviderError(
+    `AI provider request failed (${res.status})${detail ? `: ${detail}` : ''}`,
+  );
+}
+
+/**
+ * List the model ids exposed by the configured provider, so the admin can pick
+ * a valid one instead of guessing. OpenAI-compatible providers use `GET /models`;
+ * Claude uses the Anthropic SDK's model listing.
+ */
+export async function listModels(provider: ChatProvider, apiKey: string): Promise<string[]> {
+  if (provider === 'claude') {
+    const client = new Anthropic({ apiKey });
+    try {
+      const page = await client.models.list({ limit: 1000 });
+      return page.data.map((m) => m.id);
+    } catch (err) {
+      if (err instanceof Anthropic.APIError) {
+        throw new ProviderError(`Claude model list failed (${err.status ?? '?'})`);
+      }
+      throw new ProviderError('Claude model list failed');
+    }
+  }
+
+  const baseUrl = OPENAI_COMPATIBLE[provider as Exclude<ChatProvider, 'claude'>];
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+  } catch {
+    throw new ProviderError('Could not reach the AI provider');
+  }
+  if (!res.ok) {
+    throw await providerHttpError(res);
+  }
+
+  const data = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;
+  const ids = (data?.data ?? [])
+    .map((m) => m.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  return [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 }

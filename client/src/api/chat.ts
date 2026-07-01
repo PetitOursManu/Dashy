@@ -28,6 +28,9 @@ export const chatApi = {
   updateConfig: (payload: UpdateChatConfigPayload) =>
     http.put<{ config: ChatConfig }>('/api/chat/config', payload),
 
+  listModels: () =>
+    http.get<{ models: string[]; provider: ChatProvider }>('/api/chat/config/models'),
+
   test: () => http.post<{ ok: true; reply: string }>('/api/chat/config/test'),
 
   alerts: () => http.get<{ alerts: ChatAlert[] }>('/api/chat/alerts'),

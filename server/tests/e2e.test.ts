@@ -597,6 +597,12 @@ test('chat config is admin-only and never returns the key', async () => {
   assert.equal(config.apiKey, undefined);
   assert.equal(config.apiKeyEnc, undefined);
   assert.ok(providers.includes('claude'));
+  assert.ok(providers.includes('ollama'));
+});
+
+test('listing models requires a saved API key', async () => {
+  const res = await api('GET', '/api/chat/config/models');
+  assert.equal(res.status, 400);
 });
 
 test('assistant cannot be enabled without an API key', async () => {

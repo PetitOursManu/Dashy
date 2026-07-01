@@ -34,6 +34,8 @@ function AssistantSection() {
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   useEffect(() => {
     chatApi
@@ -102,6 +104,21 @@ function AssistantSection() {
     }
   };
 
+  const loadModels = async () => {
+    setError(null);
+    setMessage(null);
+    setLoadingModels(true);
+    try {
+      const { models: list } = await chatApi.listModels();
+      setModels(list);
+      setMessage(t('chatcfg.modelsLoaded', { n: list.length }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('chatcfg.modelsError'));
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
   return (
     <section className="card p-6">
       <h2 className="flex items-center gap-2 font-semibold">
@@ -120,7 +137,11 @@ function AssistantSection() {
               id="chat-provider"
               className="input"
               value={provider}
-              onChange={(e) => setProvider(e.target.value as ChatProvider)}
+              onChange={(e) => {
+                setProvider(e.target.value as ChatProvider);
+                // Loaded models belong to the previous provider — drop them.
+                setModels([]);
+              }}
             >
               {providers.map((p) => (
                 <option key={p} value={p}>
@@ -142,8 +163,34 @@ function AssistantSection() {
               list="chat-model-suggestions"
             />
             <datalist id="chat-model-suggestions">
-              {defaults[provider] && <option value={defaults[provider]} />}
+              {(models.length > 0
+                ? models
+                : defaults[provider]
+                  ? [defaults[provider]]
+                  : []
+              ).map((m) => (
+                <option key={m} value={m} />
+              ))}
             </datalist>
+            <div className="mt-1 flex items-center gap-2">
+              <button
+                type="button"
+                className="btn-ghost px-2 py-1 text-xs"
+                onClick={loadModels}
+                disabled={loadingModels || !config?.hasApiKey || provider !== config?.provider}
+                title={
+                  provider !== config?.provider ? t('chatcfg.loadModelsHint') : undefined
+                }
+              >
+                {loadingModels && <Spinner className="h-3 w-3" />}
+                {t('chatcfg.loadModels')}
+              </button>
+              {models.length > 0 && (
+                <span className="text-xs text-sand-400">
+                  {t('chatcfg.modelsLoaded', { n: models.length })}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

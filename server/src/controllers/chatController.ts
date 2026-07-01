@@ -13,6 +13,7 @@ import {
 import { buildSystemPrompt, OFFTOPIC_REMINDER } from '../services/chatPrompt.js';
 import {
   chatComplete,
+  listModels as listProviderModels,
   ProviderError,
   DEFAULT_MODELS,
   type ChatMessage,
@@ -131,6 +132,19 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
 
   await cfg.save();
   res.json({ config: cfg.toJSON() });
+}
+
+/** Admin: list the models available for the saved provider + key. */
+export async function listModels(_req: Request, res: Response): Promise<void> {
+  const cfg = await getChatConfig();
+  if (!cfg.apiKeyEnc) throw new ApiError(400, 'Save an API key first');
+  try {
+    const models = await listProviderModels(cfg.provider, decrypt(cfg.apiKeyEnc));
+    res.json({ models, provider: cfg.provider });
+  } catch (err) {
+    if (err instanceof ProviderError) throw new ApiError(err.status, err.message);
+    throw new ApiError(502, 'Could not load models');
+  }
 }
 
 /** Admin: probe the saved provider/model/key with a tiny request. */
