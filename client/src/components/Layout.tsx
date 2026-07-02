@@ -9,7 +9,6 @@ import {
   CloseIcon,
   GridIcon,
   InboxIcon,
-  Logo,
   MenuIcon,
   SettingsIcon,
   ShieldIcon,
@@ -55,9 +54,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   return (
     <div className="flex h-full flex-col">
-      <NavLink to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-3 py-2">
-        <Logo className="h-9 w-9" />
-        <span className="text-xl font-bold tracking-tight">Dashy</span>
+      <NavLink to="/" onClick={onNavigate} className="flex items-center px-3 py-2">
+        {/* Full logo + wordmark; inverted to white in dark theme for legibility. */}
+        <img
+          src="/dashy-wordmark.png"
+          alt="Dashy"
+          className="h-9 w-auto dark:brightness-0 dark:invert"
+        />
       </NavLink>
 
       <nav className="mt-4 flex-1 space-y-0.5 overflow-y-auto">
