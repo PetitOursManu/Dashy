@@ -246,16 +246,7 @@ export const CheckCircleIcon = (p: SVGProps<SVGSVGElement>) => (
 );
 
 /** Brand mark: warm hexagon with a centered dot, matching the favicon. */
+// The brand mark, served from /favicon.svg so it always matches the favicon.
 export const Logo = ({ className = 'h-9 w-9' }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="logo-grad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#f6824a" />
-        <stop offset="100%" stopColor="#db5421" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2.5l11 6.35v12.7L16 29.5 5 22.55V8.85z" fill="url(#logo-grad)" />
-    <circle cx="16" cy="16" r="4.2" fill="#fff" />
-    <circle cx="16" cy="16" r="1.7" fill="#db5421" />
-  </svg>
+  <img src="/favicon.svg" alt="Dashy" className={className} />
 );
