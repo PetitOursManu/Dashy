@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { ApiError } from '../api/client';
 import { Spinner } from '../components/Spinner';
-import { Logo, ShieldIcon } from '../components/Icons';
+import { ShieldIcon } from '../components/Icons';
 
 export function LoginPage() {
   const { login, verifyTwoFactor } = useAuth();
@@ -54,9 +54,13 @@ export function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <Logo className="h-14 w-14 drop-shadow-[0_8px_16px_rgba(219,84,33,0.35)]" />
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">Dashy</h1>
-          <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('login.subtitle')}</p>
+          {/* Full logo + wordmark; inverted to white in dark theme for legibility. */}
+          <img
+            src="/dashy-wordmark.png"
+            alt="Dashy"
+            className="h-12 w-auto dark:brightness-0 dark:invert"
+          />
+          <p className="mt-3 text-sm text-sand-500 dark:text-sand-400">{t('login.subtitle')}</p>
         </div>
 
         <div className="card p-6 sm:p-7">
