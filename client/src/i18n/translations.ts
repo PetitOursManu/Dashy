@@ -2099,8 +2099,8 @@ const notifStrings: Record<Lang, Record<string, string>> = {
     'usernotif.yourRequest': 'Votre demande :',
     'notif.title': 'Notifications',
     'notif.empty': 'Aucune notification envoyée pour l’instant.',
-    'notif.readAt': 'lue {time}',
-    'notif.pending': 'Pas encore lue',
+    'notif.readAt': 'Vu {time}',
+    'notif.pending': 'Pas encore vu',
     'notif.dismiss': 'Masquer',
   },
   es: {
