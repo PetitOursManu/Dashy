@@ -164,6 +164,20 @@ test('/sync exposes the assistant availability block', async () => {
   assert.equal(json.chat.canRequest, true);
 });
 
+test('avatar: sync exposes avatarUrl (null when none) and /avatar 404s', async () => {
+  const sync = await (await api('GET', '/api/mobile/v1/sync', { token: adminToken })).json();
+  // The seeded admin has no avatar.
+  assert.equal(sync.user.avatarUrl, null);
+  assert.equal(sync.user.hasAvatar, false);
+
+  const res = await api('GET', '/api/mobile/v1/avatar', { token: adminToken });
+  assert.equal(res.status, 404);
+
+  // Unauthenticated access is rejected.
+  const anon = await api('GET', '/api/mobile/v1/avatar');
+  assert.equal(anon.status, 401);
+});
+
 test('/chat/status reports unavailable when no provider is configured', async () => {
   const res = await api('GET', '/api/mobile/v1/chat/status', { token: adminToken });
   assert.equal(res.status, 200);

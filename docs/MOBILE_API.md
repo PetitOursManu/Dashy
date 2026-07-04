@@ -199,7 +199,7 @@ Réponse `200` :
   "apiVersion": 1,
   "serverTime": "2026-06-30T18:30:00.000Z",
   "server": { "name": "Dashy", "allowRegistration": false },
-  "user": { /* objet User, §6 */ },
+  "user": { /* objet User, §6 (inclut avatarUrl) */ },
   "note": "<p>Ma note perso en HTML…</p>",
   "apps": [ /* objets App, §6 */ ],
   "favorites": ["665f1a...", "665f1b..."],
@@ -246,6 +246,8 @@ Tous requièrent `Authorization: Bearer <token>` sauf `GET /info`.
 | `GET` | `/auth/me` | — | `{ user }` |
 | `GET` | `/auth/sessions` | — | `{ sessions: [{ id, userAgent, ip, createdAt, lastSeenAt, current }] }` |
 | `DELETE` | `/auth/sessions/:id` | — | `{ ok: true, current }` |
+| `GET` | `/avatar` | — | L'image d'avatar de l'utilisateur **connecté** (binaire) ; `404` si aucune |
+| `GET` | `/avatar/:id` | — | L'avatar d'un **membre** par id (pour les listes d'équipe) ; `404` si aucune |
 
 ### Snapshot
 
@@ -345,7 +347,8 @@ la réponse complète en une fois.
   "dateFormat": "dmy",
   "chatEnabled": true,
   "twoFactorEnabled": false,
-  "hasAvatar": true,            // l'avatar est servi séparément (cf. §7)
+  "hasAvatar": true,            // l'utilisateur a un avatar
+  "avatarUrl": "/api/mobile/v1/avatar/665f…", // URL prête à l'emploi, ou null (présent dans /sync)
   "hasBackground": false,
   "allowedApps": ["…"],         // ids d'apps accessibles (vide/ignoré pour un admin)
   "favorites": ["…"],
@@ -459,8 +462,9 @@ protégés. Comme `requireAuth` accepte le Bearer, ajoute simplement l'en-tête
 
 | Ressource | Endpoint | Notes |
 | --- | --- | --- |
+| Avatar (utilisateur connecté) | `GET <base>/api/mobile/v1/avatar` | Champ `user.avatarUrl` du `/sync`. `404` si aucun. |
+| Avatar d'un membre | `GET <base>/api/mobile/v1/avatar/:id` | Pour les listes d'équipe. `404` si aucun. |
 | Aperçu d'une app | `GET <base>/api/apps/:id/preview` | Renvoie l'image (ou un SVG placeholder généré). Champ `previewUrl`. |
-| Avatar d'un membre | `GET <base>/api/auth/avatar/:userId` | `404` si pas d'avatar (`hasAvatar=false`). |
 | Fond d'écran perso | `GET <base>/api/auth/background` | Celui de l'utilisateur courant. `404` si aucun. |
 
 Pour les afficher dans une app native, utilise un loader d'image qui supporte les
@@ -549,8 +553,9 @@ let image = UIImage(data: data)
 ## 10. Changelog d'API
 
 - **v1** (actuelle) — Auth Bearer + 2FA, `/info`, `/sync`, apps & favoris,
-  notifications, requêtes, profil & note, **assistant IA** (`/chat`,
-  `/chat/status`), Store & stats (admin, lecture).
+  notifications, requêtes, profil & note, **avatars** (`/avatar[/ :id]` +
+  `avatarUrl`), **assistant IA** (`/chat`, `/chat/status`), Store & stats
+  (admin, lecture).
   Hors périmètre : uploads, install/déploiement Store, gestion des users,
   confirmation des actions Store proposées par l'assistant.
 ```

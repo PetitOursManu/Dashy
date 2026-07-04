@@ -454,6 +454,7 @@ revoked from any client. `POST /auth/logout` revokes the current device.
 | `GET /info` | public | Server name, API version, features |
 | `POST /auth/login` · `/auth/2fa/verify` · `/auth/logout` | — / token | Bearer login + 2FA + logout |
 | `GET /auth/me` · `/auth/sessions` · `DELETE /auth/sessions/:id` | user | Profile + device management |
+| `GET /avatar` · `GET /avatar/:id` | user | Current user's / a member's avatar image |
 | `GET /sync` | user | **One-call snapshot** to hydrate the app |
 | `GET /apps` · `GET /apps/:id` · `POST /apps/:id/favorite` | user | Accessible apps + favorites |
 | `GET /notifications` · `POST /notifications/:id/read` | user | Dashboard notifications |
@@ -463,10 +464,11 @@ revoked from any client. `POST /auth/logout` revokes the current device.
 | `GET /store/installed` · `/store/catalog` · `/store/config` | admin | Store catalogues + installs |
 | `GET /stats/overview` | admin | Analytics |
 
-`GET /sync` returns `user`, `apps`, `favorites`, `note`, unread `notifications`
-and the user's `requests`; staff additionally receive an `admin` block (Store
-installs + headline stats). App previews and avatars are served by the existing
-`previewUrl` / avatar endpoints — fetch them with the same Bearer header.
+`GET /sync` returns `user` (with a ready-to-use `avatarUrl`), `apps`, `favorites`,
+`note`, unread `notifications` and the user's `requests`; staff additionally
+receive an `admin` block (Store installs + headline stats). Avatars are served
+under the mobile namespace (`GET /avatar[/ :id]`) and app previews by each app's
+`previewUrl` — fetch both with the same Bearer header.
 
 > CORS: `/api/mobile/*` accepts any origin without credentials (Bearer tokens
 > carry no CSRF risk); the cookie-based dashboard stays locked to `APP_ORIGIN`.

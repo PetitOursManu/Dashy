@@ -1,5 +1,8 @@
 import type { Request, Response } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import { env } from '../config/env.js';
+import { AVATARS_DIR } from '../config/paths.js';
 import { HostedApp } from '../models/HostedApp.js';
 import { User } from '../models/User.js';
 import { Notification } from '../models/Notification.js';
@@ -8,6 +11,11 @@ import { StoreInstalledApp } from '../models/StoreInstalledApp.js';
 import { ApiError } from '../middleware/error.js';
 import { serializeApp } from './appsController.js';
 import { chatAvailability } from './chatController.js';
+
+/** Path (relative to the base URL) of a user's avatar, or null if none. */
+function avatarUrlFor(userId: string, hasAvatar: boolean): string | null {
+  return hasAvatar ? `/api/mobile/v1/avatar/${userId}` : null;
+}
 
 /** Bumped when the mobile contract changes in a breaking way. */
 export const MOBILE_API_VERSION = 1;
@@ -28,6 +36,21 @@ export async function info(_req: Request, res: Response): Promise<void> {
     server: serverMeta(),
     features: { twoFactor: true, store: true, notifications: true, requests: true, chat: true },
   });
+}
+
+/**
+ * Serve a user's avatar image. With no `:id` it serves the authenticated user's
+ * own avatar; with an `:id` it serves that member's (auth required either way).
+ * Kept inside the mobile namespace so it shares the Bearer-friendly CORS.
+ */
+export async function avatar(req: Request, res: Response): Promise<void> {
+  const id = req.params.id || req.user!.sub;
+  const user = await User.findById(id).select('avatar');
+  if (!user || !user.avatar) throw new ApiError(404, 'No avatar');
+  const file = path.join(AVATARS_DIR, path.basename(user.avatar));
+  if (!fs.existsSync(file)) throw new ApiError(404, 'No avatar');
+  res.set('Cache-Control', 'private, max-age=60');
+  res.sendFile(file);
 }
 
 /**
@@ -59,7 +82,7 @@ export async function sync(req: Request, res: Response): Promise<void> {
     apiVersion: MOBILE_API_VERSION,
     serverTime: new Date().toISOString(),
     server: serverMeta(),
-    user: me.toJSON(),
+    user: { ...me.toJSON(), avatarUrl: avatarUrlFor(me.id, Boolean(me.avatar)) },
     note: me.note ?? '',
     apps: apps.map((a) => serializeApp(a, favorites)),
     favorites: [...favorites],

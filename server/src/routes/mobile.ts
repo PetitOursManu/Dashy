@@ -44,6 +44,11 @@ router.get('/auth/me', requireAuth, asyncHandler(auth.me));
 router.get('/auth/sessions', requireAuth, asyncHandler(auth.listSessions));
 router.delete('/auth/sessions/:id', requireAuth, asyncHandler(auth.revokeSession));
 
+// Avatars: own (/avatar) or any member (/avatar/:id). Bearer-authenticated,
+// served under the mobile namespace so the permissive CORS applies.
+router.get('/avatar', requireAuth, asyncHandler(mobile.avatar));
+router.get('/avatar/:id', requireAuth, asyncHandler(mobile.avatar));
+
 // --- Aggregated snapshot ---
 router.get('/sync', requireAuth, asyncHandler(mobile.sync));
 
