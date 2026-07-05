@@ -45,8 +45,8 @@ test('parseDeployAdvice extracts JSON from a wrapped reply', async () => {
   const { parseDeployAdvice } = await import('../src/services/deployAdvisor.js');
   const raw =
     'Sure, here you go:\n```json\n' +
-    '{"needsPersistence":true,"volumes":[{"name":"db-data","mountPath":"/var/lib/postgresql/data","reason":"database"}],' +
-    '"env":[{"key":"DB_PASSWORD","secret":true}],"compose":"services:\\n  db: {}"}\n' +
+    '{"needsPersistence":true,"volumes":[{"name":"db-data","mountPath":"/var/lib/postgresql/data","reason":"database"},],' +
+    '"env":[{"key":"DB_PASSWORD","secret":true}]}\n' +
     '```\nHope it helps.';
   const advice = parseDeployAdvice(raw);
   assert.equal(advice.needsPersistence, true);

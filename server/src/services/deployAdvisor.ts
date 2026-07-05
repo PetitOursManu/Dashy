@@ -37,8 +37,6 @@ const deployAdviceSchema = z.object({
     )
     .max(50)
     .default([]),
-  // The updated compose; may be omitted by the model (we fall back to input).
-  compose: z.string().max(100_000).optional().default(''),
   notes: z.string().max(2000).optional().default(''),
 });
 
@@ -56,9 +54,11 @@ export function parseDeployAdvice(raw: string): DeployAdvice {
   if (start === -1 || end === -1 || end <= start) {
     throw new Error('The assistant did not return JSON');
   }
+  // Tolerate a common LLM slip: trailing commas before } or ].
+  const candidate = cleaned.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1');
   let parsed: unknown;
   try {
-    parsed = JSON.parse(cleaned.slice(start, end + 1));
+    parsed = JSON.parse(candidate);
   } catch {
     throw new Error('The assistant returned malformed JSON');
   }
@@ -67,27 +67,24 @@ export function parseDeployAdvice(raw: string): DeployAdvice {
 
 const SYSTEM_PROMPT = `You are a DevOps assistant embedded in "Dashy", a self-hosted app dashboard.
 You are given a docker-compose file for a single app, optionally its Docker image
-name, source repository URL and README. Your job:
+name, source repository URL and README. Do NOT rewrite the compose — Dashy applies
+your suggestions itself. Your job:
 
 1. Decide whether the app has data that should PERSIST across redeploys (databases,
    uploads, config, state). Set "needsPersistence" accordingly.
-2. Propose named Docker volumes for each such path: a short lowercase "name", the
-   container "mountPath", and a one-line "reason". Do NOT propose volumes for
-   caches, tmp, or paths that are safe to lose.
-3. Identify environment variables the operator must set. Return them under "env"
-   as fields ({key,label,default,secret,required}). Mark passwords/keys/tokens as
+2. Propose named Docker volumes for each such path: a short lowercase "name"
+   (matching ^[a-zA-Z0-9._-]+$), the container "mountPath", and a one-line "reason".
+   Do NOT propose volumes for caches, tmp, or paths that are safe to lose.
+3. Identify environment variables the operator must set, under "env" as fields
+   ({key,label,default,secret,required}). Mark passwords/keys/tokens/secrets as
    "secret": true. Prefer real, documented variables — do not invent unlikely ones.
-4. Return an UPDATED compose string that: keeps the image, ports and service name
-   intact; adds a top-level "volumes:" block plus the service "volumes:" mounts you
-   proposed; and references the env vars via "env_file: - .env" (do NOT hardcode
-   secret values in the compose).
+4. Use "notes" for anything important (e.g. if the compose should reference the env
+   via "env_file: - .env").
 
-Respond with STRICT JSON only (no prose, no markdown fences), matching:
-{"needsPersistence":bool,"volumes":[{"name":str,"mountPath":str,"reason":str}],
-"env":[{"key":str,"label":str,"default":str,"secret":bool,"required":bool}],
-"compose":str,"notes":str}
-Volume "name" must match ^[a-zA-Z0-9._-]+$. If nothing should persist, return an
-empty "volumes" array and the compose unchanged.`;
+Respond with STRICT, COMPACT JSON only — no prose, no markdown fences, no trailing
+commas — matching exactly this shape:
+{"needsPersistence":bool,"volumes":[{"name":str,"mountPath":str,"reason":str}],"env":[{"key":str,"label":str,"default":str,"secret":bool,"required":bool}],"notes":str}
+If nothing should persist, return an empty "volumes" array.`;
 
 export interface AnalyzeInput {
   compose: string;
@@ -114,11 +111,8 @@ export async function analyzeDeploy(input: AnalyzeInput): Promise<DeployAdvice> 
     apiKey: decrypt(cfg.apiKeyEnc),
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: parts.join('\n\n') }],
-    maxTokens: 2048,
+    maxTokens: 1024,
   });
 
-  const advice = parseDeployAdvice(reply);
-  // Fall back to the original compose if the model didn't return one.
-  if (!advice.compose.trim()) advice.compose = input.compose;
-  return advice;
+  return parseDeployAdvice(reply);
 }

@@ -172,7 +172,6 @@ export interface DeployAdvice {
   needsPersistence: boolean;
   volumes: { name: string; mountPath: string; reason: string }[];
   env: { key: string; label: string; default: string; secret: boolean; required: boolean }[];
-  compose: string;
   notes: string;
 }
 

@@ -313,7 +313,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     }
     patch({
       deploy: {
-        docker_compose: advice.compose || form.deploy?.docker_compose || '',
+        // Keep the compose as-is: the docker driver injects the named volumes at
+        // deploy time, and env vars flow through the fields below.
+        docker_compose: form.deploy?.docker_compose ?? '',
         required_env: [...byKey.values()],
         volumes: advice.volumes.map((v) => ({ name: v.name, mountPath: v.mountPath })),
         default_port: form.deploy?.default_port ?? 8080,
