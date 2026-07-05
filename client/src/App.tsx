@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme, THEMES, type Theme } from './context/ThemeContext';
 import { LanguageProvider, useI18n } from './context/LanguageContext';
@@ -10,7 +10,7 @@ import { AdminRoute } from './components/AdminRoute';
 import { StaffRoute } from './components/StaffRoute';
 import { Layout } from './components/Layout';
 import { FullPageSpinner } from './components/Spinner';
-import { LoginPage } from './pages/LoginPage';
+import { LoginPage, safeNext } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AppEditPage } from './pages/AppEditPage';
 import { SecurityPage } from './pages/SecurityPage';
@@ -67,8 +67,18 @@ function ThemeBackground() {
 
 function LoginRoute() {
   const { user, loading } = useAuth();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
   if (loading) return <FullPageSpinner />;
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    // An existing Dashy session is reused for SSO: forward to `next` (a server
+    // route such as /api/sso/authorize) with a full navigation.
+    if (next) {
+      window.location.replace(next);
+      return <FullPageSpinner />;
+    }
+    return <Navigate to="/" replace />;
+  }
   return <LoginPage />;
 }
 

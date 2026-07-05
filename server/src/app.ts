@@ -22,6 +22,7 @@ import storeStaticRoutes, { storeSubdomain } from './routes/storeStatic.js';
 import hostedRoutes from './routes/hosted.js';
 import shareRoutes from './routes/share.js';
 import mobileRoutes from './routes/mobile.js';
+import ssoRoutes from './routes/sso.js';
 
 export function createApp(): Express {
   const app = express();
@@ -105,6 +106,9 @@ export function createApp(): Express {
 
   // Versioned API for the Dashy Mobile app (Bearer-token auth).
   app.use('/api/mobile/v1', mobileRoutes);
+
+  // SSO — "Sign in with Dashy" for other self-hosted apps (redirect flow).
+  app.use('/api/sso', ssoRoutes);
 
   // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);

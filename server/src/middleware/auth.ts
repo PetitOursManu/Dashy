@@ -35,52 +35,65 @@ function getRequestToken(req: Request): string | undefined {
  * verify the token's version still matches the user's — so "sign out of all
  * devices" (which bumps tokenVersion) invalidates previously issued tokens.
  */
+/**
+ * Resolve the authenticated user from the request's cookie/Bearer token,
+ * applying every session check (token version, temp expiry, per-device session).
+ * Returns the JWT payload on success; throws `ApiError(401, ...)` on any failure.
+ *
+ * Shared by `requireAuth` (which surfaces the 401) and the SSO authorize flow
+ * (which catches the failure and redirects to login instead) so the security
+ * checks live in exactly one place.
+ */
+export async function resolveSessionUser(req: Request): Promise<JwtPayload> {
+  const token = getRequestToken(req);
+  if (!token) throw new ApiError(401, 'Authentication required');
+
+  const payload = verifyToken<JwtPayload & { pending2fa?: boolean }>(token);
+  if (payload.pending2fa) {
+    throw new ApiError(401, 'Two-factor authentication not completed');
+  }
+
+  const user = await User.findById(payload.sub).select('tokenVersion role expiresAt');
+  // Treat a missing version as 0 so tokens issued before this field existed
+  // (and freshly seeded users) remain valid.
+  if (!user || (payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
+    throw new ApiError(401, 'Session expired, please sign in again');
+  }
+
+  // Temporary accounts stop working the moment they expire.
+  if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
+    throw new ApiError(401, 'This temporary account has expired');
+  }
+
+  // Tokens issued with a session id (jti) are revocable per-device: the
+  // session must still exist. Older tokens without a jti skip this check.
+  if (payload.jti) {
+    const session = await Session.findOne({ jti: payload.jti, user: payload.sub }).select(
+      'lastSeenAt',
+    );
+    if (!session) {
+      throw new ApiError(401, 'Session expired, please sign in again');
+    }
+    // Refresh last-seen at most once per minute (fire-and-forget).
+    if (Date.now() - session.lastSeenAt.getTime() > 60_000) {
+      Session.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } }).catch(
+        () => {},
+      );
+    }
+  }
+
+  // The DB role is authoritative (so role changes take effect immediately and
+  // a stale token can't keep elevated access).
+  return { sub: payload.sub, role: user.role, tv: payload.tv, jti: payload.jti };
+}
+
 export async function requireAuth(
   req: Request,
   _res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
-    const token = getRequestToken(req);
-    if (!token) throw new ApiError(401, 'Authentication required');
-
-    const payload = verifyToken<JwtPayload & { pending2fa?: boolean }>(token);
-    if (payload.pending2fa) {
-      throw new ApiError(401, 'Two-factor authentication not completed');
-    }
-
-    const user = await User.findById(payload.sub).select('tokenVersion role expiresAt');
-    // Treat a missing version as 0 so tokens issued before this field existed
-    // (and freshly seeded users) remain valid.
-    if (!user || (payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
-      throw new ApiError(401, 'Session expired, please sign in again');
-    }
-
-    // Temporary accounts stop working the moment they expire.
-    if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
-      throw new ApiError(401, 'This temporary account has expired');
-    }
-
-    // Tokens issued with a session id (jti) are revocable per-device: the
-    // session must still exist. Older tokens without a jti skip this check.
-    if (payload.jti) {
-      const session = await Session.findOne({ jti: payload.jti, user: payload.sub }).select(
-        'lastSeenAt',
-      );
-      if (!session) {
-        throw new ApiError(401, 'Session expired, please sign in again');
-      }
-      // Refresh last-seen at most once per minute (fire-and-forget).
-      if (Date.now() - session.lastSeenAt.getTime() > 60_000) {
-        Session.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } }).catch(
-          () => {},
-        );
-      }
-    }
-
-    // The DB role is authoritative (so role changes take effect immediately and
-    // a stale token can't keep elevated access).
-    req.user = { sub: payload.sub, role: user.role, tv: payload.tv, jti: payload.jti };
+    req.user = await resolveSessionUser(req);
     next();
   } catch (err) {
     next(err instanceof ApiError ? err : new ApiError(401, 'Invalid or expired session'));
