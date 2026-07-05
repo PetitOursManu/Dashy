@@ -355,7 +355,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       open={open}
       title={t('manifest.title', { name: source.name })}
       onClose={onClose}
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-4xl"
     >
       {!form ? (
         <div className="space-y-4">
