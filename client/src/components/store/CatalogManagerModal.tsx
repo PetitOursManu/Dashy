@@ -3,10 +3,17 @@ import { Modal } from '../Modal';
 import { Spinner } from '../Spinner';
 import { VolumesEditor } from './VolumesEditor';
 import { storeApi } from '../../api/store';
+import { chatApi } from '../../api/chat';
 import { ApiError } from '../../api/client';
 import { useI18n } from '../../context/LanguageContext';
-import type { ManifestInput, StoreAppType, StoreCatalogApp, StoreSource } from '../../types';
-import { EditIcon, PlusIcon, TrashIcon } from '../Icons';
+import type {
+  DeployAdvice,
+  ManifestInput,
+  StoreAppType,
+  StoreCatalogApp,
+  StoreSource,
+} from '../../types';
+import { EditIcon, PlusIcon, SparkleIcon, TrashIcon } from '../Icons';
 
 interface Props {
   open: boolean;
@@ -86,6 +93,10 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
   const [hostPort, setHostPort] = useState('8080');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // AI deploy advisor (persistent storage + env fields).
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [advice, setAdvice] = useState<DeployAdvice | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const loadApps = async () => {
     if (!source) return;
@@ -106,6 +117,11 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       setEditingId(null);
       setError(null);
       void loadApps();
+      // Only surface the AI advisor when the assistant is actually configured.
+      chatApi
+        .status()
+        .then((s) => setAiAvailable(s.available))
+        .catch(() => setAiAvailable(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, source]);
@@ -217,6 +233,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     if (!repoUrl.trim() || repoLoading) return;
     setRepoLoading(true);
     setError(null);
+    setAdvice(null);
     try {
       const { compose } = await storeApi.composeFromRepo(repoUrl.trim());
       patch({
@@ -240,6 +257,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       setError(t('manifest.imageRequired'));
       return;
     }
+    setAdvice(null);
     const cport = Number(containerPort) || 80;
     const hport = Number(hostPort) || cport;
     const compose =
@@ -260,6 +278,48 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
         default_port: hport,
       },
     });
+  };
+
+  const analyze = async () => {
+    const compose = form?.deploy?.docker_compose ?? '';
+    if (!compose.trim() || analyzing) return;
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const res = await storeApi.analyzeDeploy({
+        compose,
+        ...(composeSource === 'repo' && repoUrl.trim() ? { repo: repoUrl.trim() } : {}),
+        ...(composeSource === 'image' && image.trim() ? { image: image.trim() } : {}),
+      });
+      setAdvice(res.advice);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('manifest.aiError'));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  /** Merge the advisor's proposal into the deploy form (env merged by key). */
+  const applyAdvice = () => {
+    if (!advice || !form) return;
+    const byKey = new Map((form.deploy?.required_env ?? []).map((e) => [e.key, e]));
+    for (const e of advice.env) {
+      byKey.set(e.key, {
+        key: e.key,
+        label: e.label || e.key,
+        default: e.default || null,
+        secret: e.secret,
+      });
+    }
+    patch({
+      deploy: {
+        docker_compose: advice.compose || form.deploy?.docker_compose || '',
+        required_env: [...byKey.values()],
+        volumes: advice.volumes.map((v) => ({ name: v.name, mountPath: v.mountPath })),
+        default_port: form.deploy?.default_port ?? 8080,
+      },
+    });
+    setAdvice(null);
   };
 
   const submit = async (e: FormEvent) => {
@@ -700,6 +760,85 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                   }
                 />
               </div>
+
+              {/* AI advisor: persistent storage + env fields */}
+              {aiAvailable && Boolean((form.deploy?.docker_compose ?? '').trim()) && (
+                <div className="rounded-xl border border-ember-200 bg-ember-50/50 p-3 dark:border-ember-900/40 dark:bg-ember-950/20">
+                  <div className="flex items-start gap-2">
+                    <SparkleIcon className="mt-0.5 h-4 w-4 shrink-0 text-ember-500" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{t('manifest.aiTitle')}</p>
+                      <p className="mt-0.5 text-xs text-sand-500 dark:text-sand-400">
+                        {t('manifest.aiDesc')}
+                      </p>
+
+                      {!advice ? (
+                        <button
+                          type="button"
+                          className="btn-secondary mt-2 !py-1 text-xs"
+                          onClick={analyze}
+                          disabled={analyzing}
+                        >
+                          {analyzing && <Spinner className="h-3 w-3" />}
+                          {t('manifest.aiAnalyze')}
+                        </button>
+                      ) : (
+                        <div className="mt-2 space-y-2 text-xs">
+                          {advice.notes && (
+                            <p className="text-sand-500 dark:text-sand-400">{advice.notes}</p>
+                          )}
+                          {advice.volumes.length > 0 ? (
+                            <div>
+                              <p className="font-medium">{t('manifest.aiVolumes')}</p>
+                              <ul className="mt-1 space-y-0.5">
+                                {advice.volumes.map((v) => (
+                                  <li key={v.name} className="text-sand-500 dark:text-sand-400">
+                                    <code>{v.name}</code> → <code>{v.mountPath}</code>
+                                    {v.reason ? ` — ${v.reason}` : ''}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : (
+                            <p className="text-sand-500 dark:text-sand-400">
+                              {t('manifest.aiNoVolumes')}
+                            </p>
+                          )}
+                          {advice.env.length > 0 && (
+                            <div>
+                              <p className="font-medium">{t('manifest.aiEnv')}</p>
+                              <ul className="mt-1 space-y-0.5">
+                                {advice.env.map((e) => (
+                                  <li key={e.key} className="text-sand-500 dark:text-sand-400">
+                                    <code>{e.key}</code>
+                                    {e.secret ? ` · ${t('manifest.aiSecret')}` : ''}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              type="button"
+                              className="btn-primary !py-1 text-xs"
+                              onClick={applyAdvice}
+                            >
+                              {t('manifest.aiApply')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost !py-1 text-xs"
+                              onClick={() => setAdvice(null)}
+                            >
+                              {t('manifest.aiDismiss')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* volumes editor */}
               <VolumesEditor

@@ -27,6 +27,9 @@ import {
 } from '../store/install.js';
 import { deleteCatalogFile, addApp, updateApp, removeApp } from '../store/managedCatalog.js';
 import { createManagedCatalogue } from '../store/manage.js';
+import { getChatConfig } from '../models/ChatConfig.js';
+import { ProviderError } from '../services/chatProvider.js';
+import { analyzeDeploy as runDeployAnalysis } from '../services/deployAdvisor.js';
 
 // ----------------------------- validation schemas -----------------------------
 
@@ -97,6 +100,12 @@ export const redeploySchema = z.object({
 export const composeFromRepoSchema = z.object({
   repo: z.string().min(1).max(2000).trim(),
   path: z.string().max(255).optional(),
+});
+
+export const analyzeDeploySchema = z.object({
+  compose: z.string().min(1).max(100_000),
+  repo: z.string().max(2000).trim().optional(),
+  image: z.string().max(200).trim().optional(),
 });
 
 // --------------------------------- catalog -----------------------------------
@@ -270,6 +279,58 @@ export async function composeFromRepo(req: Request, res: Response): Promise<void
     404,
     'No docker-compose file found in that repo (looked for docker-compose.yml / compose.yaml at the repo root).',
   );
+}
+
+/** Candidate raw URLs for a repo's README (main/master, common casings). */
+function readmeCandidates(repo: string): string[] {
+  const m = GITHUB_REPO_RE.exec(repo);
+  if (!m) return [];
+  const [, owner, name, branch] = m;
+  const branches = branch ? [branch] : ['main', 'master'];
+  const files = ['README.md', 'readme.md', 'Readme.md'];
+  const urls: string[] = [];
+  for (const b of branches) for (const f of files) {
+    urls.push(`https://raw.githubusercontent.com/${owner}/${name}/${b}/${f}`);
+  }
+  return urls;
+}
+
+/** Best-effort fetch of a repo's README to give the advisor documentation context. */
+async function fetchRepoReadme(repo: string): Promise<string | undefined> {
+  for (const url of readmeCandidates(repo)) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (!r.ok) continue;
+      const text = await r.text();
+      if (text.trim()) return text.slice(0, 20_000);
+    } catch {
+      continue; // try the next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
+ * AI advisor: analyze a deploy's compose (+ repo README / image) and propose
+ * persistent volumes and env-var fields. Read-only — returns a proposal the
+ * admin reviews before installing.
+ */
+export async function analyzeDeploy(req: Request, res: Response): Promise<void> {
+  const { compose, repo, image } = req.body as z.infer<typeof analyzeDeploySchema>;
+
+  const cfg = await getChatConfig();
+  if (!cfg.enabled || !cfg.apiKeyEnc) {
+    throw new ApiError(503, 'Configure the AI assistant first (Settings → AI assistant)');
+  }
+
+  const readme = repo ? await fetchRepoReadme(repo) : undefined;
+  try {
+    const advice = await runDeployAnalysis({ compose, repo, image, readme });
+    res.json({ advice });
+  } catch (err) {
+    if (err instanceof ProviderError) throw new ApiError(err.status, err.message);
+    throw new ApiError(422, err instanceof Error ? err.message : 'Deploy analysis failed');
+  }
 }
 
 /**

@@ -31,6 +31,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - **Catalogues** — add **sources**: a local JSON file, a remote URL, or a **Dashy-managed catalogue you edit entirely from the UI** (add / edit / remove apps, no JSON to hand-write).
 - **Three install types** — **`tile`** (a card linking to a URL); **`static`** (a `.zip`/`.html` downloaded from a URL *or uploaded straight from your computer*, re-hosted by Dashy, with in-place content updates); and **`deploy`** (a `docker-compose` stack).
 - **Flexible deploy authoring** — paste the compose, give a **GitHub repo URL**, or just a **Docker Hub image** + port (Dashy generates the compose). Deploys support **persistent volumes**, editable env, and **Redeploy / Restart**.
+- **AI deploy advisor** — when the AI assistant is configured, one click has it read the compose (and the repo's README) to **propose persistent volumes** and **surface the env vars** as dedicated fields; you review and apply before installing.
 - **Runtime-detected drivers** — direct **Docker**, **Coolify**, **Portainer**, or a universal **manual** copy/paste. Tokens are encrypted backend-only; uninstalling stops/removes the container and tidies up.
 
 ### 👥 Users & access (admin)

@@ -610,6 +610,16 @@ test('assistant cannot be enabled without an API key', async () => {
   assert.equal(res.status, 400);
 });
 
+test('deploy/analyze validates input and needs a configured assistant', async () => {
+  // Missing compose → validation error.
+  assert.equal((await api('POST', '/api/store/deploy/analyze', {})).status, 400);
+  // Assistant not configured yet → 503 (runs before the config test below).
+  const res = await api('POST', '/api/store/deploy/analyze', {
+    compose: 'services:\n  app:\n    image: nginx',
+  });
+  assert.equal(res.status, 503);
+});
+
 test('admin can configure the assistant (key stored, not echoed)', async () => {
   const res = await api('PUT', '/api/chat/config', {
     provider: 'openai',

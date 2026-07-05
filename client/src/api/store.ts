@@ -1,5 +1,6 @@
 import { http } from './client';
 import type {
+  DeployAdvice,
   DockerDiagnostics,
   HostedApp,
   ManifestInput,
@@ -67,6 +68,9 @@ export const storeApi = {
       repo,
       ...(path ? { path } : {}),
     }),
+
+  analyzeDeploy: (payload: { compose: string; repo?: string; image?: string }) =>
+    http.post<{ advice: DeployAdvice }>('/api/store/deploy/analyze', payload),
 
   addApp: (sourceId: string, manifest: ManifestInput) =>
     http.post<{ app: ManifestInput }>(`/api/store/sources/${sourceId}/apps`, manifest),

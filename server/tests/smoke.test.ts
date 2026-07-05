@@ -41,6 +41,31 @@ test('crypto encrypts and decrypts round-trip', async () => {
   for (const c of codes) assert.match(c, /^[0-9a-f]{4}-[0-9a-f]{4}$/);
 });
 
+test('parseDeployAdvice extracts JSON from a wrapped reply', async () => {
+  const { parseDeployAdvice } = await import('../src/services/deployAdvisor.js');
+  const raw =
+    'Sure, here you go:\n```json\n' +
+    '{"needsPersistence":true,"volumes":[{"name":"db-data","mountPath":"/var/lib/postgresql/data","reason":"database"}],' +
+    '"env":[{"key":"DB_PASSWORD","secret":true}],"compose":"services:\\n  db: {}"}\n' +
+    '```\nHope it helps.';
+  const advice = parseDeployAdvice(raw);
+  assert.equal(advice.needsPersistence, true);
+  assert.equal(advice.volumes[0].name, 'db-data');
+  assert.equal(advice.env[0].key, 'DB_PASSWORD');
+  assert.equal(advice.env[0].secret, true);
+  // Schema defaults applied.
+  assert.equal(advice.env[0].required, true);
+  assert.equal(advice.notes, '');
+});
+
+test('parseDeployAdvice rejects non-JSON and invalid volume names', async () => {
+  const { parseDeployAdvice } = await import('../src/services/deployAdvisor.js');
+  assert.throws(() => parseDeployAdvice('there is no json here at all'));
+  assert.throws(() =>
+    parseDeployAdvice('{"volumes":[{"name":"bad name!","mountPath":"/x"}],"compose":"x"}'),
+  );
+});
+
 test('safeExtractZip extracts a normal archive', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dashy-zip-'));
   const zipPath = path.join(dir, 'site.zip');

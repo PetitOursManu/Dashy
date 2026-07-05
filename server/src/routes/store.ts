@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { storeContentUpload } from '../middleware/upload.js';
+import { chatLimiter } from '../middleware/rateLimit.js';
 import * as store from '../controllers/storeController.js';
 
 const router = Router();
@@ -29,6 +30,14 @@ router.post(
   '/compose-from-repo',
   validateBody(store.composeFromRepoSchema),
   asyncHandler(store.composeFromRepo),
+);
+
+// AI advisor: propose persistent volumes + env fields for a deploy's compose.
+router.post(
+  '/deploy/analyze',
+  chatLimiter,
+  validateBody(store.analyzeDeploySchema),
+  asyncHandler(store.analyzeDeploy),
 );
 
 // Apps inside a Dashy-managed catalogue. The manifest body is validated in the
