@@ -6,8 +6,9 @@ import { chatComplete } from './chatProvider.js';
 /**
  * AI-assisted analysis of a `docker-compose` for a Store "deploy" app: proposes
  * persistent volumes and surfaces the environment variables the operator must
- * set (as dedicated fields), returning an updated compose. Reuses the same LLM
- * provider as the Dashy assistant.
+ * set (as dedicated fields). Reuses the same LLM provider as the Dashy assistant.
+ * It only returns structured suggestions — Dashy applies volumes/env itself, so
+ * the (error-prone) task of rewriting the compose is never asked of the model.
  */
 
 // Mirrors the volume-name rule enforced by the install/redeploy schemas.
@@ -42,27 +43,61 @@ const deployAdviceSchema = z.object({
 
 export type DeployAdvice = z.infer<typeof deployAdviceSchema>;
 
+/** Return the balanced `{...}` object starting at `start`, respecting strings. */
+function balancedObject(text: string, start: number): string | null {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return text.slice(start, i + 1);
+  }
+  return null;
+}
+
+// C0 control characters (raw newlines/tabs inside string values break JSON.parse).
+const CONTROL_CHARS = new RegExp('[\\u0000-\\u001F]', 'g');
+const ADVICE_KEYS = ['needsPersistence', 'volumes', 'env', 'notes'];
+
 /**
- * Extract and validate the model's JSON reply. Models often wrap JSON in prose
- * or ```json fences, so we strip fences and take the outermost object before
- * validating against the schema.
+ * Extract and validate the advice JSON from the model's reply. Reasoning models
+ * wrap the answer in prose / <think> blocks / ```fences and may add stray braces,
+ * so we scan each `{`, taking the first balanced object that (a) parses and (b)
+ * actually looks like our advice — repairing trailing commas and raw control
+ * characters along the way.
  */
 export function parseDeployAdvice(raw: string): DeployAdvice {
-  const cleaned = raw.replace(/```(?:json)?/gi, '');
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('The assistant did not return JSON');
+  const text = raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, '') // drop reasoning blocks
+    .replace(/```(?:json)?/gi, ''); // drop code fences
+
+  for (let idx = text.indexOf('{'); idx !== -1; idx = text.indexOf('{', idx + 1)) {
+    const obj = balancedObject(text, idx);
+    if (!obj) break; // no closing brace (truncated output) → give up
+    const cleaned = obj.replace(/,(\s*[}\]])/g, '$1').replace(CONTROL_CHARS, ' ');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      continue; // not this object — try the next `{`
+    }
+    // Skip stray objects from the reasoning that happen to be valid JSON.
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !ADVICE_KEYS.some((k) => k in (parsed as Record<string, unknown>))
+    ) {
+      continue;
+    }
+    return deployAdviceSchema.parse(parsed);
   }
-  // Tolerate a common LLM slip: trailing commas before } or ].
-  const candidate = cleaned.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1');
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch {
-    throw new Error('The assistant returned malformed JSON');
-  }
-  return deployAdviceSchema.parse(parsed);
+  throw new Error('The assistant returned malformed JSON');
 }
 
 const SYSTEM_PROMPT = `You are a DevOps assistant embedded in "Dashy", a self-hosted app dashboard.
@@ -81,8 +116,8 @@ your suggestions itself. Your job:
 4. Use "notes" for anything important (e.g. if the compose should reference the env
    via "env_file: - .env").
 
-Respond with STRICT, COMPACT JSON only — no prose, no markdown fences, no trailing
-commas — matching exactly this shape:
+Do not think out loud. Output ONLY strict, compact JSON on a single line — no prose,
+no explanations, no markdown fences, no trailing commas — matching exactly:
 {"needsPersistence":bool,"volumes":[{"name":str,"mountPath":str,"reason":str}],"env":[{"key":str,"label":str,"default":str,"secret":bool,"required":bool}],"notes":str}
 If nothing should persist, return an empty "volumes" array.`;
 
@@ -111,7 +146,9 @@ export async function analyzeDeploy(input: AnalyzeInput): Promise<DeployAdvice> 
     apiKey: decrypt(cfg.apiKeyEnc),
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: parts.join('\n\n') }],
-    maxTokens: 1024,
+    // Generous: reasoning models spend part of the budget "thinking" before the
+    // JSON, and a truncated reply can't be parsed.
+    maxTokens: 3000,
   });
 
   return parseDeployAdvice(reply);

@@ -58,11 +58,23 @@ test('parseDeployAdvice extracts JSON from a wrapped reply', async () => {
   assert.equal(advice.notes, '');
 });
 
+test('parseDeployAdvice survives reasoning prose and stray braces', async () => {
+  const { parseDeployAdvice } = await import('../src/services/deployAdvisor.js');
+  const raw =
+    '<think>Consider a mount {like this} — Postgres stores data in /var/lib.</think>\n' +
+    'Here is the analysis:\n' +
+    '{"needsPersistence":true,"volumes":[{"name":"pg-data","mountPath":"/var/lib/postgresql/data"}],' +
+    '"env":[{"key":"POSTGRES_PASSWORD","secret":true}]}';
+  const advice = parseDeployAdvice(raw);
+  assert.equal(advice.volumes[0].name, 'pg-data');
+  assert.equal(advice.env[0].key, 'POSTGRES_PASSWORD');
+});
+
 test('parseDeployAdvice rejects non-JSON and invalid volume names', async () => {
   const { parseDeployAdvice } = await import('../src/services/deployAdvisor.js');
   assert.throws(() => parseDeployAdvice('there is no json here at all'));
   assert.throws(() =>
-    parseDeployAdvice('{"volumes":[{"name":"bad name!","mountPath":"/x"}],"compose":"x"}'),
+    parseDeployAdvice('{"needsPersistence":true,"volumes":[{"name":"bad name!","mountPath":"/x"}]}'),
   );
 });
 
