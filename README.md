@@ -478,6 +478,54 @@ under the mobile namespace (`GET /avatar[/ :id]`) and app previews by each app's
 
 ---
 
+## SSO — "Sign in with Dashy"
+
+Dashy can act as a lightweight **identity provider** so other self-hosted apps in
+your ecosystem share the same users ("Sign in with Dashy"). It's a redirect flow
+and is **disabled unless both env vars are set** — it never touches the existing
+login, register, 2FA or cookies.
+
+### Enable it
+
+```bash
+# A SECOND long random secret — must differ from JWT_SECRET
+SSO_SHARED_SECRET=$(openssl rand -base64 48)
+# Exact callback URLs allowed (comma-separated, exact match)
+SSO_ALLOWED_REDIRECTS=https://mocky.example.com/sso/dashy/callback,http://localhost:5173/sso/dashy/callback
+```
+
+### Flow
+
+1. The client app sends the browser to
+   `GET /api/sso/authorize?redirect_uri=<callback>&state=<opaque>`.
+2. Dashy requires a live Dashy session; if absent it bounces through the normal
+   Dashy login (so **2FA is respected**) and returns. An existing session is
+   reused automatically.
+3. Dashy validates `redirect_uri` against the allow-list (exact match; otherwise
+   `400`), signs a **60-second HS256 token**, and redirects (302) to
+   `redirect_uri?token=<jwt>&state=<state>`.
+
+### Token contract (for the client app)
+
+Signed with `SSO_SHARED_SECRET` (HS256). Claims:
+
+| Claim | Value |
+| --- | --- |
+| `sub` | Stable Dashy user id |
+| `email` | User email |
+| `name` | Display name (nickname/full name), when set |
+| `role` | `admin` \| `subadmin` \| `user` \| `temp` |
+| `iss` | `"dashy"` |
+| `aud` | **The callback's origin** (e.g. `https://mocky.example.com`) |
+| `iat` / `exp` | Issued-at / expiry (60 s lifetime) |
+| `jti` | Random id — track consumed ones to enforce single use |
+
+The client must verify the HS256 signature, `iss === "dashy"`, `aud === its own
+origin`, and `exp`, then read `sub`/`email` to create-or-find its local account.
+The token proves identity only — it grants **no** access to Dashy's own API.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.

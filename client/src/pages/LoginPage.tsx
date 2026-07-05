@@ -1,15 +1,34 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { ApiError } from '../api/client';
 import { Spinner } from '../components/Spinner';
 import { ShieldIcon } from '../components/Icons';
 
+/**
+ * Only allow a same-origin absolute path as a post-login redirect target, so the
+ * `next` param (used by the SSO flow) can never turn login into an open redirect.
+ * Rejects full URLs and protocol-relative `//host` paths.
+ */
+export function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw;
+}
+
 export function LoginPage() {
   const { login, verifyTwoFactor } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
+
+  // After login, return to `next` (a server route like /api/sso/authorize needs a
+  // full navigation), otherwise go to the dashboard.
+  const finish = () => {
+    if (next) window.location.assign(next);
+    else navigate('/', { replace: true });
+  };
 
   const [step, setStep] = useState<'credentials' | '2fa'>('credentials');
   const [email, setEmail] = useState('');
@@ -27,7 +46,7 @@ export function LoginPage() {
       if (twoFactorRequired) {
         setStep('2fa');
       } else {
-        navigate('/', { replace: true });
+        finish();
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed. Please try again.');
@@ -42,7 +61,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await verifyTwoFactor(token.trim());
-      navigate('/', { replace: true });
+      finish();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Verification failed.');
     } finally {

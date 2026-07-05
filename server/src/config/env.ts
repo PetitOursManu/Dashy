@@ -34,6 +34,13 @@ const envSchema = z.object({
   ALLOW_REGISTRATION: booleanFromString.default('false'),
 
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(50),
+
+  // --- SSO (Dashy as identity provider for other self-hosted apps) ---
+  // Shared HS256 secret for signing SSO tokens. MUST differ from JWT_SECRET.
+  // Leave unset to disable the "Sign in with Dashy" endpoint entirely.
+  SSO_SHARED_SECRET: z.string().min(32).optional(),
+  // Comma-separated allow-list of exact callback URLs permitted as redirect_uri.
+  SSO_ALLOWED_REDIRECTS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -51,3 +58,12 @@ export const env = parsed.data;
 export type Env = typeof env;
 
 export const isProduction = env.NODE_ENV === 'production';
+
+/** Parsed SSO callback allow-list (exact-match). */
+export const ssoRedirects: string[] = (env.SSO_ALLOWED_REDIRECTS ?? '')
+  .split(',')
+  .map((u) => u.trim())
+  .filter(Boolean);
+
+/** SSO is only active when a dedicated secret AND at least one callback exist. */
+export const ssoEnabled: boolean = Boolean(env.SSO_SHARED_SECRET && ssoRedirects.length > 0);
