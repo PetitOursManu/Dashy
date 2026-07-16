@@ -36,7 +36,16 @@ export const coolifyDriver: Driver = {
         },
       );
       if (!res.ok) {
-        return { ok: false, message: `Coolify API responded ${res.status}` };
+        // Surface Coolify's own error body so the admin knows what to fix
+        // (bad token → 401, wrong UUID → 404, missing environment → 422, …).
+        let detail = '';
+        try {
+          const body = await res.text();
+          detail = body ? ` — ${body.slice(0, 300)}` : '';
+        } catch {
+          /* ignore body read errors */
+        }
+        return { ok: false, message: `Coolify API responded ${res.status}${detail}` };
       }
       return { ok: true, message: 'Deployment triggered on Coolify.' };
     } catch (err) {
