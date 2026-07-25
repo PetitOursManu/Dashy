@@ -141,6 +141,12 @@ interface LottieProps {
    * slow ambient motion and cuts the per-second cost by 2–4×.
    */
   fps?: number;
+  /**
+   * Ping-pong playback: play forward then reverse, so a clip that isn't authored
+   * as a seamless loop never shows a jump at the wrap. Only applies when `fps`
+   * is set (self-driven). Leave off for clips that already loop cleanly.
+   */
+  bounce?: boolean;
   className?: string;
   loop?: boolean;
   speed?: number;
@@ -153,6 +159,7 @@ export function Lottie({
   cover = false,
   dpr,
   fps,
+  bounce = false,
   className,
   loop = true,
   speed = 1,
@@ -200,13 +207,17 @@ export function Lottie({
         const interval = 1000 / (fps as number);
         const nativeFps = anim.frameRate || 30;
         const total = anim.totalFrames || nativeFps;
+        // Ping-pong spans a double timeline (0→total→0) folded into a triangle
+        // wave, so non-seamless clips reverse at the ends instead of jumping.
+        const period = bounce ? total * 2 : total;
         const t0 = performance.now();
         let last = -Infinity;
         const step = (now: number) => {
           raf = requestAnimationFrame(step);
           if (document.hidden || now - last < interval) return;
           last = now;
-          const frame = (((now - t0) / 1000) * nativeFps * speed) % total;
+          const pos = (((now - t0) / 1000) * nativeFps * speed) % period;
+          const frame = bounce && pos > total ? period - pos : pos;
           anim?.goToAndStop(frame, true);
         };
         raf = requestAnimationFrame(step);
@@ -228,7 +239,7 @@ export function Lottie({
       document.removeEventListener('visibilitychange', onVisibility);
       anim?.destroy();
     };
-  }, [src, color, transparent, cover, dpr, fps, loop, speed]);
+  }, [src, color, transparent, cover, dpr, fps, bounce, loop, speed]);
 
   return <div ref={ref} className={className} aria-hidden="true" />;
 }

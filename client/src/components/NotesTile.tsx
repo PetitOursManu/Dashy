@@ -67,7 +67,7 @@ export function NotesTile() {
 
   return (
     <div className="card relative flex flex-col overflow-hidden p-5">
-      <TileDecor variant="dots" />
+      <TileDecor variant="dots" noirVariant="sphere" />
       <div className="relative mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-semibold">
           <span className="text-ember-500">

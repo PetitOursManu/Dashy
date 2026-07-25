@@ -34,12 +34,21 @@ const NOIR_DECOR: Record<
   bell: { src: '/lottie/dots.json', fps: 20, className: '-right-2 -top-2 h-24 w-24' },
 };
 
-export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
+export function TileDecor({
+  variant = 'rings',
+  noirVariant,
+}: {
+  variant?: DecorVariant;
+  /** Override which animation the noir theme uses, without changing the SVG
+   *  motif shown in the other themes (e.g. a content-heavy tile wants a
+   *  contained corner clip rather than a full-width one). */
+  noirVariant?: DecorVariant;
+}) {
   const { theme } = useTheme();
   const base = 'pointer-events-none absolute select-none';
 
   if (theme === 'noir') {
-    const d = NOIR_DECOR[variant] ?? NOIR_DECOR.rings;
+    const d = NOIR_DECOR[noirVariant ?? variant] ?? NOIR_DECOR.rings;
     return (
       <Lottie
         src={d.src}
