@@ -25,12 +25,14 @@ const NOIR_DECOR: Record<
   DecorVariant,
   { src: string; transparent?: boolean; cover?: boolean; fps: number; className: string }
 > = {
-  rings: { src: '/lottie/circular-dots.json', transparent: true, fps: 20, className: '-right-6 -top-6 h-32 w-32' },
-  dots: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-x-0 -bottom-3 h-24 w-full' },
-  waves: { src: '/lottie/wavy.json', cover: true, fps: 15, className: 'inset-x-0 -bottom-3 h-20 w-full' },
+  // Full-bleed backgrounds fill the whole tile (inset-0 + cover) so they reach
+  // every edge; the others are intentional corner motifs.
+  rings: { src: '/lottie/circular-dots.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
+  dots: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
+  waves: { src: '/lottie/wavy.json', cover: true, fps: 15, className: 'inset-0 h-full w-full' },
   blob: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
   sphere: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
-  storage: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-x-0 -bottom-3 h-24 w-full' },
+  storage: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
   bell: { src: '/lottie/dots.json', fps: 20, className: '-right-2 -top-2 h-24 w-24' },
 };
 
