@@ -44,11 +44,17 @@ function hexToRgb01(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-// Rewrite every fill/stroke colour in a Lottie tree to `rgb` (0–1 channels),
-// preserving each shape's original alpha.
-function setColor(c: { k: unknown }, rgb: [number, number, number]): void {
+const luminance = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+// Colours darker than this read as "background" in our monochrome sources.
+const DARK = 0.15;
+
+// Set a solid fill/stroke colour object (`c`) to `rgb`, keeping its alpha. When
+// `dropDark` is on, a near-black colour is treated as background: return false
+// so the caller can hide the whole fill instead of tinting it accent.
+function tintSolid(c: { k: unknown }, rgb: [number, number, number], dropDark: boolean): boolean {
   const k = c.k as unknown;
   if (Array.isArray(k) && typeof k[0] === 'number') {
+    if (dropDark && luminance(k[0] as number, k[1] as number, k[2] as number) < DARK) return false;
     const a = k.length > 3 ? (k[3] as number) : 1;
     c.k = [...rgb, a];
   } else if (Array.isArray(k)) {
@@ -59,44 +65,58 @@ function setColor(c: { k: unknown }, rgb: [number, number, number]): void {
       }
     }
   }
+  return true;
 }
 
-// Hide full-frame "solid" layers (ty:1) — some source files ship an opaque
-// background solid we don't want when overlaying the animation on the page.
-function hideSolids(node: unknown): void {
-  if (Array.isArray(node)) {
-    for (const n of node) hideSolids(n);
-    return;
-  }
-  if (node && typeof node === 'object') {
-    const obj = node as Record<string, unknown>;
-    if (obj.ty === 1) {
-      // `hd` (hidden) makes lottie-web skip the layer entirely.
-      obj.hd = true;
-      if (obj.ks && typeof obj.ks === 'object') {
-        (obj.ks as Record<string, unknown>).o = { a: 0, k: 0, ix: 11 };
-      }
-    }
-    for (const key of Object.keys(obj)) hideSolids(obj[key]);
+// Recolour a gradient's stops to a monochrome accent ramp: each stop keeps its
+// original luminance (so light→dark depth survives) but takes the accent hue.
+function tintGradient(g: unknown, rgb: [number, number, number]): void {
+  const grad = g as { p?: number; k?: { k?: unknown } };
+  const stops = grad.k?.k;
+  if (!grad.p || !Array.isArray(stops) || typeof stops[0] !== 'number') return;
+  for (let i = 0; i < grad.p; i++) {
+    const b = i * 4; // [offset, r, g, b] per colour stop
+    if (b + 3 >= stops.length) break;
+    const l = luminance(stops[b + 1] as number, stops[b + 2] as number, stops[b + 3] as number);
+    stops[b + 1] = rgb[0] * l;
+    stops[b + 2] = rgb[1] * l;
+    stops[b + 3] = rgb[2] * l;
   }
 }
 
-function recolor(node: unknown, rgb: [number, number, number]): void {
+function hide(obj: Record<string, unknown>): void {
+  const o = obj.o as Record<string, unknown> | undefined;
+  if (o) o.k = 0;
+  else obj.o = { a: 0, k: 0 };
+}
+
+/**
+ * Recolour a Lottie tree to the accent and, when `dropDark`, strip its opaque
+ * dark backdrop (solid layers + near-black fills) so it overlays cleanly. This
+ * one pass handles fills, strokes and gradients, luminance-aware.
+ */
+function process(node: unknown, rgb: [number, number, number], dropDark: boolean): void {
   if (Array.isArray(node)) {
-    for (const n of node) recolor(n, rgb);
+    for (const n of node) process(n, rgb, dropDark);
     return;
   }
-  if (node && typeof node === 'object') {
-    const obj = node as Record<string, unknown>;
-    for (const key of Object.keys(obj)) {
-      const v = obj[key];
-      if (key === 'c' && v && typeof v === 'object' && 'k' in (v as object)) {
-        setColor(v as { k: unknown }, rgb);
-      } else {
-        recolor(v, rgb);
-      }
+  if (!node || typeof node !== 'object') return;
+  const obj = node as Record<string, unknown>;
+
+  if (dropDark && obj.ty === 1) {
+    // Full-frame solid layer — `hd` makes lottie-web skip it entirely.
+    obj.hd = true;
+    if (obj.ks && typeof obj.ks === 'object') {
+      (obj.ks as Record<string, unknown>).o = { a: 0, k: 0, ix: 11 };
     }
+  } else if ((obj.ty === 'fl' || obj.ty === 'st') && obj.c && typeof obj.c === 'object') {
+    const kept = tintSolid(obj.c as { k: unknown }, rgb, dropDark && obj.ty === 'fl');
+    if (!kept) hide(obj); // near-black fill → background: make it invisible
+  } else if ((obj.ty === 'gf' || obj.ty === 'gs') && obj.g) {
+    tintGradient(obj.g, rgb);
   }
+
+  for (const key of Object.keys(obj)) process(obj[key], rgb, dropDark);
 }
 
 interface LottieProps {
@@ -153,8 +173,9 @@ export function Lottie({
       if (color || transparent) {
         // Clone so the cached original stays reusable by other tints.
         animationData = structuredClone(data);
-        if (color) recolor(animationData, hexToRgb01(color));
-        if (transparent) hideSolids(animationData);
+        // No accent given but still stripping the backdrop → tint to white (a
+        // no-op hue for our light artwork) so `process` can run its one pass.
+        process(animationData, color ? hexToRgb01(color) : [1, 1, 1], transparent);
       }
       anim = lottie.loadAnimation({
         container: ref.current,

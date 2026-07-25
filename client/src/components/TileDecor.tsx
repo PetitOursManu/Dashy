@@ -15,23 +15,39 @@ export type DecorVariant =
  * child of a `relative overflow-hidden` container, behind the content. Colors
  * use the accent (ember) variables, so they follow the active theme.
  */
+/**
+ * In the "noir" theme each tile variant maps to a distinct animated Lottie,
+ * tinted cyan, so the dashboard feels alive and varied on black. `transparent`
+ * strips a clip's opaque dark backdrop; `cover` lets wide clips bleed across
+ * the tile. All are fps-capped for performance.
+ */
+const NOIR_DECOR: Record<
+  DecorVariant,
+  { src: string; transparent?: boolean; cover?: boolean; fps: number; className: string }
+> = {
+  rings: { src: '/lottie/circular-dots.json', transparent: true, fps: 20, className: '-right-6 -top-6 h-32 w-32' },
+  dots: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-x-0 -bottom-3 h-24 w-full' },
+  waves: { src: '/lottie/wavy.json', cover: true, fps: 15, className: 'inset-x-0 -bottom-3 h-20 w-full' },
+  blob: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
+  sphere: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
+  storage: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-x-0 -bottom-3 h-24 w-full' },
+  bell: { src: '/lottie/dots.json', fps: 20, className: '-right-2 -top-2 h-24 w-24' },
+};
+
 export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
   const { theme } = useTheme();
   const base = 'pointer-events-none absolute select-none';
 
-  // In the "noir" theme the static SVG motifs give way to animated Lottie
-  // widgets — a dot-grid (lottie2) and an orbiting scene (lottie3) — tinted
-  // with the cyan accent so the tiles feel alive on black.
   if (theme === 'noir') {
-    const isDots = variant === 'dots';
+    const d = NOIR_DECOR[variant] ?? NOIR_DECOR.rings;
     return (
       <Lottie
-        src={isDots ? '/lottie/dots.json' : '/lottie/orbit.json'}
+        src={d.src}
         color="#22d3ee"
-        fps={20}
-        className={`${base} opacity-40 ${
-          isDots ? '-right-3 -top-3 h-28 w-28' : '-bottom-10 -right-10 h-44 w-44'
-        }`}
+        transparent={d.transparent}
+        cover={d.cover}
+        fps={d.fps}
+        className={`${base} opacity-40 ${d.className}`}
       />
     );
   }
