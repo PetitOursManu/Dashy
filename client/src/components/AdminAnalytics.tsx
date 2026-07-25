@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { formatBytes } from '../utils/format';
 import { TileDecor } from './TileDecor';
-import { Spinner } from './Spinner';
+import { Loader } from './Spinner';
 import {
   ActivityIcon,
   BellIcon,
@@ -56,7 +56,7 @@ export function AdminAnalytics() {
   if (loading) {
     return (
       <div className="flex justify-center py-10">
-        <Spinner className="h-6 w-6 text-ember-500" />
+        <Loader className="h-16 w-16" />
       </div>
     );
   }

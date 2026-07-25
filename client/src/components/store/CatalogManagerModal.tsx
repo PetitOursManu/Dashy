@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Modal } from '../Modal';
-import { Spinner } from '../Spinner';
+import { Spinner, Loader } from '../Spinner';
 import { VolumesEditor } from './VolumesEditor';
 import { storeApi } from '../../api/store';
 import { chatApi } from '../../api/chat';
@@ -369,7 +369,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
 
           {loading ? (
             <div className="flex justify-center py-8">
-              <Spinner className="h-6 w-6 text-ember-500" />
+              <Loader className="h-16 w-16" />
             </div>
           ) : apps.length === 0 ? (
             <p className="rounded-xl border border-dashed border-sand-300 px-4 py-8 text-center text-sm text-sand-400 dark:border-sand-700">

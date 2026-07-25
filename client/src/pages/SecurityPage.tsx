@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
 import type { Session, TwoFactorSetup } from '../types';
-import { Spinner } from '../components/Spinner';
+import { Spinner, Loader } from '../components/Spinner';
 import { ShieldIcon } from '../components/Icons';
 import { BackupCodes } from '../components/BackupCodes';
 
@@ -80,7 +80,7 @@ function SessionsSection() {
       <p className="mt-1 text-sm text-sand-500 dark:text-sand-400">{t('sessions.desc')}</p>
       {loading ? (
         <div className="flex justify-center py-6">
-          <Spinner className="h-6 w-6 text-ember-500" />
+          <Loader className="h-16 w-16" />
         </div>
       ) : (
         <ul className="mt-4 space-y-2">

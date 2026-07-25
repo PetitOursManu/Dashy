@@ -1,3 +1,6 @@
+import { useTheme } from '../context/ThemeContext';
+import { Lottie } from './Lottie';
+
 export type DecorVariant =
   | 'rings'
   | 'dots'
@@ -13,7 +16,24 @@ export type DecorVariant =
  * use the accent (ember) variables, so they follow the active theme.
  */
 export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
+  const { theme } = useTheme();
   const base = 'pointer-events-none absolute select-none';
+
+  // In the "noir" theme the static SVG motifs give way to animated Lottie
+  // widgets — a dot-grid (lottie2) and an orbiting scene (lottie3) — tinted
+  // with the cyan accent so the tiles feel alive on black.
+  if (theme === 'noir') {
+    const isDots = variant === 'dots';
+    return (
+      <Lottie
+        src={isDots ? '/lottie/dots.json' : '/lottie/orbit.json'}
+        color="#22d3ee"
+        className={`${base} opacity-40 ${
+          isDots ? '-right-3 -top-3 h-28 w-28' : '-bottom-10 -right-10 h-44 w-44'
+        }`}
+      />
+    );
+  }
 
   if (variant === 'sphere') {
     return (

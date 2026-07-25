@@ -15,7 +15,7 @@ import { ChatAlerts } from '../components/ChatAlerts';
 import { UserNotifications } from '../components/UserNotifications';
 import { NotesTile } from '../components/NotesTile';
 import { MyRequests } from '../components/MyRequests';
-import { Spinner } from '../components/Spinner';
+import { Loader } from '../components/Spinner';
 import {
   LayersIcon,
   PlusIcon,
@@ -172,7 +172,7 @@ export function DashboardPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <Spinner className="h-8 w-8 text-ember-500" />
+        <Loader className="h-24 w-24" />
       </div>
     );
   }

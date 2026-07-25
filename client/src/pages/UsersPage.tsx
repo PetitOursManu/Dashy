@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import type { HostedApp, User } from '../types';
 import { avatarUrl } from '../api/auth';
-import { Spinner } from '../components/Spinner';
+import { Loader } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { UserFormModal } from '../components/UserFormModal';
 import { UserDetailModal } from '../components/UserDetailModal';
@@ -103,7 +103,7 @@ export function UsersPage() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Spinner className="h-8 w-8 text-ember-500" />
+          <Loader className="h-20 w-20" />
         </div>
       ) : error ? (
         <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">

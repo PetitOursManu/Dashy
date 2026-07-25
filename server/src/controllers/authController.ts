@@ -57,7 +57,7 @@ export const profileSchema = z
     fullName: z.string().max(120).trim().optional(),
     jobTitle: z.string().max(120).trim().optional(),
     language: z.enum(['en', 'fr', 'es', 'de', 'it', 'zh', 'ru']).optional(),
-    theme: z.enum(['light', 'dark', 'violet', 'image']).optional(),
+    theme: z.enum(['light', 'dark', 'violet', 'image', 'noir']).optional(),
     glass: z.boolean().optional(),
     glassDark: z.boolean().optional(),
     timezone: z.string().max(64).optional(),

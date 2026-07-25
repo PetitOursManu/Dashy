@@ -10,6 +10,7 @@ import { AdminRoute } from './components/AdminRoute';
 import { StaffRoute } from './components/StaffRoute';
 import { Layout } from './components/Layout';
 import { FullPageSpinner } from './components/Spinner';
+import { NoirBackground } from './components/NoirBackground';
 import { LoginPage, safeNext } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AppEditPage } from './pages/AppEditPage';
@@ -90,6 +91,7 @@ export default function App() {
           <AuthProvider>
             <PreferencesSync />
             <ThemeBackground />
+            <NoirBackground />
             <Routes>
               <Route path="/login" element={<LoginRoute />} />
               <Route element={<ProtectedRoute />}>

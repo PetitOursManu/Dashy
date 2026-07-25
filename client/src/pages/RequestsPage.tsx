@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFormat } from '../hooks/useFormat';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
 import { Avatar } from '../components/Avatar';
-import { Spinner } from '../components/Spinner';
+import { Spinner, Loader } from '../components/Spinner';
 import { SendIcon } from '../components/Icons';
 
 type Filter = 'all' | 'archived' | ProjectRequestStatus;
@@ -144,7 +144,7 @@ export function RequestsPage() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Spinner className="h-8 w-8 text-ember-500" />
+          <Loader className="h-20 w-20" />
         </div>
       ) : requests.length === 0 ? (
         <div className="card px-6 py-16 text-center text-sm text-sand-500 dark:text-sand-400">

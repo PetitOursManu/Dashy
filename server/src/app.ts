@@ -77,7 +77,7 @@ export function createApp(): Express {
         // Google Fonts stylesheet (index.css @imports Inter from Google).
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         // Self scripts + the inline theme-flash-prevention script in index.html.
-        "script-src 'self' 'sha256-wofaH4sXL5cH2l1Llj1NnOG+xJYK17j7g00HRdH/YBY='",
+        "script-src 'self' 'sha256-uScHj1JwG7b+cmTEWRvILZMj03uhXrnFPr+zp4WnetQ='",
         "connect-src 'self'",
         // Google Fonts webfont files.
         "font-src 'self' data: https://fonts.gstatic.com",

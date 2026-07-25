@@ -466,6 +466,7 @@ export function SettingsPage() {
     dark: 'linear-gradient(135deg,#3f3631,#ef6a2e)',
     violet: 'linear-gradient(135deg,#e6def7,#8b5cf6)',
     image: 'linear-gradient(135deg,#5b7c5a,#c2603b)',
+    noir: 'linear-gradient(135deg,#09090b,#22d3ee)',
   };
 
   return (

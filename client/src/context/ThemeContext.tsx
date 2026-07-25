@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type Theme = 'light' | 'dark' | 'violet' | 'image';
-export const THEMES: Theme[] = ['light', 'dark', 'violet', 'image'];
+export type Theme = 'light' | 'dark' | 'violet' | 'image' | 'noir';
+export const THEMES: Theme[] = ['light', 'dark', 'violet', 'image', 'noir'];
 
 interface ThemeContextValue {
   theme: Theme;
@@ -15,10 +15,13 @@ function applyTheme(theme: Theme): void {
   const el = document.documentElement;
   el.classList.toggle('violet', theme === 'violet');
   el.classList.toggle('theme-image', theme === 'image');
+  // "noir" is a black/grey/white dark theme with animated Lottie backdrop; it
+  // rides on top of the `dark` class so every `dark:` utility keeps working.
+  el.classList.toggle('noir', theme === 'noir');
   // For the image theme the light/dark tint is user-chosen, so ThemeBackground
   // owns the `dark` class; here we only manage it for the non-image themes.
   if (theme !== 'image') {
-    el.classList.toggle('dark', theme === 'dark');
+    el.classList.toggle('dark', theme === 'dark' || theme === 'noir');
   }
 }
 

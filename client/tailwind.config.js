@@ -20,19 +20,21 @@ export default {
           900: 'rgb(var(--ember-900) / <alpha-value>)',
           950: 'rgb(var(--ember-950) / <alpha-value>)',
         },
-        // Warm neutrals — cream / greige / taupe ("sand").
+        // Neutrals ("sand") — backed by CSS variables so a theme can swap the
+        // whole ramp. Default = warm cream/greige/taupe; the "noir" theme
+        // overrides these channels to pure black/grey/white.
         sand: {
-          50: '#faf7f3',
-          100: '#f4ede5',
-          200: '#e8ddd1',
-          300: '#d6c5b4',
-          400: '#b8a392',
-          500: '#988373',
-          600: '#79675a',
-          700: '#5f5149',
-          800: '#3f3631',
-          900: '#272320',
-          950: '#181512',
+          50: 'rgb(var(--sand-50) / <alpha-value>)',
+          100: 'rgb(var(--sand-100) / <alpha-value>)',
+          200: 'rgb(var(--sand-200) / <alpha-value>)',
+          300: 'rgb(var(--sand-300) / <alpha-value>)',
+          400: 'rgb(var(--sand-400) / <alpha-value>)',
+          500: 'rgb(var(--sand-500) / <alpha-value>)',
+          600: 'rgb(var(--sand-600) / <alpha-value>)',
+          700: 'rgb(var(--sand-700) / <alpha-value>)',
+          800: 'rgb(var(--sand-800) / <alpha-value>)',
+          900: 'rgb(var(--sand-900) / <alpha-value>)',
+          950: 'rgb(var(--sand-950) / <alpha-value>)',
         },
       },
       fontFamily: {

@@ -18,6 +18,19 @@
     --ember-800: 145 54 30;
     --ember-900: 118 48 28;
     --ember-950: 64 20 10;
+
+    /* Default neutrals — warm "sand" (cream → taupe), as "R G B" channels. */
+    --sand-50: 250 247 243;
+    --sand-100: 244 237 229;
+    --sand-200: 232 221 209;
+    --sand-300: 214 197 180;
+    --sand-400: 184 163 146;
+    --sand-500: 152 131 115;
+    --sand-600: 121 103 90;
+    --sand-700: 95 81 73;
+    --sand-800: 63 54 49;
+    --sand-900: 39 35 32;
+    --sand-950: 24 21 18;
   }
 
   /* Violet theme — purple accent (light base). */
@@ -33,6 +46,35 @@
     --ember-800: 91 33 182;
     --ember-900: 76 29 149;
     --ember-950: 46 16 101;
+  }
+
+  /* Noir theme — black / grey / white with a cyan accent. Rides on `.dark`. */
+  html.noir {
+    /* Accent — electric cyan. */
+    --ember-50: 236 254 255;
+    --ember-100: 207 250 254;
+    --ember-200: 165 243 252;
+    --ember-300: 103 232 249;
+    --ember-400: 34 211 238;
+    --ember-500: 34 211 238;
+    --ember-600: 8 145 178;
+    --ember-700: 14 116 144;
+    --ember-800: 21 94 117;
+    --ember-900: 22 78 99;
+    --ember-950: 8 51 68;
+
+    /* Neutrals — pure greys (near-white → near-black). */
+    --sand-50: 250 250 250;
+    --sand-100: 244 244 245;
+    --sand-200: 228 228 231;
+    --sand-300: 212 212 216;
+    --sand-400: 161 161 170;
+    --sand-500: 113 113 122;
+    --sand-600: 82 82 91;
+    --sand-700: 63 63 70;
+    --sand-800: 39 39 42;
+    --sand-900: 24 24 27;
+    --sand-950: 9 9 11;
   }
 
   html {
@@ -56,6 +98,16 @@
       radial-gradient(1100px 620px at 0% -5%, rgb(var(--ember-500) / 0.16) 0%, transparent 55%),
       radial-gradient(1000px 560px at 100% 0%, rgba(120, 80, 50, 0.18) 0%, rgba(120, 80, 50, 0) 50%),
       linear-gradient(180deg, #1b1713 0%, #141110 100%);
+  }
+
+  /* Noir theme: a near-black canvas. The animated Lottie waves are layered on
+     top of this by <NoirBackground /> (a fixed element behind the app). */
+  html.noir body {
+    background-color: #000000;
+    background-image:
+      radial-gradient(1100px 620px at 0% -5%, rgb(var(--ember-500) / 0.1) 0%, transparent 55%),
+      radial-gradient(1000px 560px at 100% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
+      linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
   }
 
   /* Violet theme uses a cooler lavender backdrop instead of warm peach. */

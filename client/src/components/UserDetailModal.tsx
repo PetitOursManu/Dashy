@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
-import { Spinner } from './Spinner';
+import { Spinner, Loader } from './Spinner';
 import { usersApi } from '../api/users';
 import { notificationsApi } from '../api/notifications';
 import { ApiError } from '../api/client';
@@ -83,7 +83,7 @@ export function UserDetailModal({ open, user, onClose }: Props) {
     <Modal open={open} title={t('userdetail.title', { email: user?.email ?? '' })} onClose={onClose}>
       {loading ? (
         <div className="flex justify-center py-12">
-          <Spinner className="h-7 w-7 text-ember-500" />
+          <Loader className="h-16 w-16" />
         </div>
       ) : !history ? (
         <p className="py-6 text-center text-sm text-sand-400">{error ?? '—'}</p>

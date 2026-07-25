@@ -13,7 +13,7 @@ import { InstallModal } from '../components/store/InstallModal';
 import { UpdateContentModal } from '../components/store/UpdateContentModal';
 import { DeployManageModal } from '../components/store/DeployManageModal';
 import { CatalogManagerModal } from '../components/store/CatalogManagerModal';
-import { Spinner } from '../components/Spinner';
+import { Spinner, Loader } from '../components/Spinner';
 import { DownloadIcon, SearchIcon } from '../components/Icons';
 
 const TYPE_BADGE: Record<string, string> = {
@@ -125,7 +125,7 @@ export function StorePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Spinner className="h-8 w-8 text-ember-500" />
+        <Loader className="h-20 w-20" />
       </div>
     );
   }
