@@ -109,10 +109,18 @@ interface LottieProps {
   /** Cover (fill + crop) the container instead of fitting inside it. */
   cover?: boolean;
   /**
-   * Canvas pixel-density cap. Lower = cheaper to paint; 1 is plenty for a soft,
-   * low-opacity full-screen backdrop. Omit for crisp small animations.
+   * Canvas pixel-density cap. Lower = cheaper (fewer pixels to compute + upload
+   * to the GPU); 0.5 is plenty for a soft, low-opacity full-screen backdrop.
+   * Omit for crisp small animations.
    */
   dpr?: number;
+  /**
+   * Cap the render rate (frames/second) for decorative animations. lottie
+   * otherwise renders at the file's native rate (25–60 fps) *forever*, which
+   * pins the main thread and the GPU compositor. 12–15 fps is imperceptible for
+   * slow ambient motion and cuts the per-second cost by 2–4×.
+   */
+  fps?: number;
   className?: string;
   loop?: boolean;
   speed?: number;
@@ -124,6 +132,7 @@ export function Lottie({
   transparent = false,
   cover = false,
   dpr,
+  fps,
   className,
   loop = true,
   speed = 1,
@@ -133,7 +142,10 @@ export function Lottie({
   useEffect(() => {
     let anim: AnimationItem | null = null;
     let cancelled = false;
+    let raf = 0;
     const paused = reduceMotion();
+    // When throttling we drive frames ourselves, so lottie must not autoplay.
+    const selfDriven = !paused && fps != null;
 
     void loadData(src).then((data) => {
       if (cancelled || !ref.current) return;
@@ -148,8 +160,8 @@ export function Lottie({
         container: ref.current,
         renderer: 'canvas',
         loop,
-        // Honour "reduce motion": paint a single static frame, don't animate.
-        autoplay: !paused,
+        // Honour "reduce motion" (static frame) and self-driven throttling.
+        autoplay: !paused && !selfDriven,
         animationData,
         rendererSettings: {
           clearCanvas: true,
@@ -159,12 +171,31 @@ export function Lottie({
         },
       });
       anim.setSpeed(speed);
-      if (paused) anim.goToAndStop(0, true);
+      if (paused) {
+        anim.goToAndStop(0, true);
+      } else if (selfDriven) {
+        // Advance the timeline from wall-clock, but only actually render every
+        // 1000/fps ms — the rAF wake itself is cheap, the lottie render is not.
+        const interval = 1000 / (fps as number);
+        const nativeFps = anim.frameRate || 30;
+        const total = anim.totalFrames || nativeFps;
+        const t0 = performance.now();
+        let last = -Infinity;
+        const step = (now: number) => {
+          raf = requestAnimationFrame(step);
+          if (document.hidden || now - last < interval) return;
+          last = now;
+          const frame = (((now - t0) / 1000) * nativeFps * speed) % total;
+          anim?.goToAndStop(frame, true);
+        };
+        raf = requestAnimationFrame(step);
+      }
     });
 
-    // Stop burning CPU while the tab is in the background.
+    // Stop burning CPU while the tab is in the background (autoplay path only;
+    // the self-driven loop already no-ops on document.hidden).
     const onVisibility = () => {
-      if (!anim || paused) return;
+      if (!anim || paused || selfDriven) return;
       if (document.hidden) anim.pause();
       else anim.play();
     };
@@ -172,10 +203,11 @@ export function Lottie({
 
     return () => {
       cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVisibility);
       anim?.destroy();
     };
-  }, [src, color, transparent, cover, dpr, loop, speed]);
+  }, [src, color, transparent, cover, dpr, fps, loop, speed]);
 
   return <div ref={ref} className={className} aria-hidden="true" />;
 }
