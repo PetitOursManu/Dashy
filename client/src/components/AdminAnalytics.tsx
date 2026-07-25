@@ -129,7 +129,7 @@ function NotificationsPanel() {
 
   return (
     <div className="card relative overflow-hidden p-5">
-      <TileDecor variant="bell" />
+      <TileDecor variant="bell" noirVariant="rings" />
       <PanelHeader
         icon={
           <BellIcon
@@ -249,7 +249,7 @@ function OpensChart({ data, total }: { data: OverviewStats['opensByMonth']; tota
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
     <div className="card relative overflow-hidden p-5 lg:col-span-2">
-      <TileDecor variant="rings" />
+      <TileDecor variant="rings" noirVariant="bell" />
       <PanelHeader icon={<ChartIcon className="h-5 w-5" />} title={t('analytics.appOpens')} />
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold tracking-tight">{total}</span>
@@ -357,7 +357,7 @@ function StoragePanel({ data }: { data: StorageStats }) {
   const max = Math.max(1, ...top.map((a) => a.size));
   return (
     <div className="card relative overflow-hidden p-5">
-      <TileDecor variant="storage" />
+      <TileDecor variant="storage" noirVariant="dots" />
       <PanelHeader
         icon={<HardDriveIcon className="h-5 w-5" />}
         title={t('analytics.storageUsage')}

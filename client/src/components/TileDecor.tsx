@@ -16,24 +16,27 @@ export type DecorVariant =
  * use the accent (ember) variables, so they follow the active theme.
  */
 /**
- * In the "noir" theme each tile variant maps to a distinct animated Lottie,
- * tinted cyan, so the dashboard feels alive and varied on black. `transparent`
- * strips a clip's opaque dark backdrop; `cover` lets wide clips bleed across
- * the tile. All are fps-capped for performance.
+ * In the "noir" theme each tile variant maps to a *distinct* animated Lottie
+ * (a bijection — no clip is reused across variants), tinted cyan, so the
+ * dashboard feels alive and varied on black. `transparent` strips a clip's
+ * opaque dark backdrop; `cover` + `inset-0` full-bleeds it across the tile; a
+ * capped `dpr` keeps the full-screen-scale clips cheap. Widgets choose the
+ * variant whose animation best fits their title (see the per-tile usages).
  */
+const FULL_BLEED = 'inset-0 h-full w-full';
+const CORNER = '-bottom-10 -right-10 h-44 w-44';
+
 const NOIR_DECOR: Record<
   DecorVariant,
-  { src: string; transparent?: boolean; cover?: boolean; fps: number; className: string }
+  { src: string; transparent?: boolean; cover?: boolean; dpr?: number; fps: number; className: string }
 > = {
-  // Full-bleed backgrounds fill the whole tile (inset-0 + cover) so they reach
-  // every edge; the others are intentional corner motifs.
-  rings: { src: '/lottie/circular-dots.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
-  dots: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
-  waves: { src: '/lottie/wavy.json', cover: true, fps: 15, className: 'inset-0 h-full w-full' },
-  blob: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
-  sphere: { src: '/lottie/orbit.json', fps: 20, className: '-bottom-10 -right-10 h-44 w-44' },
-  storage: { src: '/lottie/grid.json', transparent: true, cover: true, fps: 20, className: 'inset-0 h-full w-full' },
-  bell: { src: '/lottie/dots.json', fps: 20, className: '-right-2 -top-2 h-24 w-24' },
+  rings: { src: '/lottie/circular-dots.json', transparent: true, cover: true, dpr: 1, fps: 20, className: FULL_BLEED },
+  dots: { src: '/lottie/grid.json', transparent: true, cover: true, dpr: 1, fps: 20, className: FULL_BLEED },
+  waves: { src: '/lottie/wavy.json', cover: true, dpr: 1, fps: 15, className: FULL_BLEED },
+  blob: { src: '/lottie/wave.json', cover: true, dpr: 1, fps: 15, className: FULL_BLEED },
+  sphere: { src: '/lottie/wave2.json', cover: true, dpr: 1, fps: 12, className: FULL_BLEED },
+  storage: { src: '/lottie/orbit.json', fps: 20, className: CORNER },
+  bell: { src: '/lottie/dots.json', cover: true, dpr: 1, fps: 20, className: FULL_BLEED },
 };
 
 export function TileDecor({
@@ -57,6 +60,7 @@ export function TileDecor({
         color="#22d3ee"
         transparent={d.transparent}
         cover={d.cover}
+        dpr={d.dpr}
         fps={d.fps}
         className={`${base} opacity-40 ${d.className}`}
       />
