@@ -18,7 +18,7 @@ export function NoirBackground() {
         transparent
         cover
         dpr={0.5}
-        fps={12}
+        fps={24}
         speed={0.6}
         className="h-full w-full opacity-[0.18]"
       />

@@ -28,7 +28,7 @@ export function TileDecor({ variant = 'rings' }: { variant?: DecorVariant }) {
       <Lottie
         src={isDots ? '/lottie/dots.json' : '/lottie/orbit.json'}
         color="#22d3ee"
-        fps={15}
+        fps={20}
         className={`${base} opacity-40 ${
           isDots ? '-right-3 -top-3 h-28 w-28' : '-bottom-10 -right-10 h-44 w-44'
         }`}
