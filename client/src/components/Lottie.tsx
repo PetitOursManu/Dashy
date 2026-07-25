@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { AnimationItem } from 'lottie-web';
-// SVG-only build: smaller, and no `eval`/expressions (keeps us within the app's
-// strict CSP, which does not allow 'unsafe-eval').
-import lottie from 'lottie-web/build/player/lottie_light';
+// Canvas renderer (no eval → stays within the app's strict CSP). Canvas is far
+// cheaper than SVG for these animations: one GPU-friendly paint per frame
+// instead of a huge live DOM tree that the browser must reflow/repaint.
+import lottie from 'lottie-web/build/player/lottie_light_canvas';
+
+const reduceMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Reusable Lottie player. The animation JSON lives in /public/lottie and is
@@ -101,6 +106,13 @@ interface LottieProps {
   color?: string;
   /** Drop opaque background "solid" layers so the artwork overlays cleanly. */
   transparent?: boolean;
+  /** Cover (fill + crop) the container instead of fitting inside it. */
+  cover?: boolean;
+  /**
+   * Canvas pixel-density cap. Lower = cheaper to paint; 1 is plenty for a soft,
+   * low-opacity full-screen backdrop. Omit for crisp small animations.
+   */
+  dpr?: number;
   className?: string;
   loop?: boolean;
   speed?: number;
@@ -110,6 +122,8 @@ export function Lottie({
   src,
   color,
   transparent = false,
+  cover = false,
+  dpr,
   className,
   loop = true,
   speed = 1,
@@ -119,6 +133,7 @@ export function Lottie({
   useEffect(() => {
     let anim: AnimationItem | null = null;
     let cancelled = false;
+    const paused = reduceMotion();
 
     void loadData(src).then((data) => {
       if (cancelled || !ref.current) return;
@@ -131,19 +146,36 @@ export function Lottie({
       }
       anim = lottie.loadAnimation({
         container: ref.current,
-        renderer: 'svg',
+        renderer: 'canvas',
         loop,
-        autoplay: true,
+        // Honour "reduce motion": paint a single static frame, don't animate.
+        autoplay: !paused,
         animationData,
+        rendererSettings: {
+          clearCanvas: true,
+          progressiveLoad: false,
+          preserveAspectRatio: cover ? 'xMidYMid slice' : 'xMidYMid meet',
+          ...(dpr ? { dpr } : {}),
+        },
       });
       anim.setSpeed(speed);
+      if (paused) anim.goToAndStop(0, true);
     });
+
+    // Stop burning CPU while the tab is in the background.
+    const onVisibility = () => {
+      if (!anim || paused) return;
+      if (document.hidden) anim.pause();
+      else anim.play();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
       anim?.destroy();
     };
-  }, [src, color, transparent, loop, speed]);
+  }, [src, color, transparent, cover, dpr, loop, speed]);
 
   return <div ref={ref} className={className} aria-hidden="true" />;
 }

@@ -122,7 +122,21 @@ export function createApp(): Express {
 
   // --- Frontend (production) ---
   if (fs.existsSync(CLIENT_DIST_DIR)) {
-    app.use(express.static(CLIENT_DIST_DIR));
+    app.use(
+      express.static(CLIENT_DIST_DIR, {
+        // Default: cache for an hour (covers /lottie/*.json, favicons, etc.).
+        maxAge: '1h',
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('index.html')) {
+            // Never stale-serve the shell: its inline script is CSP-hash-pinned.
+            res.setHeader('Cache-Control', 'no-cache');
+          } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            // Vite fingerprints these — safe to cache forever.
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      }),
+    );
     // SPA fallback for client-side routing.
     app.get('*', (_req, res) => {
       res.sendFile(path.join(CLIENT_DIST_DIR, 'index.html'));

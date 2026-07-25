@@ -16,8 +16,10 @@ export function NoirBackground() {
         src="/lottie/bg-waves.json"
         color="#22d3ee"
         transparent
+        cover
+        dpr={1}
         speed={0.6}
-        className="absolute left-1/2 top-1/2 h-full min-h-[100vh] w-full min-w-[177vh] -translate-x-1/2 -translate-y-1/2 opacity-[0.18]"
+        className="h-full w-full opacity-[0.18]"
       />
     </div>
   );
