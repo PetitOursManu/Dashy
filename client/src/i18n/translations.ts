@@ -3610,6 +3610,11 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
 const dbStrings: Record<Lang, Record<string, string>> = {
   en: {
     'db.title': 'Database',
+    'nav.database': 'Database',
+    'db.hubDesc': 'Pick an app to browse and manage its database.',
+    'db.hubPick': 'Select an app on the left to get started.',
+    'db.hubNoApps': 'No apps yet.',
+    'db.searchApps': 'Search apps…',
     'db.manualTitle': 'Connect a database',
     'db.manualDesc':
       "Enter the connection details for this app's database. Nothing is saved until a test succeeds. Credentials are encrypted at rest and never sent back to your browser.",
@@ -3659,6 +3664,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   fr: {
     'db.title': 'Base de données',
+    'nav.database': 'Base de données',
+    'db.hubDesc': 'Choisissez une app pour explorer et gérer sa base de données.',
+    'db.hubPick': 'Sélectionnez une app à gauche pour commencer.',
+    'db.hubNoApps': 'Aucune app pour le moment.',
+    'db.searchApps': 'Rechercher des apps…',
     'db.manualTitle': 'Connecter une base de données',
     'db.manualDesc':
       "Saisissez les informations de connexion à la base de données de cette app. Rien n'est enregistré tant que le test n'a pas réussi. Les identifiants sont chiffrés au repos et ne sont jamais renvoyés au navigateur.",
@@ -3708,6 +3718,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   es: {
     'db.title': 'Base de datos',
+    'nav.database': 'Base de datos',
+    'db.hubDesc': 'Elige una app para explorar y gestionar su base de datos.',
+    'db.hubPick': 'Selecciona una app a la izquierda para empezar.',
+    'db.hubNoApps': 'Aún no hay apps.',
+    'db.searchApps': 'Buscar apps…',
     'db.manualTitle': 'Conectar una base de datos',
     'db.manualDesc':
       'Introduce los datos de conexión de la base de datos de esta app. No se guarda nada hasta que la prueba tenga éxito. Las credenciales se cifran en reposo y nunca se envían de vuelta al navegador.',
@@ -3757,6 +3772,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   de: {
     'db.title': 'Datenbank',
+    'nav.database': 'Datenbank',
+    'db.hubDesc': 'Wähle eine App, um ihre Datenbank zu durchsuchen und zu verwalten.',
+    'db.hubPick': 'Wähle links eine App aus, um zu beginnen.',
+    'db.hubNoApps': 'Noch keine Apps.',
+    'db.searchApps': 'Apps suchen…',
     'db.manualTitle': 'Datenbank verbinden',
     'db.manualDesc':
       'Gib die Verbindungsdaten für die Datenbank dieser App ein. Es wird nichts gespeichert, bevor ein Test erfolgreich war. Zugangsdaten werden verschlüsselt gespeichert und nie an den Browser zurückgesendet.',
@@ -3806,6 +3826,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   it: {
     'db.title': 'Database',
+    'nav.database': 'Database',
+    'db.hubDesc': "Scegli un'app per esplorare e gestire il suo database.",
+    'db.hubPick': "Seleziona un'app a sinistra per iniziare.",
+    'db.hubNoApps': 'Ancora nessuna app.',
+    'db.searchApps': 'Cerca app…',
     'db.manualTitle': 'Connetti un database',
     'db.manualDesc':
       'Inserisci i dati di connessione del database di questa app. Non viene salvato nulla finché il test non ha successo. Le credenziali sono cifrate a riposo e non vengono mai rinviate al browser.',
@@ -3855,6 +3880,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   zh: {
     'db.title': '数据库',
+    'nav.database': '数据库',
+    'db.hubDesc': '选择一个应用以浏览和管理其数据库。',
+    'db.hubPick': '在左侧选择一个应用以开始。',
+    'db.hubNoApps': '还没有应用。',
+    'db.searchApps': '搜索应用…',
     'db.manualTitle': '连接数据库',
     'db.manualDesc':
       '输入该应用数据库的连接信息。测试成功之前不会保存任何内容。凭据在存储时加密，绝不会回传到浏览器。',
@@ -3903,6 +3933,11 @@ const dbStrings: Record<Lang, Record<string, string>> = {
   },
   ru: {
     'db.title': 'База данных',
+    'nav.database': 'База данных',
+    'db.hubDesc': 'Выберите приложение, чтобы просматривать и управлять его базой данных.',
+    'db.hubPick': 'Выберите приложение слева, чтобы начать.',
+    'db.hubNoApps': 'Пока нет приложений.',
+    'db.searchApps': 'Поиск приложений…',
     'db.manualTitle': 'Подключить базу данных',
     'db.manualDesc':
       'Введите параметры подключения к базе данных этого приложения. Ничего не сохраняется, пока проверка не пройдёт успешно. Учётные данные шифруются при хранении и никогда не отправляются обратно в браузер.',

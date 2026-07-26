@@ -15,6 +15,7 @@ import { LoginPage, safeNext } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AppEditPage } from './pages/AppEditPage';
 import { DbExplorerPage } from './pages/DbExplorerPage';
+import { DatabasePage } from './pages/DatabasePage';
 import { SecurityPage } from './pages/SecurityPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -107,6 +108,7 @@ export default function App() {
                   <Route element={<AdminRoute />}>
                     <Route path="/apps/:id/edit" element={<AppEditPage />} />
                     <Route path="/apps/:id/database" element={<DbExplorerPage />} />
+                    <Route path="/database" element={<DatabasePage />} />
                     <Route path="/store" element={<StorePage />} />
                   </Route>
                 </Route>
