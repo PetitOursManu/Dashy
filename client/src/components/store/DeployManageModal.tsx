@@ -63,7 +63,12 @@ export function DeployManageModal({ open, app, onClose, onDone }: Props) {
         volumes: volumes.filter((v) => v.name.trim() && v.mountPath.trim()),
         serviceName: serviceName.trim(),
       });
-      setMessage(res.message);
+      // A driver failure returns { ok: false, error } (HTTP 200) — show it.
+      if (res.ok === false) {
+        setError(res.error || t('store.redeployError'));
+        return;
+      }
+      setMessage(res.message ?? null);
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('store.redeployError'));

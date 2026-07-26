@@ -16,9 +16,28 @@ export interface ConnectionMeta {
   updatedAt: string;
 }
 
+/** A connection detected from the app's deploy env — never includes a password. */
+export interface DetectedMeta {
+  type: DbEngine;
+  host: string;
+  port: number;
+  user: string;
+  database: string;
+  hasPassword: boolean;
+}
+
 export type ConnectionStatus =
   | { status: 'none' }
+  | { status: 'detected'; detected: DetectedMeta }
   | { status: 'configured'; connection: ConnectionMeta; engineSupported: boolean };
+
+export interface DetectedSaveInput {
+  host: string;
+  port?: number;
+  user?: string;
+  database?: string;
+  sslMode?: SslMode;
+}
 
 export interface ConnectionInput {
   type: DbEngine;
@@ -94,6 +113,14 @@ export const databaseApi = {
   save: (appId: string, input: ConnectionInput) =>
     http.post<{ status: 'configured'; connection: ConnectionMeta }>(
       `${base(appId)}/connection`,
+      input,
+    ),
+
+  // Confirm a detected connection: the password stays server-side. Returns
+  // { ok:false, error } (HTTP 200) if the test against `host` fails.
+  saveDetected: (appId: string, input: DetectedSaveInput) =>
+    http.post<{ ok: boolean; error?: string; status?: 'configured'; connection?: ConnectionMeta }>(
+      `${base(appId)}/connection/detected`,
       input,
     ),
 

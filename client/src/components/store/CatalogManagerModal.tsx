@@ -71,6 +71,10 @@ function toPayload(m: ManifestInput): ManifestInput {
       required_env: (m.deploy?.required_env ?? []).filter((e) => e.key.trim()),
       volumes: (m.deploy?.volumes ?? []).filter((v) => v.name.trim() && v.mountPath.trim()),
       default_port: m.deploy?.default_port || 8080,
+      // Source repo so a compose `build:` works (Docker fetches it; Coolify
+      // builds from Git). Empty string → omitted.
+      ...(m.deploy?.repo?.trim() ? { repo: m.deploy.repo.trim() } : {}),
+      ...(m.deploy?.branch?.trim() ? { branch: m.deploy.branch.trim() } : {}),
     },
   };
 }
@@ -161,6 +165,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
             required_env: a.deploy.required_env,
             volumes: a.deploy.volumes ?? [],
             default_port: a.deploy.default_port,
+            repo: a.deploy.repo,
+            branch: a.deploy.branch,
           }
         : { docker_compose: '', required_env: [], volumes: [], default_port: 8080 },
     });
@@ -168,8 +174,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setIdTouched(true);
     setStaticKind(a.static?.upload ? 'upload' : 'url');
     setUploadName(a.static?.upload ? t('manifest.uploaded') : '');
-    setComposeSource('paste');
-    setRepoUrl('');
+    setComposeSource(a.deploy?.repo ? 'repo' : 'paste');
+    setRepoUrl(a.deploy?.repo ?? '');
     setImage('');
     setContainerPort('80');
     setHostPort('8080');
@@ -334,7 +340,15 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setError(null);
     setBusy(true);
     try {
-      const payload = toPayload(form);
+      // Persist the source repo only when the compose came from a GitHub repo,
+      // so `build:` can be resolved at deploy time (else clear any stale value).
+      const repo =
+        form.type === 'deploy' && composeSource === 'repo' && repoUrl.trim() ? repoUrl.trim() : '';
+      const toSend =
+        form.type === 'deploy' && form.deploy
+          ? { ...form, deploy: { ...form.deploy, repo } }
+          : form;
+      const payload = toPayload(toSend);
       if (editingId) await storeApi.updateApp(source.id, editingId, payload);
       else await storeApi.addApp(source.id, payload);
       setForm(null);

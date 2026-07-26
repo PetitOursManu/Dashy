@@ -10,6 +10,20 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A deploy/redeploy/restart driver failure (the stack couldn't be brought up).
+ * Rendered as HTTP 200 with `{ ok: false, error }` — NOT a 5xx — so a reverse
+ * proxy in front of Dashy (Coolify/Traefik) can't swap the body of a 502 for
+ * its own generic error page and hide the real reason from the admin. The
+ * failure is always logged server-side too.
+ */
+export class DeployError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DeployError';
+  }
+}
+
 export function notFound(_req: Request, res: Response): void {
   res.status(404).json({ error: 'Not found' });
 }
@@ -26,6 +40,14 @@ export function errorHandler(
       error: 'Validation failed',
       details: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
     });
+    return;
+  }
+
+  if (err instanceof DeployError) {
+    // Always surface the reason in the container logs, and return it in a 200
+    // body a reverse proxy won't rewrite. The client keys off `ok: false`.
+    console.error('[deploy]', err.message);
+    res.status(200).json({ ok: false, error: err.message });
     return;
   }
 

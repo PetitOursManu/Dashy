@@ -116,7 +116,8 @@ export function StorePage() {
   const onRestart = async (id: string) => {
     setError(null);
     try {
-      await storeApi.restart(id);
+      const res = await storeApi.restart(id);
+      if (res.ok === false) setError(res.error || t('store.restartError'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('store.restartError'));
     }

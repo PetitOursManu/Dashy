@@ -3,11 +3,13 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { HostedApp } from '../models/HostedApp.js';
 import { DbConnection, type DbConnectionDoc } from '../models/DbConnection.js';
+import { StoreInstalledApp } from '../models/StoreInstalledApp.js';
 import { ApiError } from '../middleware/error.js';
 import { encrypt } from '../utils/crypto.js';
 import { resolveDriver, SUPPORTED_ENGINES } from '../db-drivers/index.js';
 import { DriverError, type DatabaseDriver, type ConnectionConfig } from '../db-drivers/types.js';
 import { configFromManual, configFromStored, DEFAULT_PORTS } from '../services/connectionResolver.js';
+import { detectDbFromEnv, redactDetected, type DetectedConnection } from '../services/deployDbDetect.js';
 
 // ----------------------------- validation schemas -----------------------------
 
@@ -28,6 +30,16 @@ type ConnectionInput = z.infer<typeof connectionInputSchema>;
 /** DELETE requires an explicit backend confirmation flag (defense in depth). */
 export const deleteConnectionSchema = z.object({
   confirm: z.literal(true),
+});
+
+/** Confirm a detected connection: the password comes from the deploy env
+ * (server-side), the admin only supplies the host reachable from Dashy. */
+export const detectedSaveSchema = z.object({
+  host: z.string().min(1).max(255).trim(),
+  port: z.coerce.number().int().min(1).max(65535).optional(),
+  user: z.string().max(255).trim().optional(),
+  database: z.string().max(255).trim().optional(),
+  sslMode: z.enum(['disable', 'require']).optional().default('disable'),
 });
 
 const rowsQuerySchema = z.object({
@@ -59,6 +71,14 @@ async function requireConnection(
   return { doc, driver, config: configFromStored(doc) };
 }
 
+/** Detect a DB connection from the env vars of the app's Store deploy, if any. */
+async function detectForApp(appId: string): Promise<DetectedConnection | null> {
+  const installed = await StoreInstalledApp.findOne({ hostedApp: appId, type: 'deploy' });
+  if (!installed) return null;
+  const env = Object.fromEntries(installed.deployEnv ?? new Map()) as Record<string, string>;
+  return detectDbFromEnv(env);
+}
+
 /** Run a driver call, mapping expected DB failures to a 502 (bad upstream). */
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -75,15 +95,22 @@ async function run<T>(fn: () => Promise<T>): Promise<T> {
 export async function getConnection(req: Request, res: Response): Promise<void> {
   await requireApp(req.params.appId);
   const doc = await DbConnection.findOne({ appId: req.params.appId });
-  if (!doc) {
-    res.json({ status: 'none' });
+  if (doc) {
+    res.json({
+      status: 'configured',
+      connection: doc.toJSON(),
+      engineSupported: SUPPORTED_ENGINES.includes(doc.type),
+    });
     return;
   }
-  res.json({
-    status: 'configured',
-    connection: doc.toJSON(),
-    engineSupported: SUPPORTED_ENGINES.includes(doc.type),
-  });
+  // No stored connection: offer a detection from the app's own deploy env, but
+  // only for an engine we can actually use, and never leak the password.
+  const detected = await detectForApp(req.params.appId);
+  if (detected && resolveDriver(detected.type)) {
+    res.json({ status: 'detected', detected: redactDetected(detected) });
+    return;
+  }
+  res.json({ status: 'none' });
 }
 
 /** POST /connection/test — try a manual config without persisting anything. */
@@ -122,6 +149,55 @@ export async function saveConnection(req: Request, res: Response): Promise<void>
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   res.json({ status: 'configured', connection: doc!.toJSON() });
+}
+
+/**
+ * POST /connection/detected — confirm & save an auto-detected connection. The
+ * password stays server-side (read from the deploy env, never sent to/from the
+ * browser); the admin only supplies the host reachable from Dashy. Tests before
+ * persisting so a wrong host is caught up front.
+ */
+export async function saveDetectedConnection(req: Request, res: Response): Promise<void> {
+  await requireApp(req.params.appId);
+  const detected = await detectForApp(req.params.appId);
+  if (!detected) throw new ApiError(404, 'No database credentials detected for this app');
+  const driver = resolveDriver(detected.type);
+  if (!driver) throw new ApiError(501, `Engine "${detected.type}" is not supported yet`);
+
+  const body = req.body as z.infer<typeof detectedSaveSchema>;
+  const config: ConnectionConfig = {
+    type: detected.type,
+    host: body.host,
+    port: body.port && body.port > 0 ? body.port : detected.port || DEFAULT_PORTS[detected.type],
+    user: body.user?.trim() || detected.user,
+    password: detected.password,
+    database: body.database?.trim() || detected.database,
+    ssl: body.sslMode,
+  };
+
+  const test = await driver.testConnection(config);
+  if (!test.ok) {
+    res.json({ ok: false, error: test.error ?? 'Connection failed' });
+    return;
+  }
+
+  const doc = await DbConnection.findOneAndUpdate(
+    { appId: req.params.appId },
+    {
+      appId: req.params.appId,
+      type: config.type,
+      source: 'auto',
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      database: config.database,
+      sslMode: body.sslMode,
+      passwordEnc: config.password ? encrypt(config.password) : null,
+      lastTestedAt: new Date(),
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  res.json({ ok: true, status: 'configured', connection: doc!.toJSON() });
 }
 
 /** DELETE /connection — remove the stored connection (requires confirm:true). */

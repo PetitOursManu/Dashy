@@ -91,6 +91,12 @@ export function InstallModal({ open, app, config, drivers, onClose, onInstalled 
             }
           : {}),
       });
+      // A driver failure returns { ok: false, error } (HTTP 200) so the reason
+      // survives a reverse proxy — surface it instead of faking success.
+      if (res.ok === false) {
+        setError(res.error || t('store.installError'));
+        return;
+      }
       if (res.driverMessage) setMessage(res.driverMessage);
       // Show the success animation, then close the dialog automatically.
       setSuccess(true);

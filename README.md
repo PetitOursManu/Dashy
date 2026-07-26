@@ -30,7 +30,7 @@ No SaaS, no paid services — everything runs on a single machine.
 
 - **Catalogues** — add **sources**: a local JSON file, a remote URL, or a **Dashy-managed catalogue you edit entirely from the UI** (add / edit / remove apps, no JSON to hand-write).
 - **Three install types** — **`tile`** (a card linking to a URL); **`static`** (a `.zip`/`.html` downloaded from a URL *or uploaded straight from your computer*, re-hosted by Dashy, with in-place content updates); and **`deploy`** (a `docker-compose` stack).
-- **Flexible deploy authoring** — paste the compose, give a **GitHub repo URL**, or just a **Docker Hub image** + port (Dashy generates the compose). Deploys support **persistent volumes**, editable env, and **Redeploy / Restart**.
+- **Flexible deploy authoring** — paste the compose, give a **GitHub repo URL**, or just a **Docker Hub image** + port (Dashy generates the compose). Composes that **`build:` from source** work when authored from a GitHub repo (Docker fetches the source; Coolify builds from Git). Deploys support **persistent volumes**, editable env, and **Redeploy / Restart**.
 - **AI deploy advisor** — when the AI assistant is configured, one click has it read the compose (and the repo's README) to **propose persistent volumes** and **surface the env vars** as dedicated fields; you review and apply before installing.
 - **Runtime-detected drivers** — direct **Docker**, **Coolify**, **Portainer**, or a universal **manual** copy/paste. Tokens are encrypted backend-only; uninstalling stops/removes the container and tidies up.
 
@@ -373,6 +373,23 @@ folder source may also hold **one `.json` file per app** — Dashy reads every
   compose for it. The result stays editable before you save, and the deploy block
   can declare persistent **`volumes`**.
 
+#### Composes that build from source (`build:`)
+
+If your compose builds its own image (`build: .`) rather than pulling a
+pre-built one, the source must reach the build host — pasting the compose alone
+isn't enough (Dashy only transports the compose file, not your code). Author the
+app from its **GitHub repo URL**: Dashy remembers the repo (manifest
+`deploy.repo`) and, at deploy time,
+
+- **Docker (direct)** — downloads the repo's source into the build context and
+  runs `docker compose up -d --build`, so `build:` resolves.
+- **Coolify** — deploys the **repo via Coolify's Git build** (build pack
+  `dockercompose`) so Coolify clones and builds it itself.
+
+Otherwise, publish a **pre-built image** to a registry (Docker Hub / GHCR) and
+reference it with `image:` (no `build:`) — the simplest option, and the only one
+for non-GitHub sources.
+
 ### Deploy drivers
 
 Drivers are capability-detected — only the ones usable on your host are offered:
@@ -388,6 +405,13 @@ Driver credentials (Coolify token, Portainer key) are configured in
 *Settings → Store*, **encrypted at rest (AES-256-GCM)**, never returned to the
 browser, and never read from a manifest. A deploy always shows the compose
 preview first and always asks for the final app URL before creating the card.
+
+**When a deploy fails**, the driver's real reason (e.g. `Coolify API responded
+401 …`, a `docker compose` error) is shown in the install dialog *and* logged
+server-side with a `[deploy]` tag. The failure is returned as an HTTP-200
+`{ ok: false, error }` body — deliberately not a 5xx — so a reverse proxy in
+front of Dashy (Coolify/Traefik) can't replace it with a generic 502 page and
+hide the reason. Check the Dashy container logs if the dialog is ever unclear.
 
 For the **direct Docker** driver, Dashy must reach the host's Docker engine: it
 runs `docker compose`, so it needs both the Docker **socket** and the **docker
@@ -444,8 +468,13 @@ leaving Dashy or opening a SQL client. **Admin-only**, gated by the same
 Each app card gets a **🗄️ Database** action (admins only) that opens
 `/apps/:id/database`:
 
-1. **Connect** — a manual form per engine (host, port, user, password, database,
-   SSL). A **Test connection** is required before **Save** can be used.
+1. **Connect** — either a manual form per engine (host, port, user, password,
+   database, SSL; a **Test connection** is required before **Save**), or — for
+   apps Dashy deployed via the Store — a **detected connection**: Dashy reads the
+   credentials from the app's own deploy env vars (`DATABASE_URL`, `POSTGRES_*`,
+   `MYSQL_*`/`MARIADB_*`, `MONGO_URI`, `REDIS_URL`…), pre-fills the form, and lets
+   you connect in one click. The **detected password never leaves the server** —
+   you only confirm the host reachable from Dashy.
 2. **Explore** — pick a **schema** → a **table**, then read its rows in a
    paginated grid you can **sort** (click a header) and **filter** (contains).
 
@@ -464,10 +493,10 @@ one registry entry — the rest of the stack (endpoints, UI) is engine-agnostic.
 | SQLite | ⏳ planned | file → table → row |
 | Redis | ⏳ planned | db index → key-prefix → key |
 
-> **Roadmap:** Phase 1 (now) is read-only Postgres/MySQL over a **manual**
-> connection. Later phases add CRUD + an audit log, then MongoDB, SQLite, Redis,
-> and finally **automatic detection** of a connection from a Coolify-deployed
-> app's env vars (plus an optional `database:` field in the catalogue manifest).
+> **Roadmap:** Phase 1 (now) is read-only Postgres/MySQL, with **manual** and
+> **auto-detected** (from a Store deploy's env vars) connections. Later phases add
+> CRUD + an audit log, then MongoDB, SQLite, Redis, detection via the Coolify API
+> for apps deployed there, and an optional `database:` field in the manifest.
 
 ### Security
 

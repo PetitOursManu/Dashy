@@ -93,8 +93,10 @@ export const storeApi = {
     ),
 
   installed: () => http.get<{ installed: StoreInstalled[] }>('/api/store/installed'),
+  // A deploy driver failure comes back as `{ ok: false, error }` (HTTP 200) so a
+  // reverse proxy can't hide the reason — callers must check `ok`.
   install: (payload: InstallPayload) =>
-    http.post<{ ok: true; driverMessage?: string; app: HostedApp | null }>(
+    http.post<{ ok: boolean; driverMessage?: string; error?: string; app: HostedApp | null }>(
       '/api/store/install',
       payload,
     ),
@@ -110,11 +112,13 @@ export const storeApi = {
     );
   },
   redeploy: (id: string, payload: RedeployPayload) =>
-    http.post<{ ok: true; message: string; installed: StoreInstalled }>(
+    http.post<{ ok: boolean; message?: string; error?: string; installed?: StoreInstalled }>(
       `/api/store/installed/${id}/redeploy`,
       payload,
     ),
   restart: (id: string) =>
-    http.post<{ ok: true; message: string }>(`/api/store/installed/${id}/restart`),
+    http.post<{ ok: boolean; message?: string; error?: string }>(
+      `/api/store/installed/${id}/restart`,
+    ),
   uninstall: (id: string) => http.del<{ ok: true }>(`/api/store/installed/${id}`),
 };

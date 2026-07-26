@@ -25,6 +25,12 @@ router.post(
   validateBody(db.connectionInputSchema),
   asyncHandler(db.saveConnection),
 );
+router.post(
+  '/connection/detected',
+  dbLimiter,
+  validateBody(db.detectedSaveSchema),
+  asyncHandler(db.saveDetectedConnection),
+);
 router.delete(
   '/connection',
   dbLimiter,

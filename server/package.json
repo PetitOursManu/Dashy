@@ -18,6 +18,8 @@
     "test:mobile": "node --import tsx --test tests/mobile.test.ts",
     "test:sso": "node --import tsx --test tests/sso.test.ts",
     "test:drivers": "node --import tsx --test tests/dbDrivers.test.ts",
+    "test:detect": "node --import tsx --test tests/deployDbDetect.test.ts",
+    "test:reposrc": "node --import tsx --test tests/repoSource.test.ts",
     "test:db": "node --import tsx --test tests/database.test.ts"
   },
   "dependencies": {

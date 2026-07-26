@@ -44,6 +44,11 @@ export const manifestSchema = z
         required_env: z.array(envVarSchema).optional().default([]),
         volumes: z.array(volumeMountSchema).optional().default([]),
         default_port: z.number().int().positive().max(65535).optional().default(8080),
+        // Optional source repo so a compose `build:` works without a pre-built
+        // image: the Docker driver fetches the source into the build context, and
+        // the Coolify driver deploys the repo via its Git build.
+        repo: z.string().url().max(2000).optional(),
+        branch: z.string().max(120).optional(),
       })
       .optional(),
     static: z

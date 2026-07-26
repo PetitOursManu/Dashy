@@ -17,6 +17,10 @@ export interface DeployContext {
   config: StoreConfigDoc;
   volumes?: VolumeMount[];
   serviceName?: string;
+  // Optional source repo so a compose `build:` works: the Docker driver fetches
+  // it into the build context; the Coolify driver deploys the repo via Git.
+  repo?: string;
+  branch?: string;
 }
 
 export interface DeployResult {

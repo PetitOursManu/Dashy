@@ -11,7 +11,7 @@ import {
   type ServingMode,
 } from '../models/StoreInstalledApp.js';
 import type { StoreConfigDoc } from '../models/StoreConfig.js';
-import { ApiError } from '../middleware/error.js';
+import { ApiError, DeployError } from '../middleware/error.js';
 import { slugify, withRandomSuffix } from '../utils/slug.js';
 import { safeExtractZip, findEntryFile } from '../utils/zip.js';
 import { STORE_APPS_DIR, STORE_DEPLOY_DIR, STORE_UPLOADS_DIR, TMP_DIR } from '../config/paths.js';
@@ -254,8 +254,10 @@ export async function installDeploy(
     config: opts.config,
     volumes,
     serviceName: opts.serviceName,
+    repo: manifest.deploy.repo,
+    branch: manifest.deploy.branch,
   });
-  if (!result.ok) throw new ApiError(502, `Deploy failed: ${result.message}`);
+  if (!result.ok) throw new DeployError(`Deploy failed: ${result.message}`);
 
   const app = await createCard({
     name: manifest.name,
@@ -278,6 +280,8 @@ export async function installDeploy(
     deployEnv: opts.env,
     volumes,
     serviceName: opts.serviceName || '',
+    repo: manifest.deploy.repo ?? '',
+    branch: manifest.deploy.branch ?? '',
   });
   return { installed, driverMessage: result.message };
 }
@@ -300,8 +304,10 @@ export async function redeployInstall(
     config,
     volumes: installed.volumes ?? [],
     serviceName: installed.serviceName || undefined,
+    repo: installed.repo || undefined,
+    branch: installed.branch || undefined,
   });
-  if (!result.ok) throw new ApiError(502, `Redeploy failed: ${result.message}`);
+  if (!result.ok) throw new DeployError(`Redeploy failed: ${result.message}`);
   return result.message;
 }
 
@@ -315,7 +321,7 @@ export async function restartInstall(
   if (!driver?.restart) throw new ApiError(400, 'This deploy driver cannot be restarted from Dashy');
   if (!(await driver.isAvailable(config))) throw new ApiError(400, 'This deploy driver is not available');
   const result = await driver.restart(installed.slug);
-  if (!result.ok) throw new ApiError(502, `Restart failed: ${result.message}`);
+  if (!result.ok) throw new DeployError(`Restart failed: ${result.message}`);
   return result.message;
 }
 
