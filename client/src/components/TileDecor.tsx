@@ -46,13 +46,15 @@ export function TileDecor({
   variant?: DecorVariant;
   /** Override which animation the noir theme uses, without changing the SVG
    *  motif shown in the other themes (e.g. a content-heavy tile wants a
-   *  contained corner clip rather than a full-width one). */
-  noirVariant?: DecorVariant;
+   *  contained corner clip rather than a full-width one). Use 'none' to show no
+   *  animation at all in noir — for data-viz tiles where motion distracts. */
+  noirVariant?: DecorVariant | 'none';
 }) {
   const { theme } = useTheme();
   const base = 'pointer-events-none absolute select-none';
 
   if (theme === 'noir') {
+    if (noirVariant === 'none') return null;
     const d = NOIR_DECOR[noirVariant ?? variant] ?? NOIR_DECOR.rings;
     return (
       <Lottie
