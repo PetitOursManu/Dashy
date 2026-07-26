@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { STORE_DEPLOY_DIR } from '../../config/paths.js';
 import { fetchRepoSource } from '../repoSource.js';
+import { resolvePortConflicts } from '../ports.js';
 import type { Driver, DeployContext, VolumeMount } from './index.js';
 
 const exec = promisify(execFile);
@@ -107,9 +108,19 @@ export const dockerDriver: Driver = {
   async deploy(ctx) {
     const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
     try {
-      await writeStack(dir, ctx);
+      // Move any already-taken published host port to a free one before starting.
+      const { compose, remap } = await resolvePortConflicts(ctx.compose);
+      await writeStack(dir, { ...ctx, compose });
       await composeUp(dir, Boolean(ctx.repo));
-      return { ok: true, message: 'Stack started with Docker Compose.' };
+      const note = remap.length
+        ? ` Ports already in use were remapped: ${remap.map((r) => `${r.from}→${r.to}`).join(', ')}.`
+        : '';
+      return {
+        ok: true,
+        message: `Stack started with Docker Compose.${note}`,
+        portMap: remap,
+        compose,
+      };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : 'docker compose failed' };
     }
