@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { STORE_DEPLOY_DIR } from '../../config/paths.js';
+import { fetchRepoSource } from '../repoSource.js';
 import type { Driver, DeployContext, VolumeMount } from './index.js';
 
 const exec = promisify(execFile);
@@ -68,6 +69,12 @@ function overrideYaml(serviceName: string, volumes: VolumeMount[]): string | nul
 
 /** Write compose, env and the volumes override into the stack directory. */
 async function writeStack(dir: string, ctx: DeployContext): Promise<void> {
+  // Build-from-source: replace the stack dir with a fresh copy of the repo so a
+  // compose `build:` finds its Dockerfile + code, then write our compose on top.
+  if (ctx.repo) {
+    await fsp.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    await fetchRepoSource(ctx.repo, ctx.branch, dir);
+  }
   await fsp.mkdir(dir, { recursive: true });
   await fsp.writeFile(path.join(dir, 'docker-compose.yml'), ctx.compose, 'utf8');
 
@@ -82,8 +89,12 @@ async function writeStack(dir: string, ctx: DeployContext): Promise<void> {
   else await fsp.rm(overridePath, { force: true }).catch(() => {});
 }
 
-async function composeUp(dir: string): Promise<void> {
-  await exec('docker', ['compose', 'up', '-d'], { cwd: dir, timeout: 120_000 });
+async function composeUp(dir: string, build: boolean): Promise<void> {
+  const args = ['compose', 'up', '-d'];
+  // Rebuild from the fetched source when the app builds its own image.
+  if (build) args.push('--build');
+  // Building an image can take far longer than pulling one.
+  await exec('docker', args, { cwd: dir, timeout: build ? 600_000 : 180_000 });
 }
 
 /** Deploy directly on the host via `docker compose` (requires the socket). */
@@ -97,7 +108,7 @@ export const dockerDriver: Driver = {
     const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
     try {
       await writeStack(dir, ctx);
-      await composeUp(dir);
+      await composeUp(dir, Boolean(ctx.repo));
       return { ok: true, message: 'Stack started with Docker Compose.' };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : 'docker compose failed' };
@@ -107,7 +118,7 @@ export const dockerDriver: Driver = {
     const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
     try {
       await writeStack(dir, ctx);
-      await composeUp(dir);
+      await composeUp(dir, Boolean(ctx.repo));
       return { ok: true, message: 'Stack redeployed with your changes.' };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : 'docker compose failed' };

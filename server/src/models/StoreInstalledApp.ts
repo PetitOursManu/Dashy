@@ -24,6 +24,9 @@ export interface IStoreInstalledApp {
   deployEnv: Map<string, string>;
   volumes: { name: string; mountPath: string }[];
   serviceName: string;
+  // Source repo for a compose `build:` (so redeploy can rebuild from source).
+  repo: string;
+  branch: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +50,8 @@ const storeInstalledAppSchema = new Schema<IStoreInstalledApp>(
       default: [],
     },
     serviceName: { type: String, default: '' },
+    repo: { type: String, default: '' },
+    branch: { type: String, default: '' },
   },
   { timestamps: true },
 );

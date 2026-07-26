@@ -11,7 +11,7 @@
     "build": "npm --prefix client run build && npm --prefix server run build",
     "start": "node server/dist/index.js",
     "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck",
-    "test": "npm --prefix server test && npm --prefix server run test:e2e && npm --prefix server run test:mobile && npm --prefix server run test:sso && npm --prefix server run test:drivers && npm --prefix server run test:db"
+    "test": "npm --prefix server test && npm --prefix server run test:e2e && npm --prefix server run test:mobile && npm --prefix server run test:sso && npm --prefix server run test:drivers && npm --prefix server run test:detect && npm --prefix server run test:reposrc && npm --prefix server run test:db"
   },
   "engines": {
     "node": ">=20"

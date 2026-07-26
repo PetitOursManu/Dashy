@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { useI18n } from '../../context/LanguageContext';
 import { Loader } from '../Spinner';
 import { ConnectionWizard } from './ConnectionWizard';
+import { DetectedConnectionCard } from './DetectedConnectionCard';
 import { DbExplorer } from './DbExplorer';
 
 /**
@@ -18,10 +19,13 @@ export function AppDatabasePanel({ appId }: { appId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reconfig, setReconfig] = useState(false);
+  // Set when the user picks manual entry over an auto-detected connection.
+  const [manual, setManual] = useState(false);
 
   const loadStatus = useCallback(async () => {
     setStatus(await databaseApi.getConnection(appId));
     setReconfig(false);
+    setManual(false);
   }, [appId]);
 
   useEffect(() => {
@@ -29,6 +33,7 @@ export function AppDatabasePanel({ appId }: { appId: string }) {
     setLoading(true);
     setError(null);
     setReconfig(false);
+    setManual(false);
     (async () => {
       try {
         const s = await databaseApi.getConnection(appId);
@@ -79,16 +84,40 @@ export function AppDatabasePanel({ appId }: { appId: string }) {
     );
   }
 
+  // Auto-detected from the app's deploy env — offer one-click connect, with a
+  // manual fallback (credentials pre-filled, password excluded).
+  if (status?.status === 'detected' && !manual) {
+    return (
+      <DetectedConnectionCard
+        appId={appId}
+        detected={status.detected}
+        onConnected={loadStatus}
+        onManual={() => setManual(true)}
+      />
+    );
+  }
+
+  const initial =
+    configured
+      ? { type: status.connection.type, sslMode: status.connection.sslMode }
+      : status?.status === 'detected'
+        ? {
+            type: status.detected.type,
+            host: status.detected.host,
+            port: status.detected.port || undefined,
+            user: status.detected.user,
+            database: status.detected.database,
+          }
+        : undefined;
+
   return (
     <ConnectionWizard
       appId={appId}
-      initial={
-        configured
-          ? { type: status.connection.type, sslMode: status.connection.sslMode }
-          : undefined
-      }
+      initial={initial}
       onConnected={loadStatus}
-      onCancel={reconfig ? () => setReconfig(false) : undefined}
+      onCancel={
+        manual ? () => setManual(false) : reconfig ? () => setReconfig(false) : undefined
+      }
     />
   );
 }

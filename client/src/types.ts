@@ -189,6 +189,8 @@ export interface StoreCatalogApp {
     required_env: StoreEnvVar[];
     volumes?: { name: string; mountPath: string }[];
     default_port: number;
+    repo?: string;
+    branch?: string;
   };
   static?: { source_url?: string; upload?: string; entrypoint: string };
   source: string;
@@ -225,6 +227,8 @@ export interface ManifestInput {
     required_env: StoreEnvVar[];
     volumes?: { name: string; mountPath: string }[];
     default_port: number;
+    repo?: string;
+    branch?: string;
   };
 }
 

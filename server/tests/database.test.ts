@@ -20,6 +20,7 @@ let server: Server;
 let baseUrl: string;
 let disconnectDb: () => Promise<void>;
 let appId = '';
+let deployAppId = '';
 
 /** A cookie jar keyed independently so admin/user sessions don't collide. */
 function makeJar() {
@@ -68,6 +69,7 @@ before(async () => {
   const { createApp } = await import('../src/app.js');
   const { User } = await import('../src/models/User.js');
   const { HostedApp } = await import('../src/models/HostedApp.js');
+  const { StoreInstalledApp } = await import('../src/models/StoreInstalledApp.js');
   disconnectDb = dd;
 
   ensureDataDirs();
@@ -83,6 +85,25 @@ before(async () => {
   const adminDoc = await User.findOne({ email: ADMIN_EMAIL });
   const app = await HostedApp.create({ name: 'Test App', slug: 'test-app', owner: adminDoc!._id });
   appId = app.id;
+
+  // A deploy install whose env carries DB credentials, to exercise detection.
+  const deployApp = await HostedApp.create({
+    name: 'Deployed App',
+    slug: 'deployed-app',
+    owner: adminDoc!._id,
+  });
+  deployAppId = deployApp.id;
+  await StoreInstalledApp.create({
+    manifestId: 'deployed-app',
+    name: 'Deployed App',
+    type: 'deploy',
+    hostedApp: deployApp._id,
+    deployEnv: new Map([
+      ['POSTGRES_USER', 'app'],
+      ['POSTGRES_PASSWORD', 'secret'],
+      ['POSTGRES_DB', 'appdb'],
+    ]),
+  });
 
   const expressApp = createApp();
   await new Promise<void>((resolve) => {
@@ -185,6 +206,37 @@ test('testConnection to an unreachable host returns ok:false (not an exception)'
 test('browsing an unreachable database surfaces a 502', async () => {
   const res = await admin.api('GET', `/api/apps/${appId}/database/schemas`);
   assert.equal(res.status, 502);
+});
+
+test('detects a connection from the app deploy env (no password leaked)', async () => {
+  const res = await admin.api('GET', `/api/apps/${deployAppId}/database/connection`);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    status: string;
+    detected: Record<string, unknown>;
+  };
+  assert.equal(body.status, 'detected');
+  assert.equal(body.detected.type, 'postgresql');
+  assert.equal(body.detected.user, 'app');
+  assert.equal(body.detected.database, 'appdb');
+  assert.equal(body.detected.hasPassword, true);
+  assert.equal(body.detected.password, undefined, 'password must never be serialized');
+});
+
+test('confirming a detected connection tests before saving (unreachable → not saved)', async () => {
+  const res = await admin.api('POST', `/api/apps/${deployAppId}/database/connection/detected`, {
+    host: '127.0.0.1',
+    port: 1,
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { ok: boolean; error?: string };
+  assert.equal(body.ok, false);
+  assert.ok(body.error);
+  // Nothing persisted, so it is still merely "detected".
+  const after = await (
+    await admin.api('GET', `/api/apps/${deployAppId}/database/connection`)
+  ).json();
+  assert.equal(after.status, 'detected');
 });
 
 test('deleting the connection requires an explicit confirm flag', async () => {

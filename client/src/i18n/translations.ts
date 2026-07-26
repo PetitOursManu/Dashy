@@ -3615,6 +3615,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': 'Select an app on the left to get started.',
     'db.hubNoApps': 'No apps yet.',
     'db.searchApps': 'Search apps…',
+    'db.detectedTitle': 'Detected connection',
+    'db.detectedDesc':
+      "Dashy found database credentials in this app's deploy configuration. Set the host reachable from Dashy, then connect — the detected password stays on the server.",
+    'db.detectedPassword': 'detected (kept on server)',
+    'db.detectedHostHint':
+      "Host & port reachable from Dashy — not the internal compose service name (typically the host's address and the published port).",
+    'db.connect': 'Connect',
+    'db.enterManually': 'Enter manually instead',
     'db.manualTitle': 'Connect a database',
     'db.manualDesc':
       "Enter the connection details for this app's database. Nothing is saved until a test succeeds. Credentials are encrypted at rest and never sent back to your browser.",
@@ -3669,6 +3677,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': 'Sélectionnez une app à gauche pour commencer.',
     'db.hubNoApps': 'Aucune app pour le moment.',
     'db.searchApps': 'Rechercher des apps…',
+    'db.detectedTitle': 'Connexion détectée',
+    'db.detectedDesc':
+      "Dashy a trouvé des identifiants de base de données dans la configuration de déploiement de cette app. Indiquez l'hôte joignable depuis Dashy, puis connectez-vous — le mot de passe détecté reste sur le serveur.",
+    'db.detectedPassword': 'détecté (gardé sur le serveur)',
+    'db.detectedHostHint':
+      "Hôte et port joignables depuis Dashy — pas le nom du service compose interne (en général l'adresse de l'hôte et le port publié).",
+    'db.connect': 'Se connecter',
+    'db.enterManually': 'Saisir manuellement',
     'db.manualTitle': 'Connecter une base de données',
     'db.manualDesc':
       "Saisissez les informations de connexion à la base de données de cette app. Rien n'est enregistré tant que le test n'a pas réussi. Les identifiants sont chiffrés au repos et ne sont jamais renvoyés au navigateur.",
@@ -3723,6 +3739,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': 'Selecciona una app a la izquierda para empezar.',
     'db.hubNoApps': 'Aún no hay apps.',
     'db.searchApps': 'Buscar apps…',
+    'db.detectedTitle': 'Conexión detectada',
+    'db.detectedDesc':
+      'Dashy encontró credenciales de base de datos en la configuración de despliegue de esta app. Indica el host accesible desde Dashy y conéctate — la contraseña detectada permanece en el servidor.',
+    'db.detectedPassword': 'detectada (guardada en el servidor)',
+    'db.detectedHostHint':
+      'Host y puerto accesibles desde Dashy — no el nombre del servicio interno de compose (normalmente la dirección del host y el puerto publicado).',
+    'db.connect': 'Conectar',
+    'db.enterManually': 'Introducir manualmente',
     'db.manualTitle': 'Conectar una base de datos',
     'db.manualDesc':
       'Introduce los datos de conexión de la base de datos de esta app. No se guarda nada hasta que la prueba tenga éxito. Las credenciales se cifran en reposo y nunca se envían de vuelta al navegador.',
@@ -3777,6 +3801,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': 'Wähle links eine App aus, um zu beginnen.',
     'db.hubNoApps': 'Noch keine Apps.',
     'db.searchApps': 'Apps suchen…',
+    'db.detectedTitle': 'Erkannte Verbindung',
+    'db.detectedDesc':
+      'Dashy hat in der Deploy-Konfiguration dieser App Datenbank-Zugangsdaten gefunden. Gib den von Dashy erreichbaren Host an und verbinde dich — das erkannte Passwort bleibt auf dem Server.',
+    'db.detectedPassword': 'erkannt (bleibt auf dem Server)',
+    'db.detectedHostHint':
+      'Von Dashy erreichbarer Host & Port — nicht der interne Compose-Servicename (meist die Adresse des Hosts und der veröffentlichte Port).',
+    'db.connect': 'Verbinden',
+    'db.enterManually': 'Manuell eingeben',
     'db.manualTitle': 'Datenbank verbinden',
     'db.manualDesc':
       'Gib die Verbindungsdaten für die Datenbank dieser App ein. Es wird nichts gespeichert, bevor ein Test erfolgreich war. Zugangsdaten werden verschlüsselt gespeichert und nie an den Browser zurückgesendet.',
@@ -3831,6 +3863,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': "Seleziona un'app a sinistra per iniziare.",
     'db.hubNoApps': 'Ancora nessuna app.',
     'db.searchApps': 'Cerca app…',
+    'db.detectedTitle': 'Connessione rilevata',
+    'db.detectedDesc':
+      "Dashy ha trovato le credenziali del database nella configurazione di deploy di questa app. Indica l'host raggiungibile da Dashy e connettiti — la password rilevata resta sul server.",
+    'db.detectedPassword': 'rilevata (resta sul server)',
+    'db.detectedHostHint':
+      "Host e porta raggiungibili da Dashy — non il nome del servizio compose interno (di solito l'indirizzo dell'host e la porta pubblicata).",
+    'db.connect': 'Connetti',
+    'db.enterManually': 'Inserisci manualmente',
     'db.manualTitle': 'Connetti un database',
     'db.manualDesc':
       'Inserisci i dati di connessione del database di questa app. Non viene salvato nulla finché il test non ha successo. Le credenziali sono cifrate a riposo e non vengono mai rinviate al browser.',
@@ -3885,6 +3925,13 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': '在左侧选择一个应用以开始。',
     'db.hubNoApps': '还没有应用。',
     'db.searchApps': '搜索应用…',
+    'db.detectedTitle': '检测到的连接',
+    'db.detectedDesc':
+      'Dashy 在该应用的部署配置中找到了数据库凭据。请填写 Dashy 可访问的主机，然后连接 — 检测到的密码保留在服务器上。',
+    'db.detectedPassword': '已检测（保存在服务器）',
+    'db.detectedHostHint': 'Dashy 可访问的主机和端口 — 不是 compose 内部服务名（通常是主机地址和发布的端口）。',
+    'db.connect': '连接',
+    'db.enterManually': '改为手动输入',
     'db.manualTitle': '连接数据库',
     'db.manualDesc':
       '输入该应用数据库的连接信息。测试成功之前不会保存任何内容。凭据在存储时加密，绝不会回传到浏览器。',
@@ -3938,6 +3985,14 @@ const dbStrings: Record<Lang, Record<string, string>> = {
     'db.hubPick': 'Выберите приложение слева, чтобы начать.',
     'db.hubNoApps': 'Пока нет приложений.',
     'db.searchApps': 'Поиск приложений…',
+    'db.detectedTitle': 'Обнаруженное подключение',
+    'db.detectedDesc':
+      'Dashy нашёл учётные данные базы данных в конфигурации развёртывания этого приложения. Укажите хост, доступный из Dashy, и подключитесь — обнаруженный пароль остаётся на сервере.',
+    'db.detectedPassword': 'обнаружен (хранится на сервере)',
+    'db.detectedHostHint':
+      'Хост и порт, доступные из Dashy — не имя внутреннего сервиса compose (обычно адрес хоста и опубликованный порт).',
+    'db.connect': 'Подключиться',
+    'db.enterManually': 'Ввести вручную',
     'db.manualTitle': 'Подключить базу данных',
     'db.manualDesc':
       'Введите параметры подключения к базе данных этого приложения. Ничего не сохраняется, пока проверка не пройдёт успешно. Учётные данные шифруются при хранении и никогда не отправляются обратно в браузер.',
