@@ -3070,6 +3070,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'GitHub repository URL',
     'manifest.repoLoad': 'Load',
     'manifest.repoHint': 'Dashy reads docker-compose.yml (or compose.yaml) from the repo root on the default branch.',
+    'manifest.buildRepo': 'Build source repo (optional)',
+    'manifest.buildRepoHint':
+      'Only needed if your compose uses build: — the source is fetched (Docker) or built from Git (Coolify). Public GitHub repos only.',
     'manifest.repoError': 'Could not load a compose file from that repo.',
     'manifest.composeImage': 'Docker image',
     'manifest.imageName': 'Docker Hub image',
@@ -3164,6 +3167,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'URL du dépôt GitHub',
     'manifest.repoLoad': 'Charger',
     'manifest.repoHint': 'Dashy lit docker-compose.yml (ou compose.yaml) à la racine du dépôt, sur la branche par défaut.',
+    'manifest.buildRepo': 'Dépôt source pour build: (optionnel)',
+    'manifest.buildRepoHint':
+      'Nécessaire seulement si votre compose utilise build: — la source est récupérée (Docker) ou construite depuis Git (Coolify). Dépôts GitHub publics uniquement.',
     'manifest.repoError': "Impossible de charger un compose depuis ce dépôt.",
     'manifest.composeImage': 'Image Docker',
     'manifest.imageName': 'Image Docker Hub',
@@ -3258,6 +3264,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'URL del repositorio GitHub',
     'manifest.repoLoad': 'Cargar',
     'manifest.repoHint': 'Dashy lee docker-compose.yml (o compose.yaml) en la raíz del repo, en la rama por defecto.',
+    'manifest.buildRepo': 'Repo de origen para build: (opcional)',
+    'manifest.buildRepoHint':
+      'Solo si tu compose usa build: — la fuente se descarga (Docker) o se construye desde Git (Coolify). Solo repos públicos de GitHub.',
     'manifest.repoError': 'No se pudo cargar un compose desde ese repo.',
     'manifest.composeImage': 'Imagen Docker',
     'manifest.imageName': 'Imagen de Docker Hub',
@@ -3341,6 +3350,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'GitHub-Repository-URL',
     'manifest.repoLoad': 'Laden',
     'manifest.repoHint': 'Dashy liest docker-compose.yml (oder compose.yaml) im Repo-Stamm auf dem Standard-Branch.',
+    'manifest.buildRepo': 'Quell-Repo für build: (optional)',
+    'manifest.buildRepoHint':
+      'Nur nötig, wenn dein Compose build: verwendet — die Quelle wird geladen (Docker) oder aus Git gebaut (Coolify). Nur öffentliche GitHub-Repos.',
     'manifest.repoError': 'Konnte kein Compose aus diesem Repo laden.',
     'manifest.composeImage': 'Docker-Image',
     'manifest.imageName': 'Docker-Hub-Image',
@@ -3424,6 +3436,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'URL del repository GitHub',
     'manifest.repoLoad': 'Carica',
     'manifest.repoHint': 'Dashy legge docker-compose.yml (o compose.yaml) nella radice del repo, sul branch predefinito.',
+    'manifest.buildRepo': 'Repo sorgente per build: (opzionale)',
+    'manifest.buildRepoHint':
+      'Serve solo se il compose usa build: — la sorgente viene scaricata (Docker) o costruita da Git (Coolify). Solo repo GitHub pubblici.',
     'manifest.repoError': 'Impossibile caricare un compose da quel repo.',
     'manifest.composeImage': 'Immagine Docker',
     'manifest.imageName': 'Immagine Docker Hub',
@@ -3507,6 +3522,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'GitHub 仓库 URL',
     'manifest.repoLoad': '加载',
     'manifest.repoHint': 'Dashy 会从仓库默认分支的根目录读取 docker-compose.yml（或 compose.yaml）。',
+    'manifest.buildRepo': 'build: 的源码仓库（可选）',
+    'manifest.buildRepoHint':
+      '仅当 compose 使用 build: 时需要 — 源码会被下载（Docker）或从 Git 构建（Coolify）。仅支持公开的 GitHub 仓库。',
     'manifest.repoError': '无法从该仓库加载 compose 文件。',
     'manifest.composeImage': 'Docker 镜像',
     'manifest.imageName': 'Docker Hub 镜像',
@@ -3590,6 +3608,9 @@ const storeCfgStrings: Record<Lang, Record<string, string>> = {
     'manifest.repoUrl': 'URL репозитория GitHub',
     'manifest.repoLoad': 'Загрузить',
     'manifest.repoHint': 'Dashy читает docker-compose.yml (или compose.yaml) в корне репозитория на ветке по умолчанию.',
+    'manifest.buildRepo': 'Исходный репозиторий для build: (необязательно)',
+    'manifest.buildRepoHint':
+      'Нужно только если ваш compose использует build: — источник загружается (Docker) или собирается из Git (Coolify). Только публичные репозитории GitHub.',
     'manifest.repoError': 'Не удалось загрузить compose из этого репозитория.',
     'manifest.composeImage': 'Образ Docker',
     'manifest.imageName': 'Образ из Docker Hub',
