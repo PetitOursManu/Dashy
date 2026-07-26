@@ -195,6 +195,25 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
 
   const patch = (p: Partial<ManifestInput>) => setForm((f) => (f ? { ...f, ...p } : f));
 
+  /** Merge into the deploy block WITHOUT dropping unlisted fields (volumes/repo). */
+  const patchDeploy = (p: Partial<NonNullable<ManifestInput['deploy']>>) =>
+    setForm((f) =>
+      f
+        ? {
+            ...f,
+            deploy: {
+              docker_compose: f.deploy?.docker_compose ?? '',
+              required_env: f.deploy?.required_env ?? [],
+              volumes: f.deploy?.volumes ?? [],
+              default_port: f.deploy?.default_port ?? 8080,
+              repo: f.deploy?.repo,
+              branch: f.deploy?.branch,
+              ...p,
+            },
+          }
+        : f,
+    );
+
   const chooseType = (ty: StoreAppType) => {
     if (ty === 'static') {
       setStaticKind(form?.static?.upload ? 'upload' : 'url');
@@ -242,13 +261,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setAdvice(null);
     try {
       const { compose } = await storeApi.composeFromRepo(repoUrl.trim());
-      patch({
-        deploy: {
-          docker_compose: compose,
-          required_env: form?.deploy?.required_env ?? [],
-          default_port: form?.deploy?.default_port ?? 8080,
-        },
-      });
+      // Remember the repo so a compose `build:` can be resolved at deploy time.
+      patchDeploy({ docker_compose: compose, repo: repoUrl.trim() });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('manifest.repoError'));
     } finally {
@@ -276,14 +290,8 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
       '    env_file:\n' +
       '      - .env\n';
     setError(null);
-    patch({
-      deploy: {
-        docker_compose: compose,
-        required_env: form?.deploy?.required_env ?? [],
-        volumes: form?.deploy?.volumes ?? [],
-        default_port: hport,
-      },
-    });
+    // A generated image compose builds nothing from source → clear any repo.
+    patchDeploy({ docker_compose: compose, default_port: hport, repo: '' });
   };
 
   const analyze = async () => {
@@ -317,15 +325,9 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
         secret: e.secret,
       });
     }
-    patch({
-      deploy: {
-        // Keep the compose as-is: the docker driver injects the named volumes at
-        // deploy time, and env vars flow through the fields below.
-        docker_compose: form.deploy?.docker_compose ?? '',
-        required_env: [...byKey.values()],
-        volumes: advice.volumes.map((v) => ({ name: v.name, mountPath: v.mountPath })),
-        default_port: form.deploy?.default_port ?? 8080,
-      },
+    patchDeploy({
+      required_env: [...byKey.values()],
+      volumes: advice.volumes.map((v) => ({ name: v.name, mountPath: v.mountPath })),
     });
     setAdvice(null);
   };
@@ -340,15 +342,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
     setError(null);
     setBusy(true);
     try {
-      // Persist the source repo only when the compose came from a GitHub repo,
-      // so `build:` can be resolved at deploy time (else clear any stale value).
-      const repo =
-        form.type === 'deploy' && composeSource === 'repo' && repoUrl.trim() ? repoUrl.trim() : '';
-      const toSend =
-        form.type === 'deploy' && form.deploy
-          ? { ...form, deploy: { ...form.deploy, repo } }
-          : form;
-      const payload = toPayload(toSend);
+      const payload = toPayload(form);
       if (editingId) await storeApi.updateApp(source.id, editingId, payload);
       else await storeApi.addApp(source.id, payload);
       setForm(null);
@@ -465,7 +459,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                   patch({ id: e.target.value });
                 }}
                 placeholder="my-app"
-                pattern="[a-z0-9][a-z0-9-]*"
+                pattern="[a-z0-9][-a-z0-9]*"
                 title={t('manifest.idHint')}
                 required
               />
@@ -744,18 +738,21 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                 <textarea
                   className="input h-40 resize-none font-mono text-xs"
                   value={form.deploy?.docker_compose ?? ''}
-                  onChange={(e) =>
-                    patch({
-                      deploy: {
-                        docker_compose: e.target.value,
-                        required_env: form.deploy?.required_env ?? [],
-                        default_port: form.deploy?.default_port ?? 8080,
-                      },
-                    })
-                  }
+                  onChange={(e) => patchDeploy({ docker_compose: e.target.value })}
                   placeholder={'services:\n  app:\n    image: …'}
                   required
                 />
+              </div>
+              <div>
+                <label className="label">{t('manifest.buildRepo')}</label>
+                <input
+                  className="input"
+                  type="url"
+                  value={form.deploy?.repo ?? ''}
+                  onChange={(e) => patchDeploy({ repo: e.target.value })}
+                  placeholder="https://github.com/owner/repo"
+                />
+                <p className="mt-1 text-xs text-sand-400">{t('manifest.buildRepoHint')}</p>
               </div>
               <div className="w-40">
                 <label className="label">{t('manifest.defaultPort')}</label>
@@ -765,15 +762,7 @@ export function CatalogManagerModal({ open, source, onClose, onChanged }: Props)
                   min={1}
                   max={65535}
                   value={form.deploy?.default_port ?? 8080}
-                  onChange={(e) =>
-                    patch({
-                      deploy: {
-                        docker_compose: form.deploy?.docker_compose ?? '',
-                        required_env: form.deploy?.required_env ?? [],
-                        default_port: Number(e.target.value) || 8080,
-                      },
-                    })
-                  }
+                  onChange={(e) => patchDeploy({ default_port: Number(e.target.value) || 8080 })}
                 />
               </div>
 

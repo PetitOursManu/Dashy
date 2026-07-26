@@ -41,7 +41,11 @@ async function deployCompose(ctx: DeployContext): Promise<DeployResult> {
     }
     return { ok: true, message: 'Deployment triggered on Coolify.' };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : 'Coolify request failed' };
+    const reason = err instanceof Error ? err.message : 'request failed';
+    return {
+      ok: false,
+      message: `Could not reach Coolify at ${apiBase(c.coolifyBaseUrl)} — ${reason}. Check the URL is correct and reachable from the Dashy container (scheme, DNS, TLS).`,
+    };
   }
 }
 
@@ -84,7 +88,11 @@ async function deployFromGit(ctx: DeployContext): Promise<DeployResult> {
     }
     return { ok: true, message: 'Git deployment triggered on Coolify (builds from source).' };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : 'Coolify request failed' };
+    const reason = err instanceof Error ? err.message : 'request failed';
+    return {
+      ok: false,
+      message: `Could not reach Coolify at ${apiBase(c.coolifyBaseUrl)} — ${reason}. Check the URL is correct and reachable from the Dashy container (scheme, DNS, TLS).`,
+    };
   }
 }
 
