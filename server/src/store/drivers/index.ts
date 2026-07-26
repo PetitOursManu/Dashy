@@ -26,6 +26,11 @@ export interface DeployContext {
 export interface DeployResult {
   ok: boolean;
   message: string;
+  // Docker driver only: host ports remapped because they were already in use.
+  portMap?: { from: number; to: number }[];
+  // The compose actually deployed (e.g. with remapped ports), to persist so
+  // redeploy/restart stay consistent. Falls back to the input compose if unset.
+  compose?: string;
 }
 
 export interface Driver {

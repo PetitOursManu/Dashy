@@ -12,6 +12,7 @@ import {
 } from '../models/StoreInstalledApp.js';
 import type { StoreConfigDoc } from '../models/StoreConfig.js';
 import { ApiError, DeployError } from '../middleware/error.js';
+import { remapUrlPort } from './ports.js';
 import { slugify, withRandomSuffix } from '../utils/slug.js';
 import { safeExtractZip, findEntryFile } from '../utils/zip.js';
 import { STORE_APPS_DIR, STORE_DEPLOY_DIR, STORE_UPLOADS_DIR, TMP_DIR } from '../config/paths.js';
@@ -259,10 +260,17 @@ export async function installDeploy(
   });
   if (!result.ok) throw new DeployError(`Deploy failed: ${result.message}`);
 
+  // The docker driver may have remapped busy host ports — persist the compose it
+  // actually deployed and point the card at the port the app really got.
+  const deployedCompose = result.compose ?? compose;
+  const finalUrl = result.portMap?.length
+    ? remapUrlPort(opts.finalUrl, result.portMap)
+    : opts.finalUrl;
+
   const app = await createCard({
     name: manifest.name,
     description: manifest.description,
-    externalUrl: opts.finalUrl,
+    externalUrl: finalUrl,
     ownerId: opts.ownerId,
     slug,
   });
@@ -276,7 +284,7 @@ export async function installDeploy(
     installedVersion: manifest.version,
     slug,
     deployDriver: opts.driverId,
-    compose,
+    compose: deployedCompose,
     deployEnv: opts.env,
     volumes,
     serviceName: opts.serviceName || '',

@@ -413,6 +413,13 @@ server-side with a `[deploy]` tag. The failure is returned as an HTTP-200
 front of Dashy (Coolify/Traefik) can't replace it with a generic 502 page and
 hide the reason. Check the Dashy container logs if the dialog is ever unclear.
 
+With the **direct Docker** driver, if a published host port in the compose is
+already in use, Dashy automatically remaps it to a free port, rewrites the
+compose, and points the app's tile at the port it actually got (a note says
+which). Note: a raw host port isn't reachable through a proxy like Cloudflare on
+a non-standard port — for a publicly-served web app, use the **Coolify** driver
+(which assigns a domain + reverse proxy), or put your own reverse proxy in front.
+
 For the **direct Docker** driver, Dashy must reach the host's Docker engine: it
 runs `docker compose`, so it needs both the Docker **socket** and the **docker
 CLI** (the image already ships the CLI + compose plugin). It only ever talks to
