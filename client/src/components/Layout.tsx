@@ -7,6 +7,7 @@ import { ProfileMenu } from './ProfileMenu';
 import { ChatWidget } from './ChatWidget';
 import {
   CloseIcon,
+  DatabaseIcon,
   GridIcon,
   InboxIcon,
   MenuIcon,
@@ -30,6 +31,7 @@ const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
     titleKey: 'nav.mainMenu',
     items: [
       { to: '/', labelKey: 'nav.dashboard', icon: GridIcon, end: true },
+      { to: '/database', labelKey: 'nav.database', icon: DatabaseIcon, adminOnly: true },
       { to: '/store', labelKey: 'nav.store', icon: StoreIcon, adminOnly: true },
     ],
   },
@@ -101,6 +103,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'nav.dashboard',
+  '/database': 'nav.database',
   '/store': 'nav.store',
   '/users': 'nav.users',
   '/requests': 'nav.requests',

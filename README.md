@@ -34,6 +34,10 @@ No SaaS, no paid services — everything runs on a single machine.
 - **AI deploy advisor** — when the AI assistant is configured, one click has it read the compose (and the repo's README) to **propose persistent volumes** and **surface the env vars** as dedicated fields; you review and apply before installing.
 - **Runtime-detected drivers** — direct **Docker**, **Coolify**, **Portainer**, or a universal **manual** copy/paste. Tokens are encrypted backend-only; uninstalling stops/removes the container and tidies up.
 
+### 🗄️ Database Explorer (admin)
+
+- **Browse any app's database** from Dashy — connect Postgres or MySQL/MariaDB (more engines coming), then explore **schemas → tables → rows** in a paginated, sortable, filterable grid. Read-only in this phase; guided CRUD is next. See [Database Explorer](#database-explorer-admin) below.
+
 ### 👥 Users & access (admin)
 
 - **Multi-user & access control** — create users and choose, per user, which apps each can open; regular users see only their assigned apps.
@@ -91,7 +95,8 @@ Dashy/
 │   │   ├── controllers/    # auth, apps, store, chat, … logic
 │   │   ├── routes/         # /api/{auth,apps,users,stats,chat,store,notifications,requests}, /hosted, /store-apps
 │   │   ├── store/          # Store: manifests, catalog, install, managed catalogues, deploy drivers
-│   │   ├── services/       # admin seed, app content, chat prompt/provider, activity
+│   │   ├── db-drivers/     # Database Explorer: DatabaseDriver interface + per-engine drivers
+│   │   ├── services/       # admin seed, app content, chat prompt/provider, activity, connection resolver
 │   │   ├── utils/          # crypto, slug, safe-zip, jwt
 │   │   └── index.ts        # entry point
 │   └── tests/              # smoke + e2e (mongodb-memory-server)
@@ -180,7 +185,7 @@ Open <http://localhost:5173>.
 | `APP_ORIGIN` | no | `http://localhost:3000` | a valid URL — e.g. `https://dashy.example.com` | Public origin used for CORS and cookie settings. |
 | `MONGO_URI` | **yes** | — | `mongodb://mongo:27017/dashy` | MongoDB connection string (host is the compose service name `mongo`). |
 | `JWT_SECRET` | **yes** | — | ≥16 chars — `openssl rand -base64 48` | Secret for signing JWTs. Rotating it logs everyone out. |
-| `ENCRYPTION_KEY` | **yes** | — | 64 hex chars — `openssl rand -hex 32` | 32-byte key (AES-256-GCM) encrypting TOTP secrets at rest. |
+| `ENCRYPTION_KEY` | **yes** | — | 64 hex chars — `openssl rand -hex 32` | 32-byte key (AES-256-GCM) encrypting secrets at rest: TOTP secrets, Store driver tokens, and **Database Explorer** connection passwords. No separate DB key is needed. |
 | `ADMIN_EMAIL` | seed | — | a valid email — e.g. `admin@example.com` | Seed admin email (first run only, empty DB). |
 | `ADMIN_PASSWORD` | seed | — | ≥8 chars — e.g. `ChangeMeNow!2026` | Seed admin password (first run only, empty DB). |
 | `ALLOW_REGISTRATION` | no | `false` | `true` / `false` (also `1` / `0`) | Enable the `/api/auth/register` endpoint. |
@@ -428,6 +433,72 @@ after uninstall, so you can simply re-install them.)
 
 ---
 
+## Database Explorer (admin)
+
+Browse and (soon) edit the database behind any app on your dashboard — without
+leaving Dashy or opening a SQL client. **Admin-only**, gated by the same
+`requireAdmin` middleware as the Store.
+
+### How it works
+
+Each app card gets a **🗄️ Database** action (admins only) that opens
+`/apps/:id/database`:
+
+1. **Connect** — a manual form per engine (host, port, user, password, database,
+   SSL). A **Test connection** is required before **Save** can be used.
+2. **Explore** — pick a **schema** → a **table**, then read its rows in a
+   paginated grid you can **sort** (click a header) and **filter** (contains).
+
+The design mirrors the Store's pluggable-driver pattern: a common
+`DatabaseDriver` interface (`server/src/db-drivers/`) with one implementation per
+engine, resolved by a small factory. Adding an engine is a new driver file plus
+one registry entry — the rest of the stack (endpoints, UI) is engine-agnostic.
+
+### Supported engines
+
+| Engine | Status | `schema` → `table` → `row` maps to |
+|---|---|---|
+| PostgreSQL | ✅ read-only | schema → table → row (PK auto-detected) |
+| MySQL / MariaDB | ✅ read-only | database → table → row |
+| MongoDB | ⏳ planned | database → collection → document |
+| SQLite | ⏳ planned | file → table → row |
+| Redis | ⏳ planned | db index → key-prefix → key |
+
+> **Roadmap:** Phase 1 (now) is read-only Postgres/MySQL over a **manual**
+> connection. Later phases add CRUD + an audit log, then MongoDB, SQLite, Redis,
+> and finally **automatic detection** of a connection from a Coolify-deployed
+> app's env vars (plus an optional `database:` field in the catalogue manifest).
+
+### Security
+
+- **No new secret to configure.** Connection passwords are encrypted at rest
+  with AES-256-GCM using the existing **`ENCRYPTION_KEY`** — the same helper that
+  protects TOTP secrets and Store tokens.
+- **Secrets never reach the browser.** The API only ever serializes non-sensitive
+  metadata: the engine type, SSL mode, whether a password is set, and the **last
+  4 characters of the host** for visual confirmation. Host/user/database/password
+  stay backend-only.
+- **Parameterized queries only.** Values are always bound parameters; table and
+  column identifiers are safely quoted (never string-concatenated).
+- **Bounded & rate-limited.** Page size is capped (default 50, max 200), the
+  connection test has a 5 s timeout, and the write/test endpoints are rate
+  limited. Removing a connection needs an explicit `confirm: true` in the payload
+  in addition to the UI dialog.
+
+### Limitations (this phase)
+
+- **Read-only** — inserting/updating/deleting rows arrives in a later phase.
+- **SQLite** will require a file path reachable from the Dashy container (shared
+  volume) or a one-off upload — documented here when the driver lands; it is not
+  live-synced unless the volume is shared.
+- **Live integration tests** for Postgres/MySQL need a reachable instance. The
+  bundled tests (`npm --prefix server run test:db` / `test:drivers`) cover the
+  API surface — admin gating, validation, secret masking, the error path — and
+  the driver wiring using `mongodb-memory-server` and unreachable-host checks; no
+  Docker is required to run them.
+
+---
+
 ## Mobile API
 
 A dedicated, versioned API under **`/api/mobile/v1`** lets a companion app (e.g.
@@ -555,13 +626,17 @@ The token proves identity only — it grants **no** access to Dashy's own API.
 
 ## Testing
 
-The backend ships with three suites (no Docker needed — they use an ephemeral
-in-memory MongoDB):
+The backend suites need no Docker — they use an ephemeral in-memory MongoDB
+(and, for the DB drivers, unreachable-host checks). Run them all with
+`npm test` at the repo root, or individually:
 
 ```bash
-npm --prefix server test           # smoke: crypto, slug, safe-zip
-npm --prefix server run test:e2e    # full flow: auth, 2FA, import, hosted serving
-npm --prefix server run test:mobile # mobile API: Bearer login, 2FA, /sync, favorites
+npm --prefix server test            # smoke: crypto, slug, safe-zip
+npm --prefix server run test:e2e     # full flow: auth, 2FA, import, hosted serving
+npm --prefix server run test:mobile  # mobile API: Bearer login, 2FA, /sync, favorites
+npm --prefix server run test:sso     # SSO redirect flow + token contract
+npm --prefix server run test:drivers # DB Explorer: driver factory + error paths
+npm --prefix server run test:db      # DB Explorer API: admin gating, validation, secret masking
 ```
 
 ---

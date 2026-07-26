@@ -11,6 +11,7 @@ import { apiLimiter } from './middleware/rateLimit.js';
 import { errorHandler } from './middleware/error.js';
 import authRoutes from './routes/auth.js';
 import appsRoutes from './routes/apps.js';
+import databaseRoutes from './routes/database.js';
 import usersRoutes from './routes/users.js';
 import statsRoutes from './routes/stats.js';
 import adminRoutes from './routes/admin.js';
@@ -95,6 +96,9 @@ export function createApp(): Express {
   // API.
   app.use('/api', apiLimiter);
   app.use('/api/auth', authRoutes);
+  // DB Explorer (admin-only): browse/edit a HostedApp's database. Mounted before
+  // /api/apps so the nested :appId/database routes resolve unambiguously.
+  app.use('/api/apps/:appId/database', databaseRoutes);
   app.use('/api/apps', appsRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/stats', statsRoutes);
