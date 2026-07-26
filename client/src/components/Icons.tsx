@@ -245,6 +245,14 @@ export const CheckCircleIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const DatabaseIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+    <path d="M3 12a9 3 0 0 0 18 0" />
+  </svg>
+);
+
 /** Brand mark: warm hexagon with a centered dot, matching the favicon. */
 // The brand mark, served from /favicon.svg so it always matches the favicon.
 export const Logo = ({ className = 'h-9 w-9' }: { className?: string }) => (

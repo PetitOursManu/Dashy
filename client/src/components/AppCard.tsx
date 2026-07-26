@@ -3,7 +3,7 @@ import type { HostedApp } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
-import { EditIcon, ExternalIcon, StarIcon, TrashIcon } from './Icons';
+import { DatabaseIcon, EditIcon, ExternalIcon, StarIcon, TrashIcon } from './Icons';
 
 interface AppCardProps {
   app: HostedApp;
@@ -85,6 +85,15 @@ export function AppCard({ app, onDelete, onToggleFavorite }: AppCardProps) {
           <span className="text-xs text-sand-400">{formatDate(app.createdAt)}</span>
           {isAdmin && (
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => navigate(`/apps/${app.id}/database`)}
+                className="btn-ghost !px-2 !py-1"
+                title={t('db.title')}
+                aria-label={`${t('db.title')} — ${app.name}`}
+              >
+                <DatabaseIcon className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => navigate(`/apps/${app.id}/edit`)}

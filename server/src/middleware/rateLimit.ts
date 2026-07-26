@@ -34,6 +34,20 @@ export const chatLimiter = rateLimit({
   message: { error: 'Too many messages, please slow down' },
 });
 
+/**
+ * Limiter for DB Explorer actions that reach a third-party database (test a
+ * connection, and — from Phase 2 — write rows). Keeps a bug or abuse from
+ * hammering someone else's database.
+ */
+export const dbLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 40,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: skipInTest,
+  message: { error: 'Too many database requests, please slow down' },
+});
+
 /** Limiter for uploads (resource-intensive). */
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour

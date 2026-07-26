@@ -14,6 +14,7 @@ import { NoirBackground } from './components/NoirBackground';
 import { LoginPage, safeNext } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AppEditPage } from './pages/AppEditPage';
+import { DbExplorerPage } from './pages/DbExplorerPage';
 import { SecurityPage } from './pages/SecurityPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -105,6 +106,7 @@ export default function App() {
                   </Route>
                   <Route element={<AdminRoute />}>
                     <Route path="/apps/:id/edit" element={<AppEditPage />} />
+                    <Route path="/apps/:id/database" element={<DbExplorerPage />} />
                     <Route path="/store" element={<StorePage />} />
                   </Route>
                 </Route>
