@@ -65,7 +65,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - **Session control** — see active sessions (device, IP, last seen), revoke any individually, or "sign out of all devices".
 - **Backup & restore** (admin) — download every hosted app (files + metadata) as one `.zip` and restore it on another server.
 - **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, secrets encrypted at rest (TOTP secrets and LLM API keys, AES-256-GCM).
-- **One-command deploy** — multi-stage Docker build + `docker-compose`, a single container serving both API and SPA.
+- **One-command deploy** — multi-stage Docker build + `docker-compose`, a single container serving both API and SPA. On a bare Linux box, [one installer command](#install-on-a-bare-server-one-command) sets everything up and keeps Dashy **auto-updating** on every push.
 
 ---
 
@@ -102,6 +102,7 @@ Dashy/
 │   └── tests/              # smoke + e2e (mongodb-memory-server)
 ├── client/                 # React + Vite + Tailwind SPA
 │   └── src/                # pages, components, api, contexts
+├── scripts/                # install.sh (bare-server installer) + update.sh (auto-update)
 ├── Dockerfile              # multi-stage build
 ├── docker-compose.yml      # app + mongo
 └── .env.example
@@ -109,6 +110,51 @@ Dashy/
 
 In production the client is built into `server/public` and served by Express, so
 the whole thing runs as **one container** (plus MongoDB).
+
+---
+
+## Install on a bare server (one command)
+
+On a fresh Linux machine, this installs Docker if needed, clones Dashy,
+generates strong secrets, starts the stack, and enables automatic updates:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/PetitOursManu/Dashy/main/scripts/install.sh | sudo bash -s -- --domain dashy.example.com
+```
+
+Drop `--domain` to serve on the machine's IP instead (the installer then sets a
+plain-HTTP origin, since `Secure` cookies would otherwise block login). Useful
+options: `--port`, `--email`, `--dir`, `--branch`, `--no-auto-update`,
+`--interval`. The script prints the generated admin credentials **once** — save
+them, then change the password after the first login.
+
+Re-running the installer is safe: an **existing `.env` is never regenerated**
+(rotating `ENCRYPTION_KEY` would make every stored secret — 2FA, driver tokens,
+database passwords — permanently undecryptable) and the data volumes are kept.
+**Back up `/opt/dashy/.env`.**
+
+### Automatic updates
+
+The installer sets up a systemd timer (`dashy-update.timer`, every 5 min by
+default) running [`scripts/update.sh`](scripts/update.sh): it checks the tracked
+branch, and when a new commit lands it rebuilds and restarts.
+
+The new image is **built before anything is swapped** — if the build fails, the
+checkout is rolled back and the running instance is left untouched, so a broken
+commit upstream can't take your server down.
+
+```bash
+systemctl status dashy-update.timer     # is it armed?
+journalctl -u dashy-update -n 50        # what happened on the last runs
+sudo /opt/dashy/scripts/update.sh       # update right now
+sudo systemctl disable --now dashy-update.timer   # stop auto-updating
+```
+
+> **Two things to know.** Auto-update means **anyone who can push to the tracked
+> branch gets code execution on this server** — only track a repository you
+> control. And updates **reset tracked files** to the remote branch: keep your
+> customisation in `.env` and `docker-compose.override.yml` (both git-ignored
+> and preserved), never by editing `docker-compose.yml` in place.
 
 ---
 

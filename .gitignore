@@ -14,6 +14,10 @@ server/public/
 .env.*
 !.env.example
 
+# Local compose customisation (preserved across auto-updates, which reset the
+# tracked files to the remote branch — never edit docker-compose.yml in place).
+docker-compose.override.yml
+
 # Runtime data (hosted apps, previews, uploads)
 data/
 server/data/

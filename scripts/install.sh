@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+#
+# Dashy — one-command installer for a bare Linux machine.
+#
+#   curl -fsSL https://raw.githubusercontent.com/PetitOursManu/Dashy/main/scripts/install.sh | sudo bash
+#
+# Installs Docker if needed, clones Dashy, generates strong secrets, starts the
+# stack, and (optionally) enables automatic updates.
+#
+# Re-running is safe: an existing .env is never overwritten (rotating
+# ENCRYPTION_KEY would make every stored secret — TOTP, driver tokens, database
+# passwords — undecryptable), and the data volumes are left untouched.
+
+set -euo pipefail
+
+REPO_URL="${DASHY_REPO:-https://github.com/PetitOursManu/Dashy.git}"
+BRANCH="${DASHY_BRANCH:-main}"
+INSTALL_DIR="${DASHY_DIR:-/opt/dashy}"
+HOST_PORT="${DASHY_PORT:-3000}"
+DOMAIN="${DASHY_DOMAIN:-}"
+ADMIN_EMAIL="${DASHY_ADMIN_EMAIL:-}"
+AUTO_UPDATE=1
+UPDATE_INTERVAL="${DASHY_UPDATE_INTERVAL:-5min}"
+
+log()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'USAGE'
+Dashy installer
+
+  --domain <host>     Public domain (enables HTTPS origin), e.g. dashy.example.com
+  --port <port>       Host port to publish (default: 3000)
+  --email <email>     Seed administrator email (default: admin@<domain or dashy.local>)
+  --dir <path>        Install directory (default: /opt/dashy)
+  --branch <name>     Git branch to track (default: main)
+  --repo <url>        Git repository to install from
+  --no-auto-update    Do not install the automatic update timer
+  --interval <spec>   Update check interval, systemd format (default: 5min)
+  -h, --help          Show this help
+
+Every option also has an environment-variable equivalent (DASHY_DOMAIN, …).
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --domain)   DOMAIN="${2:-}"; shift 2 ;;
+    --port)     HOST_PORT="${2:-}"; shift 2 ;;
+    --email)    ADMIN_EMAIL="${2:-}"; shift 2 ;;
+    --dir)      INSTALL_DIR="${2:-}"; shift 2 ;;
+    --branch)   BRANCH="${2:-}"; shift 2 ;;
+    --repo)     REPO_URL="${2:-}"; shift 2 ;;
+    --interval) UPDATE_INTERVAL="${2:-}"; shift 2 ;;
+    --no-auto-update) AUTO_UPDATE=0; shift ;;
+    -h|--help)  usage; exit 0 ;;
+    *) die "Unknown option: $1 (try --help)" ;;
+  esac
+done
+
+# --- Preflight ---------------------------------------------------------------
+
+[ "$(id -u)" -eq 0 ] || die "Please run as root (sudo)."
+[ "$(uname -s)" = "Linux" ] || die "This installer targets Linux."
+command -v systemctl >/dev/null 2>&1 || AUTO_UPDATE=0
+
+log "Installing Dashy into ${INSTALL_DIR} (branch ${BRANCH})"
+
+# --- Dependencies ------------------------------------------------------------
+
+if ! command -v git >/dev/null 2>&1; then
+  log "Installing git…"
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y -qq git
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y -q git
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y -q git
+  else
+    die "No supported package manager found — install git manually."
+  fi
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  log "Installing Docker (get.docker.com)…"
+  curl -fsSL https://get.docker.com | sh
+fi
+
+docker compose version >/dev/null 2>&1 \
+  || die "The Docker Compose plugin is missing. Install 'docker-compose-plugin' and re-run."
+
+systemctl enable --now docker >/dev/null 2>&1 || true
+
+# --- Source ------------------------------------------------------------------
+
+if [ -d "${INSTALL_DIR}/.git" ]; then
+  log "Existing install found — updating source…"
+  git -C "${INSTALL_DIR}" remote set-url origin "${REPO_URL}"
+  git -C "${INSTALL_DIR}" fetch --quiet origin "${BRANCH}"
+  git -C "${INSTALL_DIR}" checkout --quiet -B "${BRANCH}" "origin/${BRANCH}"
+else
+  log "Cloning ${REPO_URL}…"
+  mkdir -p "$(dirname "${INSTALL_DIR}")"
+  git clone --quiet --branch "${BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
+fi
+
+cd "${INSTALL_DIR}"
+
+# --- Configuration -----------------------------------------------------------
+
+if [ -f .env ]; then
+  log "Keeping the existing .env (secrets preserved)."
+else
+  command -v openssl >/dev/null 2>&1 || die "openssl is required to generate secrets."
+
+  JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
+  ENCRYPTION_KEY="$(openssl rand -hex 32)"
+  ADMIN_PASSWORD="$(openssl rand -base64 18 | tr -d '\n/+=' | cut -c1-20)"
+
+  if [ -n "${DOMAIN}" ]; then
+    APP_ORIGIN="https://${DOMAIN}"
+  else
+    IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    [ -n "${IP}" ] || IP="localhost"
+    APP_ORIGIN="http://${IP}:${HOST_PORT}"
+  fi
+
+  # Session cookies are flagged Secure in production, so a plain-HTTP origin
+  # could never log in. Match the mode to the origin's scheme.
+  case "${APP_ORIGIN}" in
+    https://*) NODE_ENV=production ;;
+    *)         NODE_ENV=development ;;
+  esac
+
+  [ -n "${ADMIN_EMAIL}" ] || ADMIN_EMAIL="admin@${DOMAIN:-dashy.local}"
+
+  log "Generating .env (fresh secrets)…"
+  umask 077
+  cat > .env <<EOF
+# Generated by scripts/install.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Keep this file secret and BACK IT UP: losing ENCRYPTION_KEY makes every
+# stored secret (2FA, driver tokens, database passwords) unrecoverable.
+NODE_ENV=${NODE_ENV}
+PORT=3000
+HOST_PORT=${HOST_PORT}
+APP_ORIGIN=${APP_ORIGIN}
+
+MONGO_URI=mongodb://mongo:27017/dashy
+
+JWT_SECRET=${JWT_SECRET}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+ALLOW_REGISTRATION=false
+MAX_UPLOAD_MB=50
+EOF
+  chmod 600 .env
+  CREDENTIALS_SHOWN=1
+fi
+
+# --- Build & start -----------------------------------------------------------
+
+log "Building and starting the stack (first build can take a few minutes)…"
+docker compose build
+docker compose up -d
+
+# --- Automatic updates -------------------------------------------------------
+
+if [ "${AUTO_UPDATE}" -eq 1 ]; then
+  log "Enabling automatic updates (every ${UPDATE_INTERVAL})…"
+  cat > /etc/systemd/system/dashy-update.service <<EOF
+[Unit]
+Description=Update Dashy to the latest ${BRANCH} commit
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=${INSTALL_DIR}/scripts/update.sh --dir ${INSTALL_DIR} --branch ${BRANCH}
+EOF
+
+  cat > /etc/systemd/system/dashy-update.timer <<EOF
+[Unit]
+Description=Check for Dashy updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=${UPDATE_INTERVAL}
+Unit=dashy-update.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  chmod +x "${INSTALL_DIR}/scripts/update.sh" 2>/dev/null || true
+  systemctl daemon-reload
+  systemctl enable --now dashy-update.timer
+fi
+
+# --- Done --------------------------------------------------------------------
+
+ORIGIN="$(grep -E '^APP_ORIGIN=' .env | cut -d= -f2-)"
+echo
+log "Dashy is up: ${ORIGIN}"
+if [ "${CREDENTIALS_SHOWN:-0}" = "1" ]; then
+  echo
+  echo "    Administrator: $(grep -E '^ADMIN_EMAIL=' .env | cut -d= -f2-)"
+  echo "    Password:      $(grep -E '^ADMIN_PASSWORD=' .env | cut -d= -f2-)"
+  echo
+  warn "Save these now, then change the password after your first login."
+  warn "Back up ${INSTALL_DIR}/.env — ENCRYPTION_KEY cannot be recovered."
+fi
+if [ "${AUTO_UPDATE}" -eq 1 ]; then
+  echo "    Auto-update:   every ${UPDATE_INTERVAL} (systemctl status dashy-update.timer)"
+fi
+echo "    Logs:          docker compose -f ${INSTALL_DIR}/docker-compose.yml logs -f"
+echo
