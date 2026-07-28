@@ -130,6 +130,15 @@ export async function saveConnection(req: Request, res: Response): Promise<void>
   if (!resolveDriver(input.type)) throw new ApiError(501, `Engine "${input.type}" is not supported yet`);
 
   const port = input.port && input.port > 0 ? input.port : DEFAULT_PORTS[input.type];
+  // The wizard never pre-fills the stored password, so a blank field on an
+  // existing connection means "keep it" — not "clear it".
+  const existing = await DbConnection.findOne({ appId: req.params.appId });
+  const passwordEnc = input.password
+    ? encrypt(input.password)
+    : existing && existing.type === input.type
+      ? existing.passwordEnc
+      : null;
+
   const doc = await DbConnection.findOneAndUpdate(
     { appId: req.params.appId },
     {
@@ -141,8 +150,7 @@ export async function saveConnection(req: Request, res: Response): Promise<void>
       user: input.user,
       database: input.database,
       sslMode: input.sslMode,
-      // Empty password clears it; otherwise store the ciphertext only.
-      passwordEnc: input.password ? encrypt(input.password) : null,
+      passwordEnc,
       // The UI enforces a successful test before save, so record the moment.
       lastTestedAt: new Date(),
     },

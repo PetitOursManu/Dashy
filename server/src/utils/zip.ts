@@ -17,11 +17,23 @@ const ENTRY_CANDIDATES = ['index.html', 'index.htm'];
  *
  * Returns the list of extracted file paths (relative to destDir, POSIX-style).
  */
-export function safeExtractZip(zipPath: string, destDir: string): string[] {
+export function safeExtractZip(
+  zipPath: string,
+  destDir: string,
+  limits: { maxTotalBytes?: number; maxEntries?: number } = {},
+): string[] {
+  // A small archive can expand to gigabytes ("zip bomb"), so cap the total
+  // uncompressed size and the entry count as well as guarding the paths.
+  const { maxTotalBytes = 2 * 1024 * 1024 * 1024, maxEntries = 20_000 } = limits;
   const zip = new AdmZip(zipPath);
   const entries = zip.getEntries();
   const resolvedDest = path.resolve(destDir);
   const extracted: string[] = [];
+  let totalBytes = 0;
+
+  if (entries.length > maxEntries) {
+    throw new ZipExtractionError(`Archive has too many entries (max ${maxEntries})`);
+  }
 
   for (const entry of entries) {
     const rawName = entry.entryName;
@@ -48,8 +60,14 @@ export function safeExtractZip(zipPath: string, destDir: string): string[] {
       continue;
     }
 
+    const data = entry.getData();
+    totalBytes += data.length;
+    if (totalBytes > maxTotalBytes) {
+      throw new ZipExtractionError('Archive expands to too much data');
+    }
+
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.writeFileSync(targetPath, entry.getData());
+    fs.writeFileSync(targetPath, data);
     extracted.push(rawName.split(path.sep).join('/'));
   }
 

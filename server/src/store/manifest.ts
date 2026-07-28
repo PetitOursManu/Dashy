@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { httpUrl } from '../utils/urlGuard.js';
 
 /** A catalogue app id must be a safe lowercase slug (also used as a dir name). */
 const slug = z
@@ -34,7 +35,9 @@ export const manifestSchema = z
     type: z.enum(['tile', 'deploy', 'static']),
     tile: z
       .object({
-        url: z.string().url().max(2000),
+        // http(s) only: this URL becomes a card link, and a `javascript:` URL
+        // would execute in Dashy's origin when opened.
+        url: httpUrl(2000),
         widget: z.record(z.unknown()).optional(),
       })
       .optional(),
@@ -47,13 +50,13 @@ export const manifestSchema = z
         // Optional source repo so a compose `build:` works without a pre-built
         // image: the Docker driver fetches the source into the build context, and
         // the Coolify driver deploys the repo via its Git build.
-        repo: z.string().url().max(2000).optional(),
+        repo: httpUrl(2000).optional(),
         branch: z.string().max(120).optional(),
       })
       .optional(),
     static: z
       .object({
-        source_url: z.string().url().max(2000).optional(),
+        source_url: httpUrl(2000).optional(),
         // Reference to an admin-uploaded bundle stored by Dashy (local-only).
         upload: z
           .string()
