@@ -1,4 +1,9 @@
-# syntax=docker/dockerfile:1
+# NOTE: deliberately no `# syntax=` directive. This Dockerfile uses only
+# standard instructions (no RUN --mount, COPY --link or heredocs), so the
+# builder's built-in frontend handles it. Pinning an external frontend image
+# adds a download on every build and fails outright on some platforms
+# (observed on arm64 single-board machines: "failed to solve: exit code: 1"
+# pointing at line 1).
 
 # ----------------------------------------------------------------------------
 # Stage 1 — build the client (Vite → server/public) and compile the server.

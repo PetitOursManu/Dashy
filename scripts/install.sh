@@ -393,7 +393,9 @@ fi
 
 # --- Build & start -----------------------------------------------------------
 
-log "Building and starting Dashy (the first build takes a few minutes)…"
+log "Building and starting Dashy…"
+log "The first build compiles the client and server from source: a few minutes"
+log "on a normal server, considerably longer on a small ARM board. Sit tight."
 docker compose build
 docker compose up -d
 
