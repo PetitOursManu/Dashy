@@ -15,6 +15,7 @@ import { ApiError, DeployError } from '../middleware/error.js';
 import { remapUrlPort } from './ports.js';
 import { slugify, withRandomSuffix } from '../utils/slug.js';
 import { safeExtractZip, findEntryFile } from '../utils/zip.js';
+import { fetchPublicUrl } from '../utils/urlGuard.js';
 import { STORE_APPS_DIR, STORE_DEPLOY_DIR, STORE_UPLOADS_DIR, TMP_DIR } from '../config/paths.js';
 import { getDriver } from './drivers/index.js';
 import type { Manifest } from './manifest.js';
@@ -131,7 +132,15 @@ async function fetchStatic(
     name = bundle.name;
   } else {
     name = source.source_url ?? '';
-    const res = await fetch(name, { signal: AbortSignal.timeout(30_000) });
+    // The URL comes from catalogue data (possibly a third-party `remote`
+    // source), and its response is served back as an app — so it must not be
+    // able to reach the loopback interface, the LAN or a metadata endpoint.
+    let res: Response;
+    try {
+      res = await fetchPublicUrl(name, { timeoutMs: 30_000 });
+    } catch (err) {
+      throw new ApiError(400, err instanceof Error ? err.message : 'Refused to fetch this URL');
+    }
     if (!res.ok) throw new ApiError(502, `Could not download app (HTTP ${res.status})`);
     contentType = res.headers.get('content-type') ?? '';
     buf = Buffer.from(await res.arrayBuffer());

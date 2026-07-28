@@ -24,6 +24,10 @@ export interface RepoRef {
 export function parseGitHubRepo(repo: string): RepoRef | null {
   const m = GITHUB_REPO_RE.exec(repo.trim());
   if (!m) return null;
+  // owner/name go into a URL path unencoded — restrict them to GitHub's own
+  // charset so they can't inject a query string or extra path segments.
+  const SAFE = /^[A-Za-z0-9._-]+$/;
+  if (!SAFE.test(m[1]) || !SAFE.test(m[2])) return null;
   return { owner: m[1], name: m[2], branch: m[3] ?? null };
 }
 

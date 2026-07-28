@@ -12,6 +12,18 @@ const exec = promisify(execFile);
 const SOCKET = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 
 const SAFE_NAME = /^[a-zA-Z0-9._-]+$/;
+const SAFE_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * Defence in depth: the slug is used as a directory name and (for a repo build)
+ * that directory is wiped with `rm -rf`, so never take it on trust.
+ */
+function stackDir(slug: string): string {
+  if (!SAFE_SLUG.test(slug) || slug.includes('..')) {
+    throw new Error(`Invalid stack slug: ${slug}`);
+  }
+  return path.join(STORE_DEPLOY_DIR, slug);
+}
 
 /** Is a `docker` CLI binary resolvable on PATH (needed to run `docker compose`)? */
 function hasDockerCli(): boolean {
@@ -106,7 +118,7 @@ export const dockerDriver: Driver = {
   // Needs the daemon socket AND a docker CLI to actually run `docker compose`.
   isAvailable: (cfg) => cfg.dockerEnabled && fs.existsSync(SOCKET) && hasDockerCli(),
   async deploy(ctx) {
-    const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
+    const dir = stackDir(ctx.slug);
     try {
       // Move any already-taken published host port to a free one before starting.
       const { compose, remap } = await resolvePortConflicts(ctx.compose);
@@ -126,7 +138,7 @@ export const dockerDriver: Driver = {
     }
   },
   async redeploy(ctx) {
-    const dir = path.join(STORE_DEPLOY_DIR, ctx.slug);
+    const dir = stackDir(ctx.slug);
     try {
       await writeStack(dir, ctx);
       await composeUp(dir, Boolean(ctx.repo));
@@ -136,7 +148,7 @@ export const dockerDriver: Driver = {
     }
   },
   async restart(slug) {
-    const dir = path.join(STORE_DEPLOY_DIR, slug);
+    const dir = stackDir(slug);
     try {
       await exec('docker', ['compose', 'restart'], { cwd: dir, timeout: 120_000 });
       return { ok: true, message: 'Stack restarted.' };
@@ -145,7 +157,7 @@ export const dockerDriver: Driver = {
     }
   },
   async down(slug) {
-    const dir = path.join(STORE_DEPLOY_DIR, slug);
+    const dir = stackDir(slug);
     try {
       // Removes the containers + network; named volumes are kept.
       await exec('docker', ['compose', 'down'], { cwd: dir, timeout: 120_000 });

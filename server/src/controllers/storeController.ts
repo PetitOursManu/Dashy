@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ApiError } from '../middleware/error.js';
 import { storeUploadDir } from '../config/paths.js';
 import { encrypt } from '../utils/crypto.js';
+import { httpUrl } from '../utils/urlGuard.js';
 import { HostedApp } from '../models/HostedApp.js';
 import { StoreCatalogSource } from '../models/StoreCatalogSource.js';
 import { StoreInstalledApp } from '../models/StoreInstalledApp.js';
@@ -83,7 +84,8 @@ export const installSchema = z.object({
   servingMode: z.enum(['path', 'subdomain']).optional(),
   driver: z.string().max(40).optional(),
   env: z.record(z.string()).optional().default({}),
-  finalUrl: z.string().url().max(2000).optional(),
+  // http(s) only — this becomes the card's link target (no `javascript:`).
+  finalUrl: httpUrl(2000).optional(),
   // deploy-only: optional admin overrides applied before deploying.
   compose: z.string().max(100_000).optional(),
   volumes: z.array(volumeSchema).optional().default([]),
