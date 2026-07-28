@@ -115,18 +115,32 @@ the whole thing runs as **one container** (plus MongoDB).
 
 ## Install on a bare server (one command)
 
-On a fresh Linux machine, this installs Docker if needed, clones Dashy,
-generates strong secrets, starts the stack, and enables automatic updates:
+On a fresh Linux machine, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/PetitOursManu/Dashy/main/scripts/install.sh | sudo bash -s -- --domain dashy.example.com
+curl -fsSL https://raw.githubusercontent.com/PetitOursManu/Dashy/main/scripts/install.sh | sudo bash
 ```
 
-Drop `--domain` to serve on the machine's IP instead (the installer then sets a
-plain-HTTP origin, since `Secure` cookies would otherwise block login). Useful
-options: `--port`, `--email`, `--dir`, `--branch`, `--no-auto-update`,
-`--interval`. The script prints the generated admin credentials **once** — save
-them, then change the password after the first login.
+The installer asks a few questions — domain (or serve on the machine's IP),
+host port, administrator email, and whether to auto-update — shows a summary,
+then installs Docker if needed, clones Dashy, generates strong secrets and
+starts everything. It prints the generated admin credentials **once**: save
+them, then change the password after your first login.
+
+Serving without a domain switches the app to a plain-HTTP origin automatically,
+because `Secure`-flagged session cookies would otherwise make login impossible.
+
+For unattended installs, every answer has a flag — `--domain`, `--no-domain`,
+`--port`, `--email`, `--dir`, `--branch`, `--auto-update` / `--no-auto-update`,
+`--interval` — plus `-y` to accept defaults and `--dry-run` to preview the
+resulting configuration without touching the machine:
+
+```bash
+curl -fsSL .../install.sh | sudo bash -s -- -y --domain dashy.example.com --email you@example.com
+```
+
+(`-s` makes bash read the script from the pipe, and `--` separates bash's own
+options from the installer's.)
 
 Re-running the installer is safe: an **existing `.env` is never regenerated**
 (rotating `ENCRYPTION_KEY` would make every stored secret — 2FA, driver tokens,
