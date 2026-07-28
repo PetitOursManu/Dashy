@@ -288,22 +288,43 @@ fi
 
 # --- Dependencies ------------------------------------------------------------
 
-if ! command -v git >/dev/null 2>&1; then
-  log "Installing git…"
+# ensure_pkg <command> <package> — install only if the command is missing, and
+# verify afterwards. Refreshing the package indexes is best-effort on purpose:
+# one broken third-party repository must not block an install that the distro's
+# own repositories can still satisfy. What counts is whether the command exists
+# once we're done — so a genuine failure is reported clearly instead of leaving
+# the script to fail later in a confusing way.
+ensure_pkg() {
+  local cmd="$1" pkg="$2"
+  command -v "${cmd}" >/dev/null 2>&1 && return 0
+  log "Installing ${pkg}…"
   if command -v apt-get >/dev/null 2>&1; then
-    apt-get update -qq && apt-get install -y -qq git
+    apt-get update -qq \
+      || warn "apt-get update reported errors (a broken repository?) — trying the install anyway."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${pkg}" || true
   elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y -q git
+    dnf install -y -q "${pkg}" || true
   elif command -v yum >/dev/null 2>&1; then
-    yum install -y -q git
+    yum install -y -q "${pkg}" || true
+  elif command -v apk >/dev/null 2>&1; then
+    apk add --quiet "${pkg}" || true
+  elif command -v pacman >/dev/null 2>&1; then
+    pacman -Sy --noconfirm --quiet "${pkg}" || true
   else
-    die "No supported package manager found — install git manually."
+    die "No supported package manager found — please install ${pkg} manually, then re-run."
   fi
-fi
+  command -v "${cmd}" >/dev/null 2>&1 || die \
+    "Could not install ${pkg}. Fix your package sources (the output above shows which repository failed), install ${pkg} manually, then re-run this installer."
+}
+
+ensure_pkg git git
+ensure_pkg curl curl
 
 if ! command -v docker >/dev/null 2>&1; then
   log "Installing Docker…"
-  curl -fsSL https://get.docker.com | sh
+  curl -fsSL https://get.docker.com | sh || true
+  command -v docker >/dev/null 2>&1 || die \
+    "Docker installation failed (see the output above — a broken package repository is the usual cause). Install Docker manually, then re-run this installer."
 fi
 
 docker compose version >/dev/null 2>&1 \
