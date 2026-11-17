@@ -22,6 +22,8 @@ export interface User {
   dateFormat: string;
   chatEnabled: boolean;
   twoFactorEnabled: boolean;
+  /** Whether a Kosmy Board account is linked (sign in with Kosmy Board). */
+  kosmyLinked?: boolean;
   /** App ids a regular user may open (present in admin user listings). */
   allowedApps?: string[];
   createdAt: string;
@@ -286,4 +288,20 @@ export interface TwoFactorSetup {
   otpauth: string;
   qrDataUrl: string;
   backupCodes: string[];
+}
+
+/** Admin view of the "Sign in with Kosmy Board" settings (secret is write-only). */
+export interface KosmyBoardConfig {
+  issuer: string;
+  clientId: string;
+  hasClientSecret: boolean;
+  autoCreate: boolean;
+  requireDashy2fa: boolean;
+}
+
+export interface KosmyBoardAdmin {
+  config: KosmyBoardConfig;
+  enabled: boolean;
+  redirectUri: string;
+  initiateLoginUri: string;
 }

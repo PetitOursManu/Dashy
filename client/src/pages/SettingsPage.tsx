@@ -10,6 +10,7 @@ import { LANGUAGES, type Lang } from '../i18n/translations';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { StoreSettings } from '../components/store/StoreSettings';
+import { KosmyBoardSettings } from '../components/KosmyBoardSettings';
 import { DownloadIcon, SparkleIcon, UploadIcon } from '../components/Icons';
 import type { ChatConfig, ChatProvider } from '../types';
 
@@ -756,6 +757,7 @@ export function SettingsPage() {
 
       {/* AI assistant + Store + Backup & restore (admin only) */}
       {user?.role === 'admin' && <AssistantSection />}
+      {user?.role === 'admin' && <KosmyBoardSettings />}
       {user?.role === 'admin' && <StoreSettings />}
       {user?.role === 'admin' && <BackupSection />}
     </div>

@@ -10,6 +10,8 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
       '/hosted': { target: 'http://localhost:3000', changeOrigin: true },
+      // "Sign in with Kosmy Board" browser routes (login, callback, link).
+      '/auth': { target: 'http://localhost:3000', changeOrigin: true },
     },
   },
   build: {

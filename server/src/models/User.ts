@@ -46,6 +46,9 @@ export interface IUser {
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   backupCodes: BackupCode[];
+  // Kosmy Board account (OpenID Connect `sub`) linked to this user, if any.
+  // Accounts are matched on this ONLY — never on the email.
+  kosmySub?: string;
   // Apps a regular user may open. Admins implicitly have access to every app,
   // so this list is only consulted for non-admin users.
   allowedApps: Types.ObjectId[];
@@ -120,6 +123,11 @@ const userSchema = new Schema<IUser>(
     // Hashed, single-use backup codes.
     backupCodes: { type: [backupCodeSchema], default: [] },
 
+    // --- Sign in with Kosmy Board ---
+    // Left unset (not null) when unlinked so the partial unique index below
+    // only covers linked accounts.
+    kosmySub: { type: String, trim: true, maxlength: 200 },
+
     // Per-user app access (ignored for admins, who see everything).
     allowedApps: {
       type: [{ type: Schema.Types.ObjectId, ref: 'HostedApp' }],
@@ -134,6 +142,12 @@ const userSchema = new Schema<IUser>(
     },
   },
   { timestamps: true },
+);
+
+// One Dashy account per Kosmy Board account.
+userSchema.index(
+  { kosmySub: 1 },
+  { unique: true, partialFilterExpression: { kosmySub: { $type: 'string' } } },
 );
 
 // Expose `id` (string) instead of `_id`, and never leak sensitive fields.
@@ -159,6 +173,9 @@ userSchema.set('toJSON', {
     delete r.chatOffTopic;
     delete r.chatTimeoutUntil;
     delete r.note;
+    // Expose only whether a Kosmy Board account is linked.
+    r.kosmyLinked = typeof r.kosmySub === 'string' && r.kosmySub.length > 0;
+    delete r.kosmySub;
     return r;
   },
 });

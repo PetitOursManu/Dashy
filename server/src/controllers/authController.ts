@@ -68,7 +68,7 @@ export const profileSchema = z
 // --------------------------------- helpers -----------------------------------
 
 /** Create a session record + set the signed access-token cookie. */
-async function setAuthCookie(req: Request, res: Response, user: UserDoc): Promise<void> {
+export async function setAuthCookie(req: Request, res: Response, user: UserDoc): Promise<void> {
   const { token } = await issueSession(req, user);
   res.cookie(COOKIE_NAME, token, cookieOptions(ACCESS_COOKIE_MAX_AGE));
 }
