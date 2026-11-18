@@ -24,6 +24,7 @@ import hostedRoutes from './routes/hosted.js';
 import shareRoutes from './routes/share.js';
 import mobileRoutes from './routes/mobile.js';
 import ssoRoutes from './routes/sso.js';
+import kosmyBoardRoutes from './routes/kosmyBoard.js';
 
 export function createApp(): Express {
   const app = express();
@@ -113,6 +114,10 @@ export function createApp(): Express {
 
   // SSO — "Sign in with Dashy" for other self-hosted apps (redirect flow).
   app.use('/api/sso', ssoRoutes);
+
+  // "Sign in with Kosmy Board" — Dashy as an OpenID Connect client of the
+  // user's Kosmy Board (browser redirect flow, not under /api).
+  app.use('/auth/kosmy-board', kosmyBoardRoutes);
 
   // Hosted static apps (authenticated) and public share links (token-gated).
   app.use('/hosted', hostedRoutes);

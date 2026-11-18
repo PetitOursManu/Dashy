@@ -57,3 +57,16 @@ export const uploadLimiter = rateLimit({
   skip: skipInTest,
   message: { error: 'Upload limit reached, please try again later' },
 });
+
+/**
+ * Limiter for the "Sign in with Kosmy Board" browser routes. Looser than
+ * `authLimiter` because the Board's "Open" button starts a flow on each click.
+ */
+export const kosmyLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: skipInTest,
+  message: { error: 'Too many attempts, please try again later' },
+});

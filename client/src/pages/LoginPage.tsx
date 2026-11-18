@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/LanguageContext';
 import { ApiError } from '../api/client';
 import { Spinner } from '../components/Spinner';
-import { ShieldIcon } from '../components/Icons';
+import { GridIcon, ShieldIcon } from '../components/Icons';
+import { kosmyBoardApi, kosmyErrorKey, kosmyLoginUrl } from '../api/kosmyBoard';
 
 /**
  * Only allow a same-origin absolute path as a post-login redirect target, so the
@@ -30,12 +31,25 @@ export function LoginPage() {
     else navigate('/', { replace: true });
   };
 
-  const [step, setStep] = useState<'credentials' | '2fa'>('credentials');
+  // After a Kosmy Board sign-in, the server may still ask for Dashy's own 2FA
+  // (admin setting): it then lands here with the pending cookie already set.
+  const [step, setStep] = useState<'credentials' | '2fa'>(
+    params.get('kosmy_2fa') === '1' ? '2fa' : 'credentials',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [kosmyEnabled, setKosmyEnabled] = useState(false);
+  const kosmyError = params.get('kosmy_error');
+
+  useEffect(() => {
+    kosmyBoardApi
+      .status()
+      .then((r) => setKosmyEnabled(r.enabled))
+      .catch(() => setKosmyEnabled(false));
+  }, []);
 
   const submitCredentials = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,6 +97,27 @@ export function LoginPage() {
         </div>
 
         <div className="card p-6 sm:p-7">
+          {kosmyError && step === 'credentials' && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+            >
+              {t(kosmyErrorKey(kosmyError))}
+            </p>
+          )}
+          {step === 'credentials' && kosmyEnabled && (
+            <>
+              <a href={kosmyLoginUrl(next)} className="btn-secondary w-full">
+                <GridIcon className="h-4 w-4" />
+                {t('kosmy.signIn')}
+              </a>
+              <div className="my-4 flex items-center gap-3 text-xs text-sand-400">
+                <span className="h-px flex-1 bg-sand-200 dark:bg-sand-700" />
+                {t('kosmy.or')}
+                <span className="h-px flex-1 bg-sand-200 dark:bg-sand-700" />
+              </div>
+            </>
+          )}
           {step === 'credentials' ? (
             <form onSubmit={submitCredentials} className="space-y-4">
               <div>

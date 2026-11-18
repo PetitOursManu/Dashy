@@ -62,6 +62,7 @@ No SaaS, no paid services — everything runs on a single machine.
 ### 🔒 Account & operations
 
 - **Secure auth** — password login (argon2id), JWT in `httpOnly` cookies, optional **TOTP 2FA** with QR setup + single-use backup codes.
+- **Sign in with Kosmy Board** — optional OpenID Connect sign-in from your [Kosmy Board](#sign-in-with-kosmy-board-openid-connect), with accounts linked by Board id (never by email).
 - **Session control** — see active sessions (device, IP, last seen), revoke any individually, or "sign out of all devices".
 - **Backup & restore** (admin) — download every hosted app (files + metadata) as one `.zip` and restore it on another server.
 - **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, secrets encrypted at rest (TOTP secrets and LLM API keys, AES-256-GCM).
@@ -693,6 +694,82 @@ The token proves identity only — it grants **no** access to Dashy's own API.
 
 ---
 
+## Sign in with Kosmy Board (OpenID Connect)
+
+Dashy can also be a **client** of [Kosmy Board](https://github.com/PetitOursManu/Kosmy-Board),
+the space that gathers the admin panels of your self-hosted apps. Once set up,
+the **"Sign in with Kosmy Board"** button on the login page and the **Open**
+button in the Board sign people in to Dashy without a Dashy password.
+It is a standard OpenID Connect authorization-code flow and is **off until an
+admin configures it** — password login keeps working as before.
+
+### Set it up
+
+1. In the Board, add your Dashy instance (its address is `APP_ORIGIN`), then
+   open **Edit → Single sign-on** and enable it. The Board fills in the
+   Kosmy convention addresses:
+   - redirect URI: `{APP_ORIGIN}/auth/kosmy-board/callback`
+   - initiate login URI: `{APP_ORIGIN}/auth/kosmy-board/login`
+2. In Dashy, **Settings → Sign in with Kosmy Board** (admins): check that the
+   two addresses shown there match, then paste the **issuer**, **client ID** and
+   **client secret** shown by the Board. The secret is stored encrypted
+   (AES-256-GCM, like TOTP secrets) and is never shown again; type a new one to
+   replace it, or **Disable** to forget it.
+3. Each user links their account once from **Security → Kosmy Board → Link to
+   Kosmy Board** (while signed in with their password). After that, the Board
+   signs them in directly. Unlinking asks for the Dashy password.
+
+`APP_ORIGIN` must be the exact public address entered in the Board.
+
+### How accounts are matched
+
+- By the Kosmy Board account id (`sub`) **only, never by email**: the Board
+  does not verify email addresses (`email_verified` is always `false`), so
+  matching on email would let someone take over another person's account.
+- **Automatic account creation** (off by default): an unknown Board account
+  gets a new **regular** Dashy account (role `user`, no apps until an admin
+  grants them). It never attaches to an existing account with the same email,
+  and admin rights are never granted automatically.
+- Temporary accounts cannot link, and expired ones cannot sign in.
+
+### Two-factor authentication
+
+A Kosmy Board sign-in **replaces Dashy's password and Dashy's 2FA**: the
+person has just authenticated on the Board, which has its own two-factor
+authentication, and asking for a second, different code on every "Open" would
+defeat the purpose of single sign-on. If you prefer belt and braces, enable
+**"Require Dashy's 2FA even with Kosmy Board"** in the same settings card: users
+who enabled 2FA in Dashy then land on the usual 2FA step after the Board.
+
+### Security details
+
+- `state`, `nonce` and **PKCE (S256)** on every flow. The flow is stored
+  server-side (MongoDB, 10-minute TTL) and bound to the browser by an
+  `HttpOnly`, `SameSite=Lax` cookie scoped to `/auth/kosmy-board`; the `state`
+  is consumed atomically, so it works once.
+- Third-party initiated login: `iss` must equal the configured issuer, and
+  `target_link_uri` is honoured only for a page of this Dashy (same origin) —
+  anything else lands on the dashboard.
+- Callback: `iss` checked (RFC 9207) before the code exchange, which uses
+  `client_secret_basic`; the **ID token is fully verified**: RS256 signature
+  with the Board's `jwks_uri` keys, `iss`, `aud` = client ID, `exp`, `nonce`.
+- **`SameSite=Strict` session cookie**: the callback is the end of a navigation
+  started on the Board (another site), so a cookie set there would not be sent
+  on a plain redirect and the user would look signed out. The callback
+  therefore sets the session and answers with a tiny page that moves on with
+  `<meta http-equiv="refresh">` — a same-site navigation, so the cookie is
+  sent. The page has no script and passes Dashy's CSP unchanged; no helmet
+  setting (CSP, `Cross-Origin-Opener-Policy`…) was relaxed. Linking uses the
+  same trick: the callback stores the verified `sub`, and a same-site follow-up
+  (`/auth/kosmy-board/link/finish`) checks the signed-in user before saving it.
+- Signing out of Dashy ends the Dashy session only; the Board session stays
+  open, and **Open** signs back in with one click.
+
+No migration is needed: the new `kosmySub` user field is optional, with a
+partial unique index created by Mongoose at start-up.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.
@@ -733,6 +810,7 @@ npm --prefix server run test:mobile  # mobile API: Bearer login, 2FA, /sync, fav
 npm --prefix server run test:sso     # SSO redirect flow + token contract
 npm --prefix server run test:drivers # DB Explorer: driver factory + error paths
 npm --prefix server run test:db      # DB Explorer API: admin gating, validation, secret masking
+npm --prefix server run test:kosmy   # Sign in with Kosmy Board: PKCE, ID token checks, linking, 2FA option
 ```
 
 ---

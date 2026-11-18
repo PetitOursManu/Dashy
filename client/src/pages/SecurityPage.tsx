@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,8 @@ import { useI18n } from '../context/LanguageContext';
 import { useFormat } from '../hooks/useFormat';
 import type { Session, TwoFactorSetup } from '../types';
 import { Spinner, Loader } from '../components/Spinner';
-import { ShieldIcon } from '../components/Icons';
+import { GridIcon, ShieldIcon } from '../components/Icons';
+import { kosmyBoardApi, kosmyErrorKey } from '../api/kosmyBoard';
 import { BackupCodes } from '../components/BackupCodes';
 
 function deviceLabel(ua: string): string {
@@ -131,9 +132,159 @@ export function SecurityPage() {
       <p className="text-sm text-sand-500 dark:text-sand-400">{t('sec.subtitle')}</p>
       {!isTemp && <TwoFactorSection enabled={user?.twoFactorEnabled ?? false} onChange={refresh} />}
       {!isTemp && <PasswordSection />}
+      {!isTemp && <KosmyBoardSection linked={user?.kosmyLinked ?? false} onChange={refresh} />}
       <SessionsSection />
       <SignOutAllSection />
     </div>
+  );
+}
+
+// ------------------------------ Kosmy Board ---------------------------------
+
+/**
+ * "Link to Kosmy Board": the signed-in user runs the Board sign-in once; the
+ * Board account id (`sub`) is then stored on this Dashy account. Unlinking asks
+ * for the Dashy password so the user can still sign in afterwards.
+ */
+function KosmyBoardSection({
+  linked,
+  onChange,
+}: {
+  linked: boolean;
+  onChange: () => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [params, setParams] = useSearchParams();
+  const [available, setAvailable] = useState<boolean | null>(null);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(() => {
+    const code = params.get('kosmy_error');
+    return code ? t(kosmyErrorKey(code)) : null;
+  });
+  const [message, setMessage] = useState<string | null>(() =>
+    params.get('kosmy') === 'linked' ? t('kosmy.linkedOk') : null,
+  );
+
+  useEffect(() => {
+    kosmyBoardApi
+      .status()
+      .then((r) => setAvailable(r.enabled))
+      .catch(() => setAvailable(false));
+    // Drop the one-shot result params from the address bar.
+    if (params.has('kosmy') || params.has('kosmy_error')) {
+      const next = new URLSearchParams(params);
+      next.delete('kosmy');
+      next.delete('kosmy_error');
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (available === null) return null;
+  // Nothing to show when the feature is off and this account was never linked.
+  if (!available && !linked) return null;
+
+  const link = async () => {
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    try {
+      const { url } = await kosmyBoardApi.startLink();
+      window.location.assign(url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('kosmy.err.unreachable'));
+      setBusy(false);
+    }
+  };
+
+  const unlink = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    try {
+      await kosmyBoardApi.unlink(password);
+      setPassword('');
+      setMessage(t('kosmy.unlinkedOk'));
+      await onChange();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('kosmy.err.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <GridIcon className="mt-0.5 h-6 w-6 text-ember-400" />
+          <div>
+            <h2 className="font-semibold">{t('kosmy.secTitle')}</h2>
+            <p className="text-sm text-sand-500 dark:text-sand-400">
+              {linked ? t('kosmy.secLinked') : t('kosmy.secNotLinked')}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+            linked
+              ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+              : 'bg-sand-200 text-sand-600 dark:bg-sand-800 dark:text-sand-300'
+          }`}
+        >
+          {linked ? t('kosmy.statusLinked') : t('kosmy.statusNotLinked')}
+        </span>
+      </div>
+
+      {error && (
+        <p
+          role="alert"
+          className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
+      {message && (
+        <p className="mt-4 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+          {message}
+        </p>
+      )}
+
+      {!linked && available && (
+        <button type="button" className="btn-primary mt-5" onClick={link} disabled={busy}>
+          {busy && <Spinner className="h-4 w-4" />}
+          {t('kosmy.link')}
+        </button>
+      )}
+
+      {linked && (
+        <form
+          onSubmit={unlink}
+          className="mt-5 space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4"
+        >
+          <p className="text-sm font-medium text-sand-700 dark:text-sand-300">
+            {t('kosmy.unlinkTitle')}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="password"
+              className="input max-w-xs"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('sec.confirmPw')}
+              autoComplete="current-password"
+              required
+            />
+            <button type="submit" className="btn-danger" disabled={busy}>
+              {busy && <Spinner className="h-4 w-4" />}
+              {t('kosmy.unlink')}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

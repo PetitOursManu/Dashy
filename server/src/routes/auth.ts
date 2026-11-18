@@ -5,6 +5,7 @@ import { requireAuth, blockTemp } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { avatarUpload, backgroundUpload } from '../middleware/upload.js';
 import * as auth from '../controllers/authController.js';
+import * as kosmy from '../controllers/kosmyBoardController.js';
 
 const router = Router();
 
@@ -23,6 +24,19 @@ router.post(
   asyncHandler(auth.verifyTwoFactorLogin),
 );
 router.post('/logout', asyncHandler(auth.logout));
+
+// --- Sign in with Kosmy Board (OpenID Connect) ---
+// Public: whether the login page shows the "Sign in with Kosmy Board" button.
+router.get('/kosmy-board', asyncHandler(kosmy.status));
+// Link / unlink the signed-in account (temporary accounts cannot link).
+router.post('/kosmy-board/link', requireAuth, blockTemp, asyncHandler(kosmy.startLink));
+router.delete(
+  '/kosmy-board',
+  requireAuth,
+  authLimiter,
+  validateBody(kosmy.unlinkSchema),
+  asyncHandler(kosmy.unlink),
+);
 
 // --- Authenticated session ---
 router.get('/me', requireAuth, asyncHandler(auth.me));
