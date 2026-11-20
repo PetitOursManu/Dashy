@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import path from 'node:path';
 import multer from 'multer';
 import { env } from './config/env.js';
@@ -25,6 +26,18 @@ import shareRoutes from './routes/share.js';
 import mobileRoutes from './routes/mobile.js';
 import ssoRoutes from './routes/sso.js';
 import kosmyBoardRoutes from './routes/kosmyBoard.js';
+
+/**
+ * The SPA shell (index.html) is public and identical for everyone: no user
+ * data, no secrets. Let other sites read it so status checks such as Kosmy
+ * Board's (a credential-less `no-cors` fetch of the instance) see Dashy as
+ * reachable. helmet's `Cross-Origin-Resource-Policy: same-origin` would turn
+ * that fetch into a network error. Everything else (API, hosted apps, assets)
+ * keeps helmet's same-origin default.
+ */
+function allowCrossOriginShell(res: ServerResponse): void {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+}
 
 export function createApp(): Express {
   const app = express();
@@ -139,6 +152,7 @@ export function createApp(): Express {
           if (filePath.endsWith('index.html')) {
             // Never stale-serve the shell: its inline script is CSP-hash-pinned.
             res.setHeader('Cache-Control', 'no-cache');
+            allowCrossOriginShell(res);
           } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
             // Vite fingerprints these — safe to cache forever.
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -148,6 +162,7 @@ export function createApp(): Express {
     );
     // SPA fallback for client-side routing.
     app.get('*', (_req, res) => {
+      allowCrossOriginShell(res);
       res.sendFile(path.join(CLIENT_DIST_DIR, 'index.html'));
     });
   }

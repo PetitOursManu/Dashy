@@ -243,6 +243,28 @@ after(async () => {
   fs.rmSync(TMP_DATA, { recursive: true, force: true });
 });
 
+/* --------------------- status check from Kosmy Board ----------------------- */
+
+describe('reachability from Kosmy Board', () => {
+  // The built client (server/public) is git-ignored: skip the shell test without it.
+  const noShell = !fs.existsSync(path.resolve(import.meta.dirname, '../public/index.html'));
+
+  test('the SPA shell can be read cross-origin', { skip: noShell && 'client not built' }, async () => {
+    for (const p of ['/', '/settings']) {
+      const res = await fetch(baseUrl + p);
+      assert.equal(res.status, 200, p);
+      assert.equal(res.headers.get('cross-origin-resource-policy'), 'cross-origin', p);
+    }
+  });
+
+  test('the API keeps the same-origin resource policy', async () => {
+    for (const p of ['/healthz', '/api/auth/me', '/api/nope']) {
+      const res = await fetch(baseUrl + p);
+      assert.equal(res.headers.get('cross-origin-resource-policy'), 'same-origin', p);
+    }
+  });
+});
+
 /* ------------------------------ pure helpers ------------------------------- */
 
 describe('protocol helpers', () => {
