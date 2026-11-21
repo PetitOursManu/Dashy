@@ -52,7 +52,7 @@ import {
 
 const PENDING_2FA_MAX_AGE = 5 * 60 * 1000;
 
-interface KosmySettings {
+export interface KosmySettings {
   issuer: string;
   clientId: string;
   clientSecret: string;
@@ -61,7 +61,7 @@ interface KosmySettings {
 }
 
 /** Settings, or null when the admin has not (fully) configured Kosmy Board sign-in. */
-async function getSettings(): Promise<KosmySettings | null> {
+export async function getSettings(): Promise<KosmySettings | null> {
   const cfg = await getKosmyBoardConfig();
   if (!cfg.issuer || !cfg.clientId || !cfg.clientSecretEnc) return null;
   let clientSecret: string;
