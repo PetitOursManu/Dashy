@@ -23,7 +23,8 @@
     "test:ports": "node --import tsx --test tests/ports.test.ts",
     "test:security": "node --import tsx --test tests/security.test.ts",
     "test:db": "node --import tsx --test tests/database.test.ts",
-    "test:kosmy": "node --import tsx --test tests/kosmyBoard.test.ts"
+    "test:kosmy": "node --import tsx --test tests/kosmyBoard.test.ts",
+    "test:kosmy-admin": "node --import tsx --test tests/kosmyBoardAdmin.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

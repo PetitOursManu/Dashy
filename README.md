@@ -63,6 +63,7 @@ No SaaS, no paid services — everything runs on a single machine.
 
 - **Secure auth** — password login (argon2id), JWT in `httpOnly` cookies, optional **TOTP 2FA** with QR setup + single-use backup codes.
 - **Sign in with Kosmy Board** — optional OpenID Connect sign-in from your [Kosmy Board](#sign-in-with-kosmy-board-openid-connect), with accounts linked by Board id (never by email).
+- **Admin in Kosmy Board** — manage users, apps, requests, the Store and settings [right from the Board](#admin-in-kosmy-board), with Dashy's own rules.
 - **Session control** — see active sessions (device, IP, last seen), revoke any individually, or "sign out of all devices".
 - **Backup & restore** (admin) — download every hosted app (files + metadata) as one `.zip` and restore it on another server.
 - **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, secrets encrypted at rest (TOTP secrets and LLM API keys, AES-256-GCM).
@@ -770,6 +771,61 @@ partial unique index created by Mongoose at start-up.
 
 ---
 
+## Admin in Kosmy Board
+
+Once Kosmy Board sign-in is set up, an administrator can also run Dashy's
+admin **from the Board**: its **Admin** button shows Dashy's admin screens
+natively in the Board, without opening Dashy. Dashy describes its admin as
+sections; the Board displays them and sends the actions back, which Dashy runs
+through **the same code as its own admin** (same validation, rules and
+activity log). Protocol: `kosmy.board-admin.v1`, see the
+[specification](https://github.com/PetitOursManu/Kosmy-Board/blob/main/docs/admin-api.md).
+
+What the Board shows:
+
+- **Overview** — apps, users, opens, storage, pending requests, opens over the
+  last 6 months, instance info, most opened apps, recent activity.
+- **Users** — create an account (its password is generated and shown once),
+  change roles, temporary accounts (make temporary, extend), give or remove
+  access to an app, reset a password (shown once), assistant access and
+  time-out, send a notification, delete.
+- **Apps** — rename, description, category, public link (create — the link is
+  shown once — or revoke), restore the previous version, delete.
+- **Requests** — reply (as a notification), resolve, dismiss, reopen, archive.
+- **Notifications** — send one to a user, list read receipts, remove from the list.
+- **AI assistant** — provider, model, API key (write-only), connection test,
+  misuse alerts.
+- **Store** — installed apps (update, restart, redeploy, uninstall), one-click
+  install of link and static apps, catalogue sources (add, enable/disable,
+  remove, new managed catalogue), refresh.
+- **Settings** — Store deployment (Docker, default driver, subdomains),
+  Coolify and Portainer (tokens write-only), and the Kosmy Board account options.
+
+What stays in Dashy: anything that needs a file upload or an editor (importing
+an app or replacing its files/preview, backup & restore, Store bundles,
+deploy apps' compose and variables, managed catalogue apps), the DB explorer,
+per-user history, and the Kosmy Board issuer/client ID/secret (they carry this
+very connection).
+
+Requirements:
+
+- **Sign in with Kosmy Board** is configured (issuer, client ID and secret),
+  and the Board's server can reach Dashy at the address entered in the Board.
+- The person's Board account is **linked** to a Dashy account (Security →
+  Kosmy Board) and that Dashy account is an **administrator**. The Board grants
+  no rights: otherwise Dashy answers `not_linked` or `forbidden`.
+
+How it is secured: the Board's server calls `GET /api/kosmy-board/admin`,
+`GET /api/kosmy-board/admin/{section}` and `POST /api/kosmy-board/admin/{section}`
+with a 60-second JWT signed by the Board's OpenID Connect key. Dashy checks the
+RS256 signature (the JWKS already cached for sign-in), `typ: kb-admin+jwt` (an
+ID token is never accepted), `iss`, `aud` = client ID, `exp`, that the token was
+made for this method and path (`htm`, `htu`), and that its `jti` was never used.
+These routes take no cookie, send no CORS headers and are never cached.
+Existing secrets are never sent to the Board.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.
@@ -811,6 +867,7 @@ npm --prefix server run test:sso     # SSO redirect flow + token contract
 npm --prefix server run test:drivers # DB Explorer: driver factory + error paths
 npm --prefix server run test:db      # DB Explorer API: admin gating, validation, secret masking
 npm --prefix server run test:kosmy   # Sign in with Kosmy Board: PKCE, ID token checks, linking, 2FA option
+npm --prefix server run test:kosmy-admin # Admin in Kosmy Board: token checks, linking/rights, sections, actions
 ```
 
 ---

@@ -251,8 +251,11 @@ async function fetchJwks(jwksUri: string, fetchImpl: FetchLike): Promise<JwksEnt
   return entry;
 }
 
-/** Signing keys for an ID token header, refetching the JWKS once if the `kid` is unknown. */
-async function signingKeys(
+/**
+ * Signing keys for a JWT header (ID token, or the Board's admin token),
+ * refetching the JWKS once if the `kid` is unknown.
+ */
+export async function signingKeys(
   jwksUri: string,
   kid: string | undefined,
   fetchImpl: FetchLike,
