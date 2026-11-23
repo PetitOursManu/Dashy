@@ -92,6 +92,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   const result = await resolveKosmyAccount({ sub: claims.sub }, false);
   if (!result.ok) {
     if (result.error === 'account_expired') throw new AdminError(403, 'forbidden', t(l, 'error.expired'));
+    if (result.error === 'account_disabled') throw new AdminError(403, 'forbidden', t(l, 'error.disabled'));
     throw new AdminError(403, 'not_linked', t(l, 'error.notLinked'));
   }
   const user = result.user;

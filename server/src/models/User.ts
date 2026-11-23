@@ -13,6 +13,10 @@ export interface IUser {
   role: UserRole;
   // For `temp` accounts: when access expires (account is then blocked + purged).
   expiresAt: Date | null;
+  // Access withdrawn from Kosmy Board ("users managed by the Board"): the
+  // account can no longer sign in (password, Board, mobile) and its sessions
+  // are refused; its data stays. A PUT from the Board re-enables it.
+  disabled: boolean;
   // --- Profile (self-editable, visible to admins) ---
   nickname: string;
   fullName: string;
@@ -87,6 +91,10 @@ const userSchema = new Schema<IUser>(
 
     // Expiry for temporary accounts (null for everyone else).
     expiresAt: { type: Date, default: null },
+
+    // Disabled from Kosmy Board. Missing on documents created before this
+    // field existed, which reads as "not disabled": no migration needed.
+    disabled: { type: Boolean, default: false },
 
     // --- Profile ---
     nickname: { type: String, default: '', trim: true, maxlength: 60 },
@@ -167,6 +175,7 @@ userSchema.set('toJSON', {
     delete r.background;
     r.glass = r.glass !== false;
     r.glassDark = r.glassDark === true;
+    r.disabled = r.disabled === true;
     delete r.tokenVersion;
     // Default to enabled for documents created before this field existed.
     r.chatEnabled = r.chatEnabled !== false;

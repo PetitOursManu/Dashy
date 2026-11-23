@@ -28,7 +28,19 @@ export async function verifyCredentials(email: string, password: string): Promis
   if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
     throw new ApiError(401, 'This temporary account has expired');
   }
+  assertNotDisabled(user);
   return user;
+}
+
+export const ACCOUNT_DISABLED = 'This account has been disabled';
+
+/**
+ * A disabled account (access withdrawn from Kosmy Board) signs in nowhere:
+ * password, 2FA step, mobile, Kosmy Board. Its sessions are refused by
+ * `resolveSessionUser`.
+ */
+export function assertNotDisabled(user: Pick<UserDoc, 'disabled'>): void {
+  if (user.disabled === true) throw new ApiError(403, ACCOUNT_DISABLED);
 }
 
 /**

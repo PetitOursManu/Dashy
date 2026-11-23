@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { ApiError } from '../middleware/error.js';
-import { verifyCredentials, issueSession, verifyTwoFactorToken } from '../services/auth.js';
+import {
+  assertNotDisabled,
+  verifyCredentials,
+  issueSession,
+  verifyTwoFactorToken,
+} from '../services/auth.js';
 import { signPendingToken, verifyToken, type PendingPayload } from '../utils/jwt.js';
 
 /**
@@ -68,6 +73,7 @@ export async function verifyTwoFactor(req: Request, res: Response): Promise<void
   if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
     throw new ApiError(401, 'Two-factor authentication is not configured');
   }
+  assertNotDisabled(user);
 
   const ok = await verifyTwoFactorToken(user, token);
   if (!ok) throw new ApiError(401, 'Invalid two-factor code');

@@ -392,6 +392,7 @@ type UserRow = Pick<
   | 'nickname'
   | 'role'
   | 'expiresAt'
+  | 'disabled'
   | 'twoFactorEnabled'
   | 'kosmySub'
   | 'chatEnabled'
@@ -401,7 +402,7 @@ type UserRow = Pick<
 >;
 
 const USER_FIELDS =
-  'email fullName nickname role expiresAt twoFactorEnabled kosmySub chatEnabled chatTimeoutUntil allowedApps createdAt';
+  'email fullName nickname role expiresAt disabled twoFactorEnabled kosmySub chatEnabled chatTimeoutUntil allowedApps createdAt';
 const ROLES: UserRole[] = ['admin', 'subadmin', 'user', 'temp'];
 
 function isTimedOut(u: UserRow): boolean {
@@ -486,7 +487,10 @@ const usersSection: SectionDef = {
           cells: {
             email: u.email,
             name: self ? `${name || u.email} (${t(lang, 'common.you')})` : name,
-            role: { text: t(lang, `role.${u.role}`), tone: roleTone[u.role] },
+            role:
+              u.disabled === true
+                ? { text: `${t(lang, `role.${u.role}`)} · ${t(lang, 'users.disabled')}`, tone: 'danger' }
+                : { text: t(lang, `role.${u.role}`), tone: roleTone[u.role] },
             apps: staff ? t(lang, 'users.allApps') : u.allowedApps.length,
             twoFactor: u.twoFactorEnabled,
             kosmy: typeof u.kosmySub === 'string' && u.kosmySub.length > 0,
