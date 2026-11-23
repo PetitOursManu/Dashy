@@ -12,6 +12,7 @@ import { decrypt, encrypt } from '../utils/crypto.js';
 import { COOKIE_NAME, cookieOptions, signPendingToken } from '../utils/jwt.js';
 import { logActivity } from '../services/activity.js';
 import { setAuthCookie } from './authController.js';
+import { provisionBoardUser, UsersApiError } from '../services/kosmyBoard/users.js';
 import {
   DEFAULT_TARGET,
   FLOW_COOKIE,
@@ -146,7 +147,10 @@ async function startFlow(
 
 type ResolveResult =
   | { ok: true; user: UserDoc }
-  | { ok: false; error: 'not_linked' | 'account_expired' | 'email_taken' | 'no_email' };
+  | {
+      ok: false;
+      error: 'not_linked' | 'account_expired' | 'account_disabled' | 'email_taken' | 'no_email';
+    };
 
 const emailSchema = z.string().email().max(254);
 
@@ -160,6 +164,8 @@ export async function resolveKosmyAccount(
     if (linked.role === 'temp' && linked.expiresAt && linked.expiresAt.getTime() <= Date.now()) {
       return { ok: false, error: 'account_expired' };
     }
+    // Access withdrawn in the Board: no sign-in, no admin in the Board.
+    if (linked.disabled === true) return { ok: false, error: 'account_disabled' };
     return { ok: true, user: linked };
   }
 
@@ -189,6 +195,38 @@ export async function resolveKosmyAccount(
   } catch (err) {
     if ((err as { code?: number }).code === 11000) return { ok: false, error: 'email_taken' };
     throw err;
+  }
+}
+
+/**
+ * The `kosmy_board_access` claim of a sign-in: apply it like the Board's PUT.
+ * A refusal becomes a `kosmy_error` code for the login page.
+ */
+async function applyBoardAccess(
+  claims: KosmyClaims,
+): Promise<{ ok: true; user: UserDoc } | { ok: false; error: string }> {
+  const access = claims.kosmy_board_access!;
+  try {
+    const { user } = await provisionBoardUser(
+      claims.sub,
+      {
+        name: claims.name,
+        email: claims.email || claims.preferred_username,
+        locale: claims.locale,
+        role: access.role,
+        values: access.values,
+      },
+      { actorSub: null, atLogin: true, lang: 'en' },
+    );
+    return { ok: true, user };
+  } catch (e) {
+    if (!(e instanceof UsersApiError)) throw e;
+    console.warn(`[kosmy-board] sign-in: kosmy_board_access refused (${e.key})`);
+    if (e.key === 'usersApi.emailNeeded' || e.key === 'usersApi.badEmail') {
+      return { ok: false, error: 'no_email' };
+    }
+    if (e.status === 409) return { ok: false, error: 'email_taken' };
+    return { ok: false, error: 'access_invalid' };
   }
 }
 
@@ -289,9 +327,18 @@ export async function callback(req: Request, res: Response): Promise<void> {
     clearFlowCookie(res);
     await KosmyFlow.deleteOne({ _id: flow._id });
 
-    const result = await resolveKosmyAccount(claims, settings.autoCreate);
-    if (!result.ok) return redirectWithError(res, '/login', result.error);
-    const user = result.user;
+    let user: UserDoc;
+    if (claims.kosmy_board_access) {
+      // Access managed by the Board (kosmy.board-users.v1): same rules as its
+      // PUT, the account is created if needed (never linked by email).
+      const access = await applyBoardAccess(claims);
+      if (!access.ok) return redirectWithError(res, '/login', access.error);
+      user = access.user;
+    } else {
+      const result = await resolveKosmyAccount(claims, settings.autoCreate);
+      if (!result.ok) return redirectWithError(res, '/login', result.error);
+      user = result.user;
+    }
 
     if (settings.requireDashy2fa && user.twoFactorEnabled) {
       // Admin asked for Dashy's own 2FA on top of the Board's: hand over to

@@ -43,6 +43,8 @@ export function kosmyErrorKey(code: string): string {
     'token',
     'not_linked',
     'account_expired',
+    'account_disabled',
+    'access_invalid',
     'email_taken',
     'no_email',
     'session',

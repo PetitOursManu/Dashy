@@ -28,6 +28,8 @@ import ssoRoutes from './routes/sso.js';
 import kosmyBoardRoutes from './routes/kosmyBoard.js';
 import kosmyBoardAdminRoutes from './routes/kosmyBoardAdmin.js';
 import { ADMIN_API_PATH as KOSMY_ADMIN_PATH } from './controllers/kosmyBoardAdminController.js';
+import kosmyBoardUsersRoutes from './routes/kosmyBoardUsers.js';
+import { USERS_API_PATH as KOSMY_USERS_PATH } from './services/kosmyBoard/users.js';
 
 /**
  * The SPA shell (index.html) is public and identical for everyone: no user
@@ -61,6 +63,8 @@ export function createApp(): Express {
   // short-lived Bearer token. Mounted before CORS, cookies, the body parsers
   // and the API rate limiter, none of which apply (see routes/kosmyBoardAdmin.ts).
   app.use(KOSMY_ADMIN_PATH, kosmyBoardAdminRoutes);
+  // "Users managed by the Board" (kosmy.board-users.v1): same token and rules.
+  app.use(KOSMY_USERS_PATH, kosmyBoardUsersRoutes);
 
   // The dashboard (SPA + cookie auth) is locked to its own origin and sends
   // credentials. The mobile API authenticates with Bearer tokens (no ambient

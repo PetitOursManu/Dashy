@@ -24,6 +24,8 @@ export interface User {
   twoFactorEnabled: boolean;
   /** Whether a Kosmy Board account is linked (sign in with Kosmy Board). */
   kosmyLinked?: boolean;
+  // Access withdrawn in Kosmy Board: the account cannot sign in.
+  disabled?: boolean;
   /** App ids a regular user may open (present in admin user listings). */
   allowedApps?: string[];
   createdAt: string;

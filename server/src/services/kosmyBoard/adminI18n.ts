@@ -324,6 +324,34 @@ const en: Record<string, string> = {
   'error.invalidInput': 'Invalid input ({details}).',
   'error.conflict': 'This already exists.',
   'error.server': 'Something went wrong in Dashy. The details are in its logs.',
+  'error.disabled': 'Your Dashy account is disabled.',
+
+  // Users managed by the Board (kosmy.board-users.v1)
+  'usersApi.role.admin': 'Manages Dashy: users, apps, the Store and settings.',
+  'usersApi.role.subadmin': 'Opens every app, moderates regular users, answers requests.',
+  'usersApi.role.user': 'Opens the apps they are given.',
+  'usersApi.field.chat': 'AI assistant',
+  'usersApi.field.chatHelp': "Can use Dashy's AI assistant and send requests to the administrators.",
+  'usersApi.field.app': 'App: {name}',
+  'usersApi.field.appHelp': 'The apps this user may open in Dashy.',
+  'usersApi.created': 'Dashy account created.',
+  'usersApi.linked': 'Existing Dashy account {account} linked.',
+  'usersApi.updated': 'Dashy account updated.',
+  'usersApi.disabled': 'Dashy account disabled.',
+  'usersApi.nothing': 'No Dashy account to disable.',
+  'usersApi.notFound': 'Unknown address.',
+  'usersApi.unknownRole': 'Unknown role.',
+  'usersApi.badValues': 'Unreadable restrictions.',
+  'usersApi.badCheckbox': '{label}: yes or no.',
+  'usersApi.badEmail': 'Invalid email address.',
+  'usersApi.emailNeeded': 'An email address is needed to create the Dashy account.',
+  'usersApi.emailLinkedElsewhere':
+    'This email address belongs to a Dashy account already linked to another Kosmy Board account.',
+  'usersApi.emailTaken': 'Another Dashy account already uses this email address.',
+  'usersApi.selfDemote': 'You cannot remove your own administrator rights.',
+  'usersApi.selfDisable': 'You cannot remove your own access.',
+  'usersApi.lastAdmin': 'Dashy must keep at least one active administrator.',
+  'users.disabled': 'Disabled (Kosmy Board)',
 };
 
 const fr: Record<string, string> = {
@@ -636,6 +664,33 @@ const fr: Record<string, string> = {
   'error.invalidInput': 'Saisie refusée ({details}).',
   'error.conflict': 'Cela existe déjà.',
   'error.server': 'Un problème est survenu dans Dashy. Le détail est dans ses journaux.',
+  'error.disabled': 'Votre compte Dashy est désactivé.',
+
+  'usersApi.role.admin': 'Gère Dashy : comptes, applis, Store et réglages.',
+  'usersApi.role.subadmin': 'Ouvre toutes les applis, modère les utilisateurs, répond aux demandes.',
+  'usersApi.role.user': 'Ouvre les applis qui lui sont données.',
+  'usersApi.field.chat': 'Assistant IA',
+  'usersApi.field.chatHelp': "Peut utiliser l'assistant IA de Dashy et envoyer des demandes aux administrateurs.",
+  'usersApi.field.app': 'Appli : {name}',
+  'usersApi.field.appHelp': 'Les applis que cette personne peut ouvrir dans Dashy.',
+  'usersApi.created': 'Compte Dashy créé.',
+  'usersApi.linked': 'Compte Dashy existant {account} relié.',
+  'usersApi.updated': 'Compte Dashy mis à jour.',
+  'usersApi.disabled': 'Compte Dashy désactivé.',
+  'usersApi.nothing': 'Aucun compte Dashy à désactiver.',
+  'usersApi.notFound': 'Adresse inconnue.',
+  'usersApi.unknownRole': 'Rôle inconnu.',
+  'usersApi.badValues': 'Restrictions illisibles.',
+  'usersApi.badCheckbox': '{label} : oui ou non.',
+  'usersApi.badEmail': 'Adresse e-mail invalide.',
+  'usersApi.emailNeeded': 'Une adresse e-mail est nécessaire pour créer le compte Dashy.',
+  'usersApi.emailLinkedElsewhere':
+    'Cette adresse e-mail appartient à un compte Dashy déjà relié à un autre compte Kosmy Board.',
+  'usersApi.emailTaken': 'Un autre compte Dashy utilise déjà cette adresse e-mail.',
+  'usersApi.selfDemote': "Vous ne pouvez pas vous retirer vos propres droits d'administration.",
+  'usersApi.selfDisable': 'Vous ne pouvez pas retirer votre propre accès.',
+  'usersApi.lastAdmin': 'Dashy doit garder au moins un administrateur actif.',
+  'users.disabled': 'Désactivé (Kosmy Board)',
 };
 
 const STRINGS: Record<Lang, Record<string, string>> = { en, fr };
@@ -677,6 +732,7 @@ const API_ERRORS_FR: Record<string, string> = {
   'This catalogue is read-only': 'Ce catalogue est en lecture seule.',
   'Invalid issuer URL': "Adresse d'émetteur invalide.",
   'Resource already exists': 'Cela existe déjà.',
+  'This account has been disabled': 'Ce compte est désactivé.',
 };
 
 export function translateApiError(lang: Lang, message: string): string {

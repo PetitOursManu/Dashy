@@ -284,6 +284,13 @@ export interface KosmyClaims {
   email?: string;
   preferred_username?: string;
   locale?: string;
+  /**
+   * "Users managed by the Board" (kosmy.board-users.v1): the role and the
+   * restrictions an administrator of the Board gave this person here — the
+   * same content as the Board's last PUT. Absent when the Board does not
+   * manage this person's access.
+   */
+  kosmy_board_access?: { role: unknown; values: unknown };
 }
 
 /** Full ID token check: RS256 signature (jwks_uri), iss, aud, exp, nonce. */
@@ -337,7 +344,19 @@ export async function verifyIdToken(
     email: str(payload.email),
     preferred_username: str(payload.preferred_username),
     locale: str(payload.locale),
+    ...(isPlainObject(payload.kosmy_board_access)
+      ? {
+          kosmy_board_access: {
+            role: payload.kosmy_board_access.role,
+            values: payload.kosmy_board_access.values,
+          },
+        }
+      : {}),
   };
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /* ------------------------------ bounce page -------------------------------- */

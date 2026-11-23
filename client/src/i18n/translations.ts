@@ -4079,6 +4079,9 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       'This Kosmy Board account is not linked to any Dashy account. Sign in with your password, then link it from Security.',
     'kosmy.err.account_expired': 'This temporary account has expired.',
+    'kosmy.err.account_disabled': 'This account has been disabled in Kosmy Board.',
+    'kosmy.err.access_invalid': 'The access sent by Kosmy Board could not be applied. Ask an administrator.',
+    'users.disabledKosmy': 'Disabled (Kosmy Board)',
     'kosmy.err.email_taken':
       'A Dashy account already uses this email. Sign in with your password, then link Kosmy Board from Security.',
     'kosmy.err.no_email': 'Kosmy Board did not send a usable email address.',
@@ -4141,6 +4144,10 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       "Ce compte Kosmy Board n'est relié à aucun compte Dashy. Connectez-vous avec votre mot de passe, puis reliez-le depuis Sécurité.",
     'kosmy.err.account_expired': 'Ce compte temporaire a expiré.',
+    'kosmy.err.account_disabled': 'Ce compte a été désactivé dans Kosmy Board.',
+    'kosmy.err.access_invalid':
+      "L'accès envoyé par Kosmy Board n'a pas pu être appliqué. Demandez à un administrateur.",
+    'users.disabledKosmy': 'Désactivé (Kosmy Board)',
     'kosmy.err.email_taken':
       'Un compte Dashy utilise déjà cet e-mail. Connectez-vous avec votre mot de passe, puis reliez Kosmy Board depuis Sécurité.',
     'kosmy.err.no_email': "Kosmy Board n'a pas envoyé d'adresse e-mail utilisable.",
@@ -4203,6 +4210,9 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       'Esta cuenta de Kosmy Board no está vinculada a ninguna cuenta de Dashy. Inicia sesión con tu contraseña y vincúlala desde Seguridad.',
     'kosmy.err.account_expired': 'Esta cuenta temporal ha caducado.',
+    'kosmy.err.account_disabled': 'Esta cuenta ha sido desactivada en Kosmy Board.',
+    'kosmy.err.access_invalid': 'No se pudo aplicar el acceso enviado por Kosmy Board. Consulte a un administrador.',
+    'users.disabledKosmy': 'Desactivada (Kosmy Board)',
     'kosmy.err.email_taken':
       'Una cuenta de Dashy ya usa este correo. Inicia sesión con tu contraseña y vincula Kosmy Board desde Seguridad.',
     'kosmy.err.no_email': 'Kosmy Board no envió una dirección de correo utilizable.',
@@ -4264,6 +4274,9 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       'Dieses Kosmy-Board-Konto ist mit keinem Dashy-Konto verknüpft. Melde dich mit deinem Passwort an und verknüpfe es unter Sicherheit.',
     'kosmy.err.account_expired': 'Dieses temporäre Konto ist abgelaufen.',
+    'kosmy.err.account_disabled': 'Dieses Konto wurde in Kosmy Board deaktiviert.',
+    'kosmy.err.access_invalid': 'Der von Kosmy Board gesendete Zugang konnte nicht angewendet werden. Wenden Sie sich an einen Administrator.',
+    'users.disabledKosmy': 'Deaktiviert (Kosmy Board)',
     'kosmy.err.email_taken':
       'Ein Dashy-Konto verwendet diese E-Mail bereits. Melde dich mit deinem Passwort an und verknüpfe Kosmy Board unter Sicherheit.',
     'kosmy.err.no_email': 'Kosmy Board hat keine verwendbare E-Mail-Adresse gesendet.',
@@ -4325,6 +4338,10 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       'Questo account Kosmy Board non è collegato a nessun account Dashy. Accedi con la password, poi collegalo da Sicurezza.',
     'kosmy.err.account_expired': 'Questo account temporaneo è scaduto.',
+    'kosmy.err.account_disabled': 'Questo account è stato disattivato in Kosmy Board.',
+    'kosmy.err.access_invalid':
+      "Impossibile applicare l'accesso inviato da Kosmy Board. Rivolgiti a un amministratore.",
+    'users.disabledKosmy': 'Disattivato (Kosmy Board)',
     'kosmy.err.email_taken':
       'Un account Dashy usa già questa email. Accedi con la password, poi collega Kosmy Board da Sicurezza.',
     'kosmy.err.no_email': 'Kosmy Board non ha inviato un indirizzo email utilizzabile.',
@@ -4384,6 +4401,9 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.token': '无法验证 Kosmy Board 发送的身份信息。',
     'kosmy.err.not_linked': '此 Kosmy Board 账户未关联任何 Dashy 账户。请先用密码登录，然后在“安全”中关联。',
     'kosmy.err.account_expired': '此临时账户已过期。',
+    'kosmy.err.account_disabled': '此账户已在 Kosmy Board 中停用。',
+    'kosmy.err.access_invalid': '无法应用 Kosmy Board 发送的访问权限。请联系管理员。',
+    'users.disabledKosmy': '已停用（Kosmy Board）',
     'kosmy.err.email_taken': '已有 Dashy 账户使用此邮箱。请先用密码登录，然后在“安全”中关联 Kosmy Board。',
     'kosmy.err.no_email': 'Kosmy Board 未发送可用的邮箱地址。',
     'kosmy.err.session': '关联过程中你的 Dashy 会话已改变。请重新登录后重试。',
@@ -4441,6 +4461,9 @@ const kosmyStrings: Record<Lang, Record<string, string>> = {
     'kosmy.err.not_linked':
       'Эта учётная запись Kosmy Board не связана ни с одной учётной записью Dashy. Войдите с паролем и свяжите её в разделе «Безопасность».',
     'kosmy.err.account_expired': 'Срок действия этой временной учётной записи истёк.',
+    'kosmy.err.account_disabled': 'Эта учётная запись отключена в Kosmy Board.',
+    'kosmy.err.access_invalid': 'Не удалось применить доступ, переданный Kosmy Board. Обратитесь к администратору.',
+    'users.disabledKosmy': 'Отключена (Kosmy Board)',
     'kosmy.err.email_taken':
       'Этот e-mail уже используется учётной записью Dashy. Войдите с паролем и свяжите Kosmy Board в разделе «Безопасность».',
     'kosmy.err.no_email': 'Kosmy Board не передал пригодный адрес e-mail.',

@@ -5,6 +5,8 @@ export type ActivityType =
   | 'app.updated'
   | 'app.deleted'
   | 'user.created'
+  | 'user.updated'
+  | 'user.disabled'
   | 'user.deleted'
   | 'twofactor.enabled';
 

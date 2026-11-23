@@ -172,6 +172,11 @@ export function UsersPage() {
                           : new Date(u.expiresAt).toLocaleString()}
                       </span>
                     )}
+                    {u.disabled && (
+                      <span className="ml-1 block text-[11px] text-red-600 dark:text-red-400">
+                        {t('users.disabledKosmy')}
+                      </span>
+                    )}
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
                     {u.twoFactorEnabled ? (

@@ -62,6 +62,11 @@ export const chatTimeoutSchema = z.object({
 
 // --------------------------------- helpers -----------------------------------
 
+/** Administrators who can still sign in (a disabled admin does not count). */
+export function countActiveAdmins(): Promise<number> {
+  return User.countDocuments({ role: 'admin', disabled: { $ne: true } });
+}
+
 /** Keep only ids that correspond to existing apps; return them as ObjectIds. */
 async function resolveAllowedApps(ids: string[]): Promise<Types.ObjectId[]> {
   const valid = ids.filter((id) => mongoose.isValidObjectId(id));
@@ -113,10 +118,10 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   const updates = req.body as z.infer<typeof updateUserSchema>;
   if (updates.role) assertCanManage(actorRole, updates.role);
 
-  // Prevent demoting the last administrator (would lock everyone out of admin).
+  // Prevent demoting the last (active) administrator (would lock everyone out of admin).
   if (updates.role && updates.role !== user.role && user.role === 'admin') {
-    const admins = await User.countDocuments({ role: 'admin' });
-    if (admins <= 1) {
+    const admins = await countActiveAdmins();
+    if (user.disabled !== true && admins <= 1) {
       throw new ApiError(400, 'Cannot change the role of the last administrator');
     }
     user.role = updates.role;
@@ -222,8 +227,8 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
   if (!user) throw new ApiError(404, 'User not found');
   assertCanManage(req.user!.role as Role, user.role as Role);
 
-  if (user.role === 'admin') {
-    const admins = await User.countDocuments({ role: 'admin' });
+  if (user.role === 'admin' && user.disabled !== true) {
+    const admins = await countActiveAdmins();
     if (admins <= 1) {
       throw new ApiError(400, 'Cannot delete the last administrator');
     }

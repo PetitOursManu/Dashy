@@ -64,6 +64,7 @@ No SaaS, no paid services — everything runs on a single machine.
 - **Secure auth** — password login (argon2id), JWT in `httpOnly` cookies, optional **TOTP 2FA** with QR setup + single-use backup codes.
 - **Sign in with Kosmy Board** — optional OpenID Connect sign-in from your [Kosmy Board](#sign-in-with-kosmy-board-openid-connect), with accounts linked by Board id (never by email).
 - **Admin in Kosmy Board** — manage users, apps, requests, the Store and settings [right from the Board](#admin-in-kosmy-board), with Dashy's own rules.
+- **Users managed by Kosmy Board** — the Board gives or withdraws access to Dashy, with a role and per-user restrictions ([details](#users-managed-by-kosmy-board)).
 - **Session control** — see active sessions (device, IP, last seen), revoke any individually, or "sign out of all devices".
 - **Backup & restore** (admin) — download every hosted app (files + metadata) as one `.zip` and restore it on another server.
 - **Hardened** — `helmet`, per-route rate limiting, `zod` validation, path-traversal / zip-slip protection, secrets encrypted at rest (TOTP secrets and LLM API keys, AES-256-GCM).
@@ -826,6 +827,43 @@ Existing secrets are never sent to the Board.
 
 ---
 
+## Users managed by Kosmy Board
+
+A Board administrator can also choose, from the Board, **who may use this
+Dashy**, with a role and Dashy's own restrictions: the Board then creates,
+updates or disables the person's Dashy account (protocol
+`kosmy.board-users.v1`, see the
+[specification](https://github.com/PetitOursManu/Kosmy-Board/blob/main/docs/users-api.md)).
+Same requirements and same token as the admin in the Board: the Board
+administrator who acts must be linked to an active Dashy **administrator**.
+
+- **Roles** — Administrator, Semi-admin, User (Dashy's own; temporary accounts
+  stay a Dashy-only tool and show without a role in the Board).
+- **Restrictions**, enforced by Dashy as for any account — **AI assistant**
+  (the assistant and requests to the admins), and one **App: …** box per app
+  (up to 29, by name) for regular users: the apps they may open. Staff see
+  every app.
+- **Giving access** creates a Dashy account **without a password** (sign-in
+  through the Board only), linked to the Board account; an existing Dashy
+  account with the same email and not linked yet is linked instead (only from
+  the Board's request, never at sign-in). An email already linked to another
+  Board account is refused.
+- **Withdrawing access disables** the account (its data stays, the Users page
+  shows it): no sign-in with the password, the Board or the mobile app, and
+  every open session (web, mobile tokens, "Sign in with Dashy") is refused at
+  once. Giving access again re-enables it.
+- When the Board sends the person's access in the ID token
+  (`kosmy_board_access`), a sign-in applies it the same way and creates the
+  account if needed (without ever demoting Dashy's last administrator).
+- Dashy never loses its last active administrator, and a Board administrator
+  cannot remove their own rights or access.
+
+Routes: `GET /api/kosmy-board/users`, `PUT` and `DELETE
+/api/kosmy-board/users/{sub}`. No migration is needed: the new `disabled`
+user field reads as "not disabled" when missing.
+
+---
+
 ## Security notes
 
 - **Passwords** are hashed with argon2id; plaintext is never stored or logged.
@@ -868,6 +906,7 @@ npm --prefix server run test:drivers # DB Explorer: driver factory + error paths
 npm --prefix server run test:db      # DB Explorer API: admin gating, validation, secret masking
 npm --prefix server run test:kosmy   # Sign in with Kosmy Board: PKCE, ID token checks, linking, 2FA option
 npm --prefix server run test:kosmy-admin # Admin in Kosmy Board: token checks, linking/rights, sections, actions
+npm --prefix server run test:kosmy-users # Users managed by Kosmy Board: create/link/update, disable, guards, sign-in claim
 ```
 
 ---

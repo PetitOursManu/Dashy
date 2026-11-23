@@ -14,7 +14,12 @@ import { ApiError } from '../middleware/error.js';
 import { encrypt, decrypt, generateBackupCodes } from '../utils/crypto.js';
 import { sanitizeNoteHtml } from '../utils/sanitizeHtml.js';
 import { logActivity } from '../services/activity.js';
-import { verifyCredentials, issueSession, verifyTwoFactorToken } from '../services/auth.js';
+import {
+  assertNotDisabled,
+  verifyCredentials,
+  issueSession,
+  verifyTwoFactorToken,
+} from '../services/auth.js';
 import {
   COOKIE_NAME,
   cookieOptions,
@@ -138,6 +143,8 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
   if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
     throw new ApiError(401, 'Two-factor authentication is not configured');
   }
+  // Disabled between the first step (password or Board) and this one.
+  assertNotDisabled(user);
 
   const { token } = req.body as z.infer<typeof twoFactorVerifySchema>;
   const ok = await verifyTwoFactorToken(user, token);

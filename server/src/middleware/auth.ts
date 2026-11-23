@@ -53,7 +53,7 @@ export async function resolveSessionUser(req: Request): Promise<JwtPayload> {
     throw new ApiError(401, 'Two-factor authentication not completed');
   }
 
-  const user = await User.findById(payload.sub).select('tokenVersion role expiresAt');
+  const user = await User.findById(payload.sub).select('tokenVersion role expiresAt disabled');
   // Treat a missing version as 0 so tokens issued before this field existed
   // (and freshly seeded users) remain valid.
   if (!user || (payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
@@ -63,6 +63,12 @@ export async function resolveSessionUser(req: Request): Promise<JwtPayload> {
   // Temporary accounts stop working the moment they expire.
   if (user.role === 'temp' && user.expiresAt && user.expiresAt.getTime() <= Date.now()) {
     throw new ApiError(401, 'This temporary account has expired');
+  }
+
+  // Access withdrawn from Kosmy Board: every session stops at once (web,
+  // mobile Bearer tokens, SSO for hosted apps).
+  if (user.disabled === true) {
+    throw new ApiError(401, 'This account has been disabled');
   }
 
   // Tokens issued with a session id (jti) are revocable per-device: the
